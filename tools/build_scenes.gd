@@ -107,21 +107,26 @@ func _make_tileset() -> TileSet:
 	ts.add_custom_data_layer()
 	ts.set_custom_data_layer_name(0, "rubber")
 	ts.set_custom_data_layer_type(0, TYPE_BOOL)
+	ts.add_custom_data_layer()
+	ts.set_custom_data_layer_name(1, "rubber_wall")
+	ts.set_custom_data_layer_type(1, TYPE_BOOL)
 	var src := TileSetAtlasSource.new()
 	src.texture = load("res://art/tiles.png")
 	src.texture_region_size = Vector2i(T, T)
-	for i in 4:
+	for i in 5:
 		src.create_tile(Vector2i(i, 0))
 	ts.add_source(src, 0)
 	var square := PackedVector2Array([Vector2(-16, -16), Vector2(16, -16), Vector2(16, 16), Vector2(-16, 16)])
-	for i in 4:
+	for i in 5:
 		var td := src.get_tile_data(Vector2i(i, 0), 0)
 		td.add_collision_polygon(0)
 		td.set_collision_polygon_points(0, 0, square)
 		if i == 2:
 			td.set_collision_polygon_one_way(0, 0, true)   # jump up through floating platforms
-		if i == 3:
+		if i == 3 or i == 4:
 			td.set_custom_data("rubber", true)             # the player bounces off it
+		if i == 4:
+			td.set_custom_data("rubber_wall", true)        # strong sideways kick and wall jumps
 	return ts
 
 

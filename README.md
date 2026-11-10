@@ -42,6 +42,7 @@ Levels are plain text, one character per 32 px tile, 17 rows tall:
 | `#` | ground |
 | `=` | floating platform (you can jump up through it) |
 | `R` | rubber: bounces you back up, keeping your sideways speed. Hold jump as you land for a big bounce. |
+| `W` | rubber wall: running into it throws you back with a little hop. Hit it in mid-air holding jump to wall-jump; two facing rubber walls make a chimney you can climb. |
 | `1` `2` `3` | red, yellow and blue teleporters. Touching one sends you to the other pad of its color, keeping your speed. The pad you arrive on stays off until you step away. Put arrival pads off the main path, or players walking past get sent back. |
 | `P` | player start |
 | `G` | goal |

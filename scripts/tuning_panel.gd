@@ -19,6 +19,9 @@ const SETTINGS := [
 	["jump_buffer_time", "Early jump grace (s)", 0.0, 0.3, 0.01],
 	["rubber_bounciness", "Rubber bounciness", 0.3, 1.0, 0.01],
 	["rubber_boost", "Rubber boost (hold jump)", 1.0, 2.0, 0.05],
+	["wall_kick", "Rubber wall kick", 100.0, 700.0, 10.0],
+	["wall_jump", "Rubber wall jump", 0.5, 1.5, 0.05],
+	["wall_stun", "Wall bounce no-steer (s)", 0.0, 0.6, 0.01],
 	["squash_recovery", "Squash settle speed", 3.0, 30.0, 0.5],
 ]
 

@@ -15,10 +15,16 @@ texture_region_size = Vector2i(32, 32)
 3:0/0 = 0
 3:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-16, -16, 16, -16, 16, 16, -16, 16)
 3:0/0/custom_data_0 = true
+4:0/0 = 0
+4:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-16, -16, 16, -16, 16, 16, -16, 16)
+4:0/0/custom_data_0 = true
+4:0/0/custom_data_1 = true
 
 [resource]
 tile_size = Vector2i(32, 32)
 physics_layer_0/collision_layer = 1
 custom_data_layer_0/name = "rubber"
 custom_data_layer_0/type = 1
+custom_data_layer_1/name = "rubber_wall"
+custom_data_layer_1/type = 1
 sources/0 = SubResource("TileSetAtlasSource_anfm0")

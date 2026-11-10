@@ -8,6 +8,7 @@ var frame := 0
 var hold := 0
 var bounces := 0
 var teleports := 0
+var wall_bounces := 0
 var puffs := 0
 var min_squash_y := 1.0
 var max_squash_y := 1.0
@@ -32,6 +33,7 @@ func _physics_process(_d: float) -> bool:
 	if frame == 5:
 		main.new_run()
 		main.player.bounced.connect(func() -> void: bounces += 1)
+		main.player.wall_bounced.connect(func() -> void: wall_bounces += 1)
 		main.player.teleported.connect(func() -> void:
 			teleports += 1
 			print("  teleported to x=%.0f y=%.0f" % [main.player.position.x, main.player.position.y]))
@@ -53,7 +55,12 @@ func _physics_process(_d: float) -> bool:
 				gap = false
 		var on_rubber: bool = _is_rubber(ground, int(floor(x / 32.0)), feet_row + 1)
 		var rubber_ahead: bool = _is_rubber(ground, land_col, feet_row + 1)
-		if on_rubber or rubber_ahead:
+		var wall_is_rubber: bool = ground.get_cell_atlas_coords(Vector2i(col, feet_row)) == Vector2i(4, 0)
+		if wall and wall_is_rubber:
+			# Rubber wall: jump into it and keep holding to wall-jump up between rubber walls.
+			Input.action_press("jump"); hold = 400
+			print("  climb rubber wall at x=%.0f (col %d)" % [x, col])
+		elif on_rubber or rubber_ahead:
 			Input.action_press("jump"); hold = 80
 			print("  jump onto rubber at x=%.0f (col %d)" % [x, col])
 		elif wall or gap:
@@ -74,7 +81,7 @@ func _physics_process(_d: float) -> bool:
 	_dust_was_emitting = emitting
 
 	if main.state == main.State.WON:
-		print("RESULT: WON in %.2fs, falls %d, rubber bounces %d, teleports %d" % [main.run_time, main.falls, bounces, teleports])
+		print("RESULT: WON in %.2fs, falls %d, rubber bounces %d, wall bounces %d, teleports %d" % [main.run_time, main.falls, bounces, wall_bounces, teleports])
 		print("ANIM: stretch up to %.2f, squash down to %.2f, dust puffs %d" % [max_squash_y, min_squash_y, puffs])
 		quit(0)
 		return true

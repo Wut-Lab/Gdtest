@@ -5,7 +5,7 @@ extends Node2D
 ##
 ## Text map characters, one per 32 px tile:
 ##   .  empty        #  ground        =  floating platform (jump up through it)
-##   R  rubber       P  player start  G  goal
+##   R  rubber       W  rubber wall   P  player start  G  goal
 ##   1  red teleport     2  yellow teleport     3  blue teleport   (each color links its pair)
 
 signal goal_reached
@@ -15,6 +15,7 @@ const ATLAS_GROUND_TOP := Vector2i(0, 0)
 const ATLAS_GROUND_FILL := Vector2i(1, 0)
 const ATLAS_PLATFORM := Vector2i(2, 0)
 const ATLAS_RUBBER := Vector2i(3, 0)
+const ATLAS_RUBBER_WALL := Vector2i(4, 0)
 const TELEPORT_COLORS := {"1": "red", "2": "yellow", "3": "blue"}
 
 @export_file("*.txt") var map_file := ""
@@ -60,7 +61,7 @@ func load_map_text(text: String) -> void:
 		for x in line.length():
 			var ch := line[x]
 			match ch:
-				"#", "=", "R":
+				"#", "=", "R", "W":
 					cells[Vector2i(x, y)] = ch
 				"P":
 					start_cell = Vector2i(x, y)
@@ -119,8 +120,10 @@ func _atlas_for(cells: Dictionary, cell: Vector2i) -> Vector2i:
 			return ATLAS_PLATFORM
 		"R":
 			return ATLAS_RUBBER
+		"W":
+			return ATLAS_RUBBER_WALL
 	var above: String = cells.get(cell + Vector2i.UP, "")
-	return ATLAS_GROUND_FILL if above == "#" or above == "R" else ATLAS_GROUND_TOP
+	return ATLAS_GROUND_FILL if above in ["#", "R", "W"] else ATLAS_GROUND_TOP
 
 
 ## The playable area: from the top of the screen down to the lowest tile.

@@ -21,8 +21,9 @@ func _initialize() -> void:
 
 
 func _tiles() -> Image:
-	# Four 32×32 tiles: 0 = ground surface, 1 = ground fill, 2 = floating platform, 3 = rubber.
-	var img := Image.create_empty(128, 32, false, Image.FORMAT_RGBA8)
+	# Five 32×32 tiles: 0 = ground surface, 1 = ground fill, 2 = floating platform, 3 = rubber,
+	# 4 = rubber wall.
+	var img := Image.create_empty(160, 32, false, Image.FORMAT_RGBA8)
 	img.fill_rect(Rect2i(0, 0, 32, 32), STONE)
 	img.fill_rect(Rect2i(0, 0, 32, 6), STONE_TOP)
 	img.fill_rect(Rect2i(0, 6, 1, 26), STONE_SIDE)
@@ -35,7 +36,33 @@ func _tiles() -> Image:
 	img.fill_rect(Rect2i(64, 26, 32, 6), STONE_SIDE)
 	img.fill_rect(Rect2i(64, 6, 1, 20), STONE_SIDE)
 	_rubber(img, 96)
+	_rubber_wall(img, 128)
 	return img
+
+
+func _rubber_wall(img: Image, ox: int) -> void:
+	# The same yellow rubber turned on its side: glossy left edge, shaded right edge, and
+	# vertical grip ribs. Top and bottom are flat so stacked tiles read as one column.
+	var body := Color("f2c230")
+	var light := Color("ffe27a")
+	var shade := Color("b8860b")
+	var groove := Color("9c7208")
+	for y in 32:
+		for x in 32:
+			var c := body
+			if x < 3:
+				c = light
+			elif x < 5:
+				c = body.lerp(light, 0.5)
+			elif x >= 27:
+				c = shade
+			img.set_pixel(ox + x, y, c)
+	# Three vertical ribs, each with a highlight and a groove.
+	for rx in [9, 16, 23]:
+		img.fill_rect(Rect2i(ox + rx, 0, 2, 32), body.lerp(light, 0.6))
+		img.fill_rect(Rect2i(ox + rx + 2, 0, 1, 32), groove)
+	# Faint seam where tiles stack.
+	img.fill_rect(Rect2i(ox + 5, 31, 22, 1), body.lerp(shade, 0.4))
 
 
 func _rubber(img: Image, ox: int) -> void:

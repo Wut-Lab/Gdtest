@@ -6,6 +6,7 @@ extends CharacterBody2D
 signal fell
 signal bounced
 signal teleported
+signal wall_bounced
 
 const SIZE := 24.0
 
@@ -40,6 +41,18 @@ const SIZE := 24.0
 @export var bounce_threshold := 150.0
 @export var max_bounce_speed := 1100.0
 
+@export_group("Rubber wall")
+## Share of your running speed a rubber wall throws back at you.
+@export var wall_bounciness := 0.9
+## The weakest kick a rubber wall gives, so even a slow bump sends you back.
+@export var wall_kick := 320.0
+## Hitting a rubber wall on the ground bumps you up this fast, so you leave the ground.
+@export var wall_hop := 260.0
+## Hitting one in mid-air while holding jump launches you up this many times a normal jump.
+@export var wall_jump := 0.95
+## For this long after a wall bounce your own steering is ignored, so the kick is felt.
+@export var wall_stun := 0.25
+
 @export_group("Look")
 @export var color := Color("ff6b5e")
 @export var eye_color := Color("1b2440")
@@ -55,6 +68,7 @@ var _face := 1.0
 var _squash := Vector2.ONE
 var _was_on_floor := true
 var _bouncing := false
+var _stun := 0.0
 
 @onready var camera: Camera2D = $Camera2D
 @onready var dust: CPUParticles2D = $Dust
@@ -68,6 +82,7 @@ func reset_to(pos: Vector2) -> void:
 	_squash = Vector2.ONE
 	_was_on_floor = true
 	_bouncing = false
+	_stun = 0.0
 	camera.reset_smoothing()
 
 
@@ -96,7 +111,9 @@ func _physics_process(delta: float) -> void:
 	var on_floor := is_on_floor()
 
 	var dir := Input.get_axis("move_left", "move_right")
-	if dir != 0.0:
+	if _stun > 0.0:
+		_stun = maxf(_stun - delta, 0.0)   # just bounced off a rubber wall: no steering yet
+	elif dir != 0.0:
 		_face = signf(dir)
 		var acc := ground_accel if on_floor else air_accel
 		velocity.x = move_toward(velocity.x, dir * run_speed, acc * delta)
@@ -129,7 +146,7 @@ func _physics_process(delta: float) -> void:
 
 	var before := velocity
 	move_and_slide()
-	var bounced_now := _apply_rubber(before)
+	var bounced_now := _apply_rubber(before, on_floor)
 
 	if not bounced_now and is_on_floor() and not _was_on_floor and before.y > 250.0:
 		var amount := clampf((before.y - 200.0) / 700.0, 0.0, 1.0)
@@ -143,12 +160,31 @@ func _physics_process(delta: float) -> void:
 
 ## Bounce off any rubber tile touched this frame. The surface reflects the velocity
 ## that points into it, keeping the rest, so you bounce away in the direction you came from.
-func _apply_rubber(before: Vector2) -> bool:
+func _apply_rubber(before: Vector2, was_on_floor: bool) -> bool:
 	for i in get_slide_collision_count():
 		var col := get_slide_collision(i)
-		if not _is_rubber(col):
+		var data := _rubber_data(col)
+		if data == null:
 			continue
 		var n := col.get_normal()
+		var is_wall := bool(data.get_custom_data("rubber_wall"))
+		var into_side := absf(n.x) > 0.7 and before.x * n.x < -30.0
+		if is_wall and into_side:
+			# Rubber wall: throw the player back the way they came.
+			velocity.x = n.x * maxf(absf(before.x) * wall_bounciness, wall_kick)
+			if not was_on_floor and Input.is_action_pressed("jump"):
+				velocity.y = minf(before.y, -jump_velocity * wall_jump)   # wall jump
+			elif was_on_floor:
+				velocity.y = -wall_hop                                     # bumped off the ground
+			else:
+				velocity.y = before.y
+			_bouncing = velocity.y < 0.0
+			_stun = wall_stun
+			_face = signf(n.x)
+			_squash = Vector2(0.6, 1.25)
+			_puff()
+			wall_bounced.emit()
+			return true
 		if n.y < -0.7 and before.y > bounce_threshold:
 			# Landed on top: reflect upward, keep the sideways speed.
 			var speed := before.y * rubber_bounciness
@@ -162,8 +198,8 @@ func _apply_rubber(before: Vector2) -> bool:
 			_puff()
 			bounced.emit()
 			return true
-		elif absf(n.x) > 0.7 and absf(before.x) > 60.0:
-			# Hit the side: push back the other way.
+		elif into_side and absf(before.x) > 60.0:
+			# Side of a rubber floor tile: a softer push back.
 			velocity.x = n.x * maxf(absf(before.x) * rubber_bounciness, 150.0)
 			_squash = Vector2(0.7, 1.2)
 		elif n.y > 0.7 and before.y < -bounce_threshold:
@@ -172,16 +208,18 @@ func _apply_rubber(before: Vector2) -> bool:
 	return false
 
 
-func _is_rubber(col: KinematicCollision2D) -> bool:
+## The tile data of a rubber tile that was hit, or null for anything else.
+func _rubber_data(col: KinematicCollision2D) -> TileData:
 	var layer := col.get_collider() as TileMapLayer
 	if layer == null:
-		return false
+		return null
 	# Tiles are merged into larger physics bodies, so find the tile from the contact point,
 	# nudged a little into the surface that was hit.
 	var inside := col.get_position() - col.get_normal() * 2.0
-	var coords := layer.local_to_map(layer.to_local(inside))
-	var data := layer.get_cell_tile_data(coords)
-	return data != null and bool(data.get_custom_data("rubber"))
+	var data := layer.get_cell_tile_data(layer.local_to_map(layer.to_local(inside)))
+	if data == null or not bool(data.get_custom_data("rubber")):
+		return null
+	return data
 
 
 func _puff() -> void:

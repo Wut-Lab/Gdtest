@@ -218,7 +218,7 @@ button:disabled { opacity: 0.4; }
       <span class="spacer"></span>
       <button id="closeSheet" type="button" class="primary">Done</button>
     </div>
-    <p>Characters: <code>#</code> ground, <code>=</code> platform you can jump up through, <code>R</code> rubber, <code>P</code> start, <code>G</code> goal, <code>1</code> <code>2</code> <code>3</code> red, yellow and blue warps (place two of a color to link them), <code>.</code> empty. Tip: put the pad you arrive at somewhere off the main path, or players walking past it get sent back. Your work is saved on this device as you go.</p>
+    <p>Characters: <code>#</code> ground, <code>=</code> platform you can jump up through, <code>R</code> rubber, <code>W</code> rubber wall (kicks you back; hold jump against it mid-air to wall-jump), <code>P</code> start, <code>G</code> goal, <code>1</code> <code>2</code> <code>3</code> red, yellow and blue warps (place two of a color to link them), <code>.</code> empty. Tip: put the pad you arrive at somewhere off the main path, or players walking past it get sent back. Your work is saved on this device as you go.</p>
   </div>
 </div>
 
@@ -271,6 +271,7 @@ button:disabled { opacity: 0.4; }
     { ch: '#', label: 'Ground' },
     { ch: '=', label: 'Platform' },
     { ch: 'R', label: 'Rubber' },
+    { ch: 'W', label: 'Rubber wall' },
     { ch: 'P', label: 'Start' },
     { ch: 'G', label: 'Goal' },
     { ch: '1', label: 'Red warp' },
@@ -305,7 +306,7 @@ button:disabled { opacity: 0.4; }
     while (src.length < ROWS) src.unshift('');
     for (const line of src) {
       const row = [];
-      for (let x = 0; x < width; x++) row.push(line[x] && '.#=RPG123'.includes(line[x]) ? line[x] : '.');
+      for (let x = 0; x < width; x++) row.push(line[x] && '.#=RWPG123'.includes(line[x]) ? line[x] : '.');
       rows.push(row);
     }
     return rows;
@@ -345,7 +346,7 @@ button:disabled { opacity: 0.4; }
   function drawTile(g, ch, x, y, s, above) {
     if (ch === '#') {
       g.fillStyle = col.stone; g.fillRect(x, y, s, s);
-      if (above !== '#' && above !== 'R') { g.fillStyle = col.stoneTop; g.fillRect(x, y, s, Math.max(2, s * 0.19)); }
+      if (above !== '#' && above !== 'R' && above !== 'W') { g.fillStyle = col.stoneTop; g.fillRect(x, y, s, Math.max(2, s * 0.19)); }
       g.fillStyle = col.stoneSide; g.fillRect(x, y, 1, s);
     } else if (ch === '=') {
       g.fillStyle = col.stone; g.fillRect(x, y, s, s);
@@ -368,6 +369,12 @@ button:disabled { opacity: 0.4; }
       g.fillStyle = col.skyTop;
       g.fillRect(x + s * 0.5, y + s - p * 0.72, Math.max(1, s * 0.09), Math.max(2, s * 0.16));
       g.fillRect(x + s * 0.68, y + s - p * 0.72, Math.max(1, s * 0.09), Math.max(2, s * 0.16));
+    } else if (ch === 'W') {
+      // Rubber wall: rubber turned on its side, glossy left edge and vertical ribs.
+      g.fillStyle = col.rubber; g.fillRect(x, y, s, s);
+      g.fillStyle = col.rubberLight; g.fillRect(x, y, Math.max(2, s * 0.12), s);
+      g.fillStyle = col.rubberDark; g.fillRect(x + s * 0.84, y, s * 0.16, s);
+      for (const fx of [0.3, 0.52, 0.74]) g.fillRect(x + fx * s, y, Math.max(1, s * 0.05), s);
     } else if (WARP[ch]) {
       // Teleport: the goal's square plus a ring of pixel blocks for the glow.
       const c = WARP[ch], p = s * 0.62, o = (s - p) / 2, px = Math.max(2, Math.round(s / 9));
