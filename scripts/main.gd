@@ -4,6 +4,8 @@ extends Node
 
 enum State { READY, PLAY, WON }
 
+const SETTINGS_PATH := "user://settings.cfg"
+
 @export var level_scene: PackedScene
 @export var player_scene: PackedScene
 
@@ -31,6 +33,10 @@ func _ready() -> void:
 	level.goal_reached.connect(_on_goal_reached)
 	hud.play_requested.connect(new_run)
 	hud.tuning_panel.player = player
+	hud.default_color = player.color
+	player.color = _load_player_color(player.color)
+	hud.set_player_color(player.color)
+	hud.player_color_changed.connect(_on_player_color_changed)
 	hud.set_stats(0.0, 0)
 	hud.show_start()
 	get_viewport().size_changed.connect(_on_screen_changed)
@@ -95,6 +101,22 @@ func _process(delta: float) -> void:
 	if state == State.PLAY:
 		run_time += delta
 	hud.set_stats(run_time, falls)
+
+
+## The player color picked on the start screen is saved on this device.
+func _on_player_color_changed(c: Color) -> void:
+	player.color = c
+	var cfg := ConfigFile.new()
+	cfg.load(SETTINGS_PATH)
+	cfg.set_value("player", "color", c)
+	cfg.save(SETTINGS_PATH)
+
+
+func _load_player_color(fallback: Color) -> Color:
+	var cfg := ConfigFile.new()
+	if cfg.load(SETTINGS_PATH) != OK:
+		return fallback
+	return cfg.get_value("player", "color", fallback)
 
 
 func _on_player_fell() -> void:

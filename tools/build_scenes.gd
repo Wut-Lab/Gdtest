@@ -267,11 +267,11 @@ func _hud_scene() -> Node:
 	falls_label.text = "Falls 0"
 	root.add_child(falls_label)
 
-	_menu(root, "StartMenu", "Reach the goal",
-		"Run and jump through the level to the green goal. Hold jump to go higher. "
-		+ "You can steer a little in mid-air.\n\n"
-		+ "Keys: arrows or A/D to move, Space to jump, R to restart.",
+	var start := _menu(root, "StartMenu", "Reach the goal",
+		"Run, jump and bounce to the green goal. Hold jump to go higher.\n"
+		+ "Keys: arrows or A/D move, Space jumps, R restarts.",
 		"StartBody", "PlayButton", "Play")
+	_color_row(start.get_node("Panel/Box"))
 	var win := _menu(root, "WinMenu", "Goal reached", "Time 0.00s  ·  Falls 0",
 		"ResultLabel", "AgainButton", "Play again")
 	win.visible = false
@@ -340,6 +340,70 @@ func _menu(parent: Control, menu_name: String, title: String, body: String,
 	button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	box.add_child(button)
 	return center
+
+
+## The start menu's color picker: a wheel, and beside it a preview, brightness and reset.
+func _color_row(box: VBoxContainer) -> void:
+	var row := HBoxContainer.new()
+	row.name = "ColorRow"
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 18)
+
+	var wheel := Control.new()
+	wheel.name = "ColorWheel"
+	wheel.unique_name_in_owner = true
+	wheel.set_script(load("res://scripts/color_wheel.gd"))
+	wheel.custom_minimum_size = Vector2(136, 136)
+	row.add_child(wheel)
+
+	var side := VBoxContainer.new()
+	side.name = "ColorSide"
+	side.alignment = BoxContainer.ALIGNMENT_CENTER
+	side.add_theme_constant_override("separation", 8)
+	row.add_child(side)
+
+	var heading := Label.new()
+	heading.name = "Heading"
+	heading.text = "Your color"
+	side.add_child(heading)
+
+	var preview := ColorRect.new()
+	preview.name = "ColorPreview"
+	preview.unique_name_in_owner = true
+	preview.color = Color("ff6b5e")
+	preview.custom_minimum_size = Vector2(36, 36)
+	preview.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	side.add_child(preview)
+
+	var bright_label := Label.new()
+	bright_label.name = "BrightnessLabel"
+	bright_label.text = "Brightness"
+	bright_label.theme_type_variation = "SmallLabel"
+	side.add_child(bright_label)
+
+	var slider := HSlider.new()
+	slider.name = "Brightness"
+	slider.unique_name_in_owner = true
+	slider.min_value = 0.2
+	slider.max_value = 1.0
+	slider.step = 0.01
+	slider.value = 1.0
+	slider.custom_minimum_size = Vector2(150, 30)
+	side.add_child(slider)
+
+	var reset := Button.new()
+	reset.name = "ColorReset"
+	reset.unique_name_in_owner = true
+	reset.text = "Reset color"
+	reset.custom_minimum_size = Vector2(0, 36)
+	reset.add_theme_font_size_override("font_size", 14)
+	reset.flat = true   # a quiet text button, so Play stays the main action
+	for color_name in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+		reset.add_theme_color_override(color_name, INK_DIM)
+	side.add_child(reset)
+
+	box.add_child(row)
+	box.move_child(row, box.get_child_count() - 2)   # above the Play button
 
 
 func _touch_scene() -> Node:

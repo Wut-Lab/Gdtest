@@ -3,6 +3,7 @@ extends CanvasLayer
 ## Timer, fall counter, the start and win menus, and the Tune button.
 
 signal play_requested
+signal player_color_changed(color: Color)
 
 @onready var time_label: Label = %TimeLabel
 @onready var falls_label: Label = %FallsLabel
@@ -13,6 +14,13 @@ signal play_requested
 @onready var again_button: Button = %AgainButton
 @onready var tune_button: Button = %TuneButton
 @onready var tuning_panel: TuningPanel = %TuningPanel
+@onready var color_wheel: ColorWheel = %ColorWheel
+@onready var brightness: HSlider = %Brightness
+@onready var color_preview: ColorRect = %ColorPreview
+@onready var color_reset: Button = %ColorReset
+
+## The game's built-in player color, for the Reset button. Main sets it.
+var default_color := Color("ff6b5e")
 
 
 func _ready() -> void:
@@ -20,6 +28,25 @@ func _ready() -> void:
 	again_button.pressed.connect(play_requested.emit)
 	tune_button.pressed.connect(tuning_panel.open)
 	tuning_panel.closed.connect(func() -> void: get_viewport().gui_release_focus())
+	color_wheel.changed.connect(_on_color_input)
+	brightness.value_changed.connect(func(_v: float) -> void: _on_color_input())
+	color_reset.pressed.connect(func() -> void:
+		set_player_color(default_color)
+		player_color_changed.emit(default_color))
+
+
+## Shows a color on the wheel, slider and preview without announcing a change.
+func set_player_color(c: Color) -> void:
+	color_wheel.set_hsv(c.h, c.s, c.v)
+	brightness.set_value_no_signal(c.v)
+	color_preview.color = c
+
+
+func _on_color_input() -> void:
+	var c := Color.from_hsv(color_wheel.hue, color_wheel.saturation, brightness.value)
+	color_wheel.value = brightness.value
+	color_preview.color = c
+	player_color_changed.emit(c)
 
 
 func show_start() -> void:

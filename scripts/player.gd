@@ -233,5 +233,7 @@ func _draw() -> void:
 	draw_rect(rect, color)
 	var ex := _face * 4.0
 	var ey := rect.position.y + s.y * 0.3
-	draw_rect(Rect2(ex - 5.0, ey, 3.0, 5.0), eye_color)
-	draw_rect(Rect2(ex + 2.0, ey, 3.0, 5.0), eye_color)
+	# Dark eyes on light colors, light eyes on dark colors, so they always show.
+	var eyes := eye_color if color.get_luminance() > 0.3 else Color("eef1fa")
+	draw_rect(Rect2(ex - 5.0, ey, 3.0, 5.0), eyes)
+	draw_rect(Rect2(ex + 2.0, ey, 3.0, 5.0), eyes)
