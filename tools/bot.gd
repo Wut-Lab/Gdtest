@@ -7,6 +7,7 @@ var main
 var frame := 0
 var hold := 0
 var bounces := 0
+var teleports := 0
 var puffs := 0
 var min_squash_y := 1.0
 var max_squash_y := 1.0
@@ -31,6 +32,9 @@ func _physics_process(_d: float) -> bool:
 	if frame == 5:
 		main.new_run()
 		main.player.bounced.connect(func() -> void: bounces += 1)
+		main.player.teleported.connect(func() -> void:
+			teleports += 1
+			print("  teleported to x=%.0f y=%.0f" % [main.player.position.x, main.player.position.y]))
 		Input.action_press("move_right")
 	if frame < 5:
 		return false
@@ -70,7 +74,7 @@ func _physics_process(_d: float) -> bool:
 	_dust_was_emitting = emitting
 
 	if main.state == main.State.WON:
-		print("RESULT: WON in %.2fs, falls %d, rubber bounces %d" % [main.run_time, main.falls, bounces])
+		print("RESULT: WON in %.2fs, falls %d, rubber bounces %d, teleports %d" % [main.run_time, main.falls, bounces, teleports])
 		print("ANIM: stretch up to %.2f, squash down to %.2f, dust puffs %d" % [max_squash_y, min_squash_y, puffs])
 		quit(0)
 		return true

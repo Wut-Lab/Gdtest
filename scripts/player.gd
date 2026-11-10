@@ -5,6 +5,7 @@ extends CharacterBody2D
 
 signal fell
 signal bounced
+signal teleported
 
 const SIZE := 24.0
 
@@ -68,6 +69,17 @@ func reset_to(pos: Vector2) -> void:
 	_was_on_floor = true
 	_bouncing = false
 	camera.reset_smoothing()
+
+
+## Move to a teleport pad, keeping the current velocity.
+func teleport_to(pos: Vector2) -> void:
+	global_position = pos
+	_coyote = 0.0          # you arrive in the air: no ledge-grace jump carried over
+	_was_on_floor = false
+	camera.reset_smoothing()
+	_squash = Vector2(0.6, 1.4)
+	_puff()
+	teleported.emit()
 
 
 ## Current squash/stretch scale, for tests.

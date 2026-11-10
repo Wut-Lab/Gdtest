@@ -1,20 +1,22 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" path="res://scripts/level.gd" id="1_gg43x"]
-[ext_resource type="TileSet" path="res://art/tileset.tres" id="2_mllcm"]
-[ext_resource type="PackedScene" path="res://scenes/goal.tscn" id="3_q7ibo"]
-[ext_resource type="Script" path="res://scripts/goal.gd" id="4_cg8v6"]
+[ext_resource type="Script" path="res://scripts/level.gd" id="1_mllcm"]
+[ext_resource type="PackedScene" path="res://scenes/teleporter.tscn" id="2_q7ibo"]
+[ext_resource type="TileSet" path="res://art/tileset.tres" id="3_cg8v6"]
+[ext_resource type="PackedScene" path="res://scenes/goal.tscn" id="4_j0sdw"]
+[ext_resource type="Script" path="res://scripts/goal.gd" id="5_jy02f"]
 
-[node name="Level01" type="Node2D" unique_id=1461155761]
-script = ExtResource("1_gg43x")
+[node name="Level01" type="Node2D" unique_id=2133621595]
+script = ExtResource("1_mllcm")
 map_file = "res://levels/level_01.txt"
+teleporter_scene = ExtResource("2_q7ibo")
 
-[node name="Ground" type="TileMapLayer" parent="." unique_id=954399872]
-tile_set = ExtResource("2_mllcm")
+[node name="Ground" type="TileMapLayer" parent="." unique_id=1555989535]
+tile_set = ExtResource("3_cg8v6")
 
-[node name="Start" type="Marker2D" parent="." unique_id=2036915285]
+[node name="Start" type="Marker2D" parent="." unique_id=1882462106]
 position = Vector2(80, 468)
 
-[node name="Goal" type="Area2D" parent="." unique_id=194346379 instance=ExtResource("3_q7ibo")]
+[node name="Goal" type="Area2D" parent="." unique_id=425612406 instance=ExtResource("4_j0sdw")]
 position = Vector2(2832, 334)
-script = ExtResource("4_cg8v6")
+script = ExtResource("5_jy02f")

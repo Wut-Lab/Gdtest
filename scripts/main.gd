@@ -33,15 +33,34 @@ func _ready() -> void:
 	hud.tuning_panel.player = player
 	hud.set_stats(0.0, 0)
 	hud.show_start()
+	get_viewport().size_changed.connect(_on_screen_changed)
+	_on_screen_changed()
 	_setup_web_bridge()
 
 
+## Fill any screen. Landscape uses a 960×544 base; an upright phone switches to 544×960 so the
+## menus and buttons stay a readable size, and the camera zooms in so you see about 24 rows
+## (the level plus some sky) instead of a thin strip.
+func _on_screen_changed() -> void:
+	var win := get_window()
+	var portrait := win.size.y > win.size.x
+	var base := Vector2i(544, 960) if portrait else Vector2i(960, 544)
+	if win.content_scale_size != base:
+		win.content_scale_size = base   # fires size_changed again, which lands below
+		return
+	var visible := get_viewport().get_visible_rect().size
+	var z := maxf(1.0, visible.y / 760.0)
+	player.camera.zoom = Vector2(z, z)
+
+
 ## Keep the camera inside the level, and treat falling below it as a fall.
+## The game fills any screen shape, so there's no top limit: on a tall screen the ground stays
+## at the bottom and you see more sky.
 func _fit_to_level() -> void:
 	var b := level.get_bounds()
 	player.camera.limit_left = int(b.position.x)
 	player.camera.limit_right = int(b.end.x)
-	player.camera.limit_top = int(b.position.y)
+	player.camera.limit_top = -100000
 	player.camera.limit_bottom = int(b.end.y)
 	player.fall_limit_y = b.end.y + 80.0
 

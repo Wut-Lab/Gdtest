@@ -20,6 +20,7 @@ func _initialize() -> void:
 	_check(ResourceSaver.save(_make_theme(), "res://art/ui_theme.tres"), "theme")
 	_save_scene(_player_scene(), "res://scenes/player.tscn")
 	_save_scene(_goal_scene(), "res://scenes/goal.tscn")
+	_save_scene(_teleporter_scene(), "res://scenes/teleporter.tscn")
 	_save_scene(_hud_scene(), "res://scenes/hud.tscn")
 	_save_scene(_touch_scene(), "res://scenes/touch_controls.tscn")
 	_save_scene(_level_scene(), "res://levels/level_01.tscn")
@@ -91,6 +92,8 @@ func _setup_project() -> void:
 			events.append(jm)
 		ProjectSettings.set_setting("input/" + action, {"deadzone": 0.3, "events": events})
 	ProjectSettings.set_setting("application/run/main_scene", "res://scenes/main.tscn")
+	# Fill any screen shape: the shorter side shows 544 px of level, the longer side shows more.
+	ProjectSettings.set_setting("display/window/stretch/aspect", "expand")
 	ProjectSettings.set_setting("application/config/description", "A small platformer: run and jump to the goal.")
 	_check(ProjectSettings.save(), "project.godot")
 
@@ -217,6 +220,19 @@ func _goal_scene() -> Node:
 	col.shape = shape
 	g.add_child(col)
 	return g
+
+
+func _teleporter_scene() -> Node:
+	var t := Area2D.new()
+	t.name = "Teleporter"
+	t.set_script(load("res://scripts/teleporter.gd"))
+	var col := CollisionShape2D.new()
+	col.name = "CollisionShape2D"
+	var shape := RectangleShape2D.new()
+	shape.size = Vector2(24, 24)
+	col.shape = shape
+	t.add_child(col)
+	return t
 
 
 func _hud_scene() -> Node:
@@ -387,6 +403,7 @@ func _level_scene() -> Node:
 	level.add_child(ground)
 	# The layout lives in a text map; the level paints Ground from it when it loads.
 	level.set("map_file", "res://levels/level_01.txt")
+	level.set("teleporter_scene", load("res://scenes/teleporter.tscn"))
 
 	var start := Marker2D.new()
 	start.name = "Start"

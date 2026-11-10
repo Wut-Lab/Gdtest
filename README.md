@@ -1,6 +1,6 @@
 # Square Hop (Godot)
 
-A small platformer: run, jump and bounce a red square through a 100-tile level to the green goal.
+A small platformer: run, jump, bounce and teleport a red square through a 100-tile level to the green goal.
 
 - **Play it:** https://claude.ai/artifact/2gMkwUS3qg2sqVGHM762Cw
 - **Level editor (works on a phone):** https://claude.ai/artifact/8As8FYAdjdxrbhuugZhsWZ
@@ -42,6 +42,7 @@ Levels are plain text, one character per 32 px tile, 17 rows tall:
 | `#` | ground |
 | `=` | floating platform (you can jump up through it) |
 | `R` | rubber: bounces you back up, keeping your sideways speed. Hold jump as you land for a big bounce. |
+| `1` `2` `3` | red, yellow and blue teleporters. Touching one sends you to the other pad of its color, keeping your speed. The pad you arrive on stays off until you step away. Put arrival pads off the main path, or players walking past get sent back. |
 | `P` | player start |
 | `G` | goal |
 

@@ -6,6 +6,7 @@ extends Node2D
 ## Text map characters, one per 32 px tile:
 ##   .  empty        #  ground        =  floating platform (jump up through it)
 ##   R  rubber       P  player start  G  goal
+##   1  red teleport     2  yellow teleport     3  blue teleport   (each color links its pair)
 
 signal goal_reached
 
@@ -14,11 +15,14 @@ const ATLAS_GROUND_TOP := Vector2i(0, 0)
 const ATLAS_GROUND_FILL := Vector2i(1, 0)
 const ATLAS_PLATFORM := Vector2i(2, 0)
 const ATLAS_RUBBER := Vector2i(3, 0)
+const TELEPORT_COLORS := {"1": "red", "2": "yellow", "3": "blue"}
 
 @export_file("*.txt") var map_file := ""
+@export var teleporter_scene: PackedScene
 @export var grid_color := Color(0.93, 0.95, 0.98, 0.05)
 
 var _walls: Array[CollisionShape2D] = []
+var _teleporters: Node2D
 
 @onready var ground: TileMapLayer = $Ground
 @onready var start: Marker2D = $Start
@@ -34,6 +38,9 @@ func _ready() -> void:
 		body.add_child(col)
 		add_child(body)
 		_walls.append(col)
+	_teleporters = Node2D.new()
+	_teleporters.name = "Teleporters"
+	add_child(_teleporters)
 	if map_file != "":
 		load_map_text(FileAccess.get_file_as_string(map_file))
 	else:
@@ -46,6 +53,7 @@ func load_map_text(text: String) -> void:
 	var cells := {}
 	var start_cell := Vector2i(-1, -1)
 	var goal_cell := Vector2i(-1, -1)
+	var pads := {}   # color name -> Array of cells, in reading order
 	var lines := text.replace("\r", "").split("\n")
 	for y in lines.size():
 		var line: String = lines[y]
@@ -58,6 +66,11 @@ func load_map_text(text: String) -> void:
 					start_cell = Vector2i(x, y)
 				"G":
 					goal_cell = Vector2i(x, y)
+				"1", "2", "3":
+					var color_name: String = TELEPORT_COLORS[ch]
+					if not pads.has(color_name):
+						pads[color_name] = []
+					pads[color_name].append(Vector2i(x, y))
 	for cell in cells:
 		ground.set_cell(cell, 0, _atlas_for(cells, cell))
 
@@ -70,8 +83,34 @@ func load_map_text(text: String) -> void:
 	else:
 		goal.hide()
 		goal.set_deferred("monitoring", false)
+	_place_teleporters(pads)
 	_update_walls()
 	queue_redraw()
+
+
+## Pads float in their cell like the goal. Each pad links to the next one of its color
+## (with two pads, that's each other); a pad with no partner stays dormant.
+func _place_teleporters(pads: Dictionary) -> void:
+	for child in _teleporters.get_children():
+		_teleporters.remove_child(child)
+		child.queue_free()
+	if teleporter_scene == null:
+		return
+	for color_name in pads:
+		var group: Array[Teleporter] = []
+		for cell in pads[color_name]:
+			var t := teleporter_scene.instantiate() as Teleporter
+			t.color_name = color_name
+			t.position = Vector2(cell.x * T + T / 2.0, (cell.y + 1) * T - 18.0)
+			_teleporters.add_child(t)
+			group.append(t)
+		if group.size() >= 2:
+			for i in group.size():
+				group[i].partner = group[(i + 1) % group.size()]
+
+
+func get_teleporters() -> Array[Node]:
+	return _teleporters.get_children()
 
 
 func _atlas_for(cells: Dictionary, cell: Vector2i) -> Vector2i:

@@ -16,7 +16,10 @@ them headless, publish the web build, and commit/push to `main`.
    `tools/make_art.gd`). Edit those tools and rerun them rather than hand-editing `.tscn` files.
    Copy a tool into the project root to run it: `godot --headless --path . --script res://build_scenes.gd`,
    then delete the copy and run `godot --headless --path . --import`.
-3. Levels are text maps in `levels/*.txt` (`. # = R P G`), loaded by `scripts/level.gd`.
+3. Levels are text maps in `levels/*.txt` (`. # = R P G 1 2 3`; digits are red/yellow/blue
+   teleport pairs), loaded by `scripts/level.gd`. Keep arrival pads off the main route.
+   The game fills any screen (stretch aspect expand; portrait swaps to a 544×960 base and
+   zooms the camera) — check both orientations when changing layout.
 4. Test with `tools/bot.gd` (copy to root, run headless); it must print `RESULT: WON`.
 5. Publish: `tools/build_web.sh <godot> <out-dir in scratchpad>`, then publish `play.html` and
    `editor.html` with the engine files to the artifact URLs above (same `url` keeps the link).

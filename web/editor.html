@@ -23,6 +23,9 @@
   --ink-dim: #a9b3d1;
   --line: rgba(238, 241, 250, 0.14);
   --warn: #ffb44d;
+  --tp-red: #ff4d6d;
+  --tp-yellow: #ffd23f;
+  --tp-blue: #4da3ff;
   --font-display: "Chakra Petch", "Trebuchet MS", system-ui, sans-serif;
   --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
   color-scheme: dark;
@@ -215,7 +218,7 @@ button:disabled { opacity: 0.4; }
       <span class="spacer"></span>
       <button id="closeSheet" type="button" class="primary">Done</button>
     </div>
-    <p>Characters: <code>#</code> ground, <code>=</code> platform you can jump up through, <code>R</code> rubber, <code>P</code> start, <code>G</code> goal, <code>.</code> empty. Your work is saved on this device as you go.</p>
+    <p>Characters: <code>#</code> ground, <code>=</code> platform you can jump up through, <code>R</code> rubber, <code>P</code> start, <code>G</code> goal, <code>1</code> <code>2</code> <code>3</code> red, yellow and blue warps (place two of a color to link them), <code>.</code> empty. Tip: put the pad you arrive at somewhere off the main path, or players walking past it get sent back. Your work is saved on this device as you go.</p>
   </div>
 </div>
 
@@ -270,6 +273,9 @@ button:disabled { opacity: 0.4; }
     { ch: 'R', label: 'Rubber' },
     { ch: 'P', label: 'Start' },
     { ch: 'G', label: 'Goal' },
+    { ch: '1', label: 'Red warp' },
+    { ch: '2', label: 'Yellow warp' },
+    { ch: '3', label: 'Blue warp' },
     { ch: '.', label: 'Erase' },
   ];
   const STORE_KEY = 'squarehop-editor-level';
@@ -281,6 +287,8 @@ button:disabled { opacity: 0.4; }
     rubber: C('--rubber'), rubberLight: C('--rubber-light'), rubberDark: C('--rubber-dark'),
     hero: C('--hero'), goal: C('--goal'), ink: C('--ink'), skyTop: C('--sky-top'),
   };
+  const WARP = { '1': C('--tp-red'), '2': C('--tp-yellow'), '3': C('--tp-blue') };
+  const WARP_NAME = { '1': 'red', '2': 'yellow', '3': 'blue' };
 
   // ---------- Level data ----------
   let grid = [];        // ROWS arrays of characters
@@ -297,7 +305,7 @@ button:disabled { opacity: 0.4; }
     while (src.length < ROWS) src.unshift('');
     for (const line of src) {
       const row = [];
-      for (let x = 0; x < width; x++) row.push('.#=RPG'.includes(line[x]) ? line[x] : '.');
+      for (let x = 0; x < width; x++) row.push(line[x] && '.#=RPG123'.includes(line[x]) ? line[x] : '.');
       rows.push(row);
     }
     return rows;
@@ -360,6 +368,18 @@ button:disabled { opacity: 0.4; }
       g.fillStyle = col.skyTop;
       g.fillRect(x + s * 0.5, y + s - p * 0.72, Math.max(1, s * 0.09), Math.max(2, s * 0.16));
       g.fillRect(x + s * 0.68, y + s - p * 0.72, Math.max(1, s * 0.09), Math.max(2, s * 0.16));
+    } else if (WARP[ch]) {
+      // Teleport: the goal's square plus a ring of pixel blocks for the glow.
+      const c = WARP[ch], p = s * 0.62, o = (s - p) / 2, px = Math.max(2, Math.round(s / 9));
+      g.fillStyle = c;
+      for (let i = 0; i * px < s; i++) {
+        const a = (i % 2) ? 0.35 : 0.7;
+        g.globalAlpha = a;
+        g.fillRect(x + i * px, y, px, px); g.fillRect(x + i * px, y + s - px, px, px);
+        g.fillRect(x, y + i * px, px, px); g.fillRect(x + s - px, y + i * px, px, px);
+      }
+      g.globalAlpha = 1; g.fillRect(x + o, y + o, p, p);
+      g.fillStyle = 'rgba(0,0,0,0.35)'; g.fillRect(x + s * 0.4, y + s * 0.4, s * 0.2, s * 0.2);
     } else if (ch === 'G') {
       const p = s * 0.75, o = (s - p) / 2;
       g.globalAlpha = 0.3; g.fillStyle = col.goal; g.fillRect(x, y, s, s);
@@ -464,8 +484,16 @@ button:disabled { opacity: 0.4; }
     const missing = [];
     if (!find('P')) missing.push('start (P)');
     if (!find('G')) missing.push('goal (G)');
-    status.textContent = missing.length ? 'Add a ' + missing.join(' and a ') : width() + ' tiles wide';
-    status.classList.toggle('ok', !missing.length);
+    const warps = { '1': 0, '2': 0, '3': 0 };
+    for (const row of grid) for (const ch of row) if (ch in warps) warps[ch]++;
+    const unpaired = Object.keys(warps).filter(k => warps[k] === 1).map(k => WARP_NAME[k]);
+    const extra = Object.keys(warps).filter(k => warps[k] > 2).map(k => WARP_NAME[k]);
+    let msg = '';
+    if (missing.length) msg = 'Add a ' + missing.join(' and a ');
+    else if (unpaired.length) msg = unpaired.join(', ') + ' warp needs a second pad';
+    else if (extra.length) msg = extra.join(', ') + ': more than 2 pads, they link in a loop';
+    status.textContent = msg || width() + ' tiles wide';
+    status.classList.toggle('ok', !msg);
   }
   undoBtn.addEventListener('click', () => {
     const t = undoStack.pop();
