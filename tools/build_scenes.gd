@@ -101,19 +101,24 @@ func _make_tileset() -> TileSet:
 	var ts := TileSet.new()
 	ts.tile_size = Vector2i(T, T)
 	ts.add_physics_layer()
+	ts.add_custom_data_layer()
+	ts.set_custom_data_layer_name(0, "rubber")
+	ts.set_custom_data_layer_type(0, TYPE_BOOL)
 	var src := TileSetAtlasSource.new()
 	src.texture = load("res://art/tiles.png")
 	src.texture_region_size = Vector2i(T, T)
-	for i in 3:
+	for i in 4:
 		src.create_tile(Vector2i(i, 0))
 	ts.add_source(src, 0)
 	var square := PackedVector2Array([Vector2(-16, -16), Vector2(16, -16), Vector2(16, 16), Vector2(-16, 16)])
-	for i in 3:
+	for i in 4:
 		var td := src.get_tile_data(Vector2i(i, 0), 0)
 		td.add_collision_polygon(0)
 		td.set_collision_polygon_points(0, 0, square)
 		if i == 2:
 			td.set_collision_polygon_one_way(0, 0, true)   # jump up through floating platforms
+		if i == 3:
+			td.set_custom_data("rubber", true)             # the player bounces off it
 	return ts
 
 
@@ -176,6 +181,28 @@ func _player_scene() -> Node:
 	cam.position_smoothing_enabled = true
 	cam.position_smoothing_speed = 8.0
 	p.add_child(cam)
+	# Dust puff at the feet on jumps, landings and bounces (world-space, one shot).
+	var dust := CPUParticles2D.new()
+	dust.name = "Dust"
+	dust.position = Vector2(0, 12)
+	dust.emitting = false
+	dust.one_shot = true
+	dust.amount = 8
+	dust.lifetime = 0.4
+	dust.explosiveness = 1.0
+	dust.local_coords = false
+	dust.direction = Vector2(0, -1)
+	dust.spread = 75.0
+	dust.gravity = Vector2(0, 400)
+	dust.initial_velocity_min = 50.0
+	dust.initial_velocity_max = 140.0
+	dust.scale_amount_min = 3.0
+	dust.scale_amount_max = 5.0
+	var fade := Gradient.new()
+	fade.set_color(0, Color(INK, 0.9))
+	fade.set_color(1, Color(INK, 0.0))
+	dust.color_ramp = fade
+	p.add_child(dust)
 	return p
 
 
@@ -227,6 +254,27 @@ func _hud_scene() -> Node:
 	var win := _menu(root, "WinMenu", "Goal reached", "Time 0.00s  ·  Falls 0",
 		"ResultLabel", "AgainButton", "Play again")
 	win.visible = false
+
+	var tune := Button.new()
+	tune.name = "TuneButton"
+	tune.unique_name_in_owner = true
+	tune.text = "Tune"
+	tune.anchor_left = 1.0
+	tune.anchor_right = 1.0
+	tune.offset_left = -102.0
+	tune.offset_right = -14.0
+	tune.offset_top = 10.0
+	tune.offset_bottom = 54.0
+	tune.focus_mode = Control.FOCUS_NONE
+	root.add_child(tune)
+
+	var panel := Control.new()
+	panel.name = "TuningPanel"
+	panel.unique_name_in_owner = true
+	panel.set_script(load("res://scripts/tuning_panel.gd"))
+	_full_rect(panel)
+	root.add_child(panel)
+	hud.process_mode = Node.PROCESS_MODE_ALWAYS   # menus keep working while the game is paused
 	return hud
 
 
@@ -337,32 +385,8 @@ func _level_scene() -> Node:
 	ground.name = "Ground"
 	ground.tile_set = load("res://art/tileset.tres")
 	level.add_child(ground)
-
-	# Level 1, 100 tiles wide. "#" = ground, "=" = one-way floating platform.
-	var cells := {}
-	_fill(cells, 0, 15, 15, 2, "#")     # start
-	_fill(cells, 8, 13, 2, 2, "#")      # practice step
-	# pit 15-17
-	_fill(cells, 18, 15, 16, 2, "#")
-	_fill(cells, 22, 14, 1, 1, "#")     # stairs up...
-	_fill(cells, 23, 13, 1, 2, "#")
-	_fill(cells, 24, 12, 3, 3, "#")     # ...and drop off the far side
-	# wide pit 34-38 with a platform to land on
-	_fill(cells, 35, 13, 4, 1, "=")
-	_fill(cells, 39, 15, 14, 2, "#")
-	_fill(cells, 43, 12, 2, 3, "#")     # tall wall to jump over
-	# long gap 53-63 crossed on two floating platforms
-	_fill(cells, 55, 12, 3, 1, "=")
-	_fill(cells, 61, 12, 3, 1, "=")
-	_fill(cells, 64, 15, 36, 2, "#")
-	_fill(cells, 84, 13, 3, 2, "#")     # final climb to the goal
-	_fill(cells, 87, 11, 3, 4, "#")
-
-	for cell in cells:
-		var atlas := Vector2i(2, 0)
-		if cells[cell] == "#":
-			atlas = Vector2i(1, 0) if cells.has(cell + Vector2i.UP) else Vector2i(0, 0)
-		ground.set_cell(cell, 0, atlas)
+	# The layout lives in a text map; the level paints Ground from it when it loads.
+	level.set("map_file", "res://levels/level_01.txt")
 
 	var start := Marker2D.new()
 	start.name = "Start"
@@ -375,11 +399,6 @@ func _level_scene() -> Node:
 	level.add_child(goal)
 	return level
 
-
-func _fill(cells: Dictionary, col: int, row: int, w: int, h: int, kind: String) -> void:
-	for y in range(row, row + h):
-		for x in range(col, col + w):
-			cells[Vector2i(x, y)] = kind
 
 
 func _main_scene() -> Node:

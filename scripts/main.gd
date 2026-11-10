@@ -1,5 +1,6 @@
 extends Node
 ## Runs the game: loads the level, spawns the player, and tracks time, falls and winning.
+## In a web build it also lets the page send a level in (used by the level editor).
 
 enum State { READY, PLAY, WON }
 
@@ -12,6 +13,8 @@ var falls := 0
 var level: Level
 var player: Player
 
+var _js_load_level: JavaScriptObject
+
 @onready var world: Node2D = $World
 @onready var hud: Hud = $HUD
 
@@ -21,8 +24,20 @@ func _ready() -> void:
 	world.add_child(level)
 	player = player_scene.instantiate() as Player
 	level.add_child(player)
+	_fit_to_level()
 
-	# Keep the camera inside the level, and treat falling below it as a fall.
+	player.reset_to(level.start.position)
+	player.fell.connect(_on_player_fell)
+	level.goal_reached.connect(_on_goal_reached)
+	hud.play_requested.connect(new_run)
+	hud.tuning_panel.player = player
+	hud.set_stats(0.0, 0)
+	hud.show_start()
+	_setup_web_bridge()
+
+
+## Keep the camera inside the level, and treat falling below it as a fall.
+func _fit_to_level() -> void:
 	var b := level.get_bounds()
 	player.camera.limit_left = int(b.position.x)
 	player.camera.limit_right = int(b.end.x)
@@ -30,12 +45,14 @@ func _ready() -> void:
 	player.camera.limit_bottom = int(b.end.y)
 	player.fall_limit_y = b.end.y + 80.0
 
-	player.reset_to(level.start.position)
-	player.fell.connect(_on_player_fell)
-	level.goal_reached.connect(_on_goal_reached)
-	hud.play_requested.connect(new_run)
-	hud.set_stats(0.0, 0)
-	hud.show_start()
+
+## Replace the current level with a text map and start playing it.
+func load_level_text(text: String) -> void:
+	level.load_map_text(text)
+	_fit_to_level()
+	get_tree().paused = false
+	hud.tuning_panel.hide()
+	new_run()
 
 
 func new_run() -> void:
@@ -73,3 +90,22 @@ func _on_goal_reached() -> void:
 	player.active = false
 	player.velocity = Vector2.ZERO
 	hud.show_win(run_time, falls)
+
+
+# ---------- Web page bridge ----------
+
+func _setup_web_bridge() -> void:
+	if not OS.has_feature("web"):
+		return
+	_js_load_level = JavaScriptBridge.create_callback(_on_js_load_level)
+	var window := JavaScriptBridge.get_interface("window")
+	window.squareHopLoadLevel = _js_load_level
+	var pending: Variant = window.squareHopPendingLevel
+	if pending is String and pending != "":
+		load_level_text(pending)
+	JavaScriptBridge.eval("window.dispatchEvent(new Event('squarehop-ready'))")
+
+
+func _on_js_load_level(args: Array) -> void:
+	if args.size() > 0:
+		load_level_text(str(args[0]))

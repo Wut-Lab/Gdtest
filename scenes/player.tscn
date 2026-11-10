@@ -5,13 +5,31 @@
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_g2els"]
 size = Vector2(24, 24)
 
-[node name="Player" type="CharacterBody2D" unique_id=456436593]
+[sub_resource type="Gradient" id="Gradient_qhqgy"]
+colors = PackedColorArray(0.93333334, 0.94509804, 0.98039216, 0.9, 0.93333334, 0.94509804, 0.98039216, 0)
+
+[node name="Player" type="CharacterBody2D" unique_id=375092903]
 floor_snap_length = 4.0
 script = ExtResource("1_3vyb7")
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=902166226]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=907061958]
 shape = SubResource("RectangleShape2D_g2els")
 
-[node name="Camera2D" type="Camera2D" parent="." unique_id=18760806]
+[node name="Camera2D" type="Camera2D" parent="." unique_id=1757218816]
 position_smoothing_enabled = true
 position_smoothing_speed = 8.0
+
+[node name="Dust" type="CPUParticles2D" parent="." unique_id=1464871790]
+position = Vector2(0, 12)
+emitting = false
+lifetime = 0.4
+one_shot = true
+explosiveness = 1.0
+direction = Vector2(0, -1)
+spread = 75.0
+gravity = Vector2(0, 400)
+initial_velocity_min = 50.0
+initial_velocity_max = 140.0
+scale_amount_min = 3.0
+scale_amount_max = 5.0
+color_ramp = SubResource("Gradient_qhqgy")

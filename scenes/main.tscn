@@ -17,26 +17,27 @@ width = 4
 height = 256
 fill_to = Vector2(0, 1)
 
-[node name="Main" type="Node" unique_id=1823879573]
+[node name="Main" type="Node" unique_id=1917044332]
 script = ExtResource("1_o6xl0")
 level_scene = ExtResource("2_tipki")
 player_scene = ExtResource("3_85g3d")
 
-[node name="Background" type="CanvasLayer" parent="." unique_id=255991686]
+[node name="Background" type="CanvasLayer" parent="." unique_id=1613578386]
 layer = -1
 
-[node name="Sky" type="TextureRect" parent="Background" unique_id=315501615]
+[node name="Sky" type="TextureRect" parent="Background" unique_id=1255815828]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 texture = SubResource("GradientTexture2D_jkv2x")
 expand_mode = 1
 
-[node name="World" type="Node2D" parent="." unique_id=294234105]
+[node name="World" type="Node2D" parent="." unique_id=1180393093]
 
-[node name="HUD" type="CanvasLayer" parent="." unique_id=56584878 instance=ExtResource("4_choun")]
+[node name="HUD" type="CanvasLayer" parent="." unique_id=1545665246 instance=ExtResource("4_choun")]
+process_mode = 3
 script = ExtResource("5_ya4ey")
 
-[node name="TouchControls" type="CanvasLayer" parent="." unique_id=326371651 instance=ExtResource("6_eb6dy")]
+[node name="TouchControls" type="CanvasLayer" parent="." unique_id=2062059144 instance=ExtResource("6_eb6dy")]
 layer = 2
 script = ExtResource("7_trceg")

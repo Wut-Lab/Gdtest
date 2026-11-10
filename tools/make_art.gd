@@ -21,8 +21,8 @@ func _initialize() -> void:
 
 
 func _tiles() -> Image:
-	# Three 32×32 tiles: 0 = ground surface, 1 = ground fill, 2 = floating platform.
-	var img := Image.create_empty(96, 32, false, Image.FORMAT_RGBA8)
+	# Four 32×32 tiles: 0 = ground surface, 1 = ground fill, 2 = floating platform, 3 = rubber.
+	var img := Image.create_empty(128, 32, false, Image.FORMAT_RGBA8)
 	img.fill_rect(Rect2i(0, 0, 32, 32), STONE)
 	img.fill_rect(Rect2i(0, 0, 32, 6), STONE_TOP)
 	img.fill_rect(Rect2i(0, 6, 1, 26), STONE_SIDE)
@@ -34,7 +34,40 @@ func _tiles() -> Image:
 	img.fill_rect(Rect2i(64, 0, 32, 6), STONE_TOP)
 	img.fill_rect(Rect2i(64, 26, 32, 6), STONE_SIDE)
 	img.fill_rect(Rect2i(64, 6, 1, 20), STONE_SIDE)
+	_rubber(img, 96)
 	return img
+
+
+func _rubber(img: Image, ox: int) -> void:
+	# Yellow rubber: rounded, glossy top lip, darker body, and a row of grip studs.
+	var body := Color("f2c230")
+	var light := Color("ffe27a")
+	var shade := Color("b8860b")
+	var groove := Color("9c7208")
+	for y in 32:
+		for x in 32:
+			# Rounded top corners (radius 6) so it reads as soft rubber, not stone.
+			var cx := 6.0 if x < 6 else (25.0 if x > 25 else float(x))
+			if y < 6 and Vector2(x + 0.5, y + 0.5).distance_to(Vector2(cx + 0.5, 6.5)) > 6.5:
+				continue
+			var c := body
+			if y < 3:
+				c = light
+			elif y < 5:
+				c = body.lerp(light, 0.5)
+			elif y >= 27:
+				c = shade
+			img.set_pixel(ox + x, y, c)
+	# Grip studs: two rows of small raised bumps with a highlight and a shadow.
+	for row in [[11, 4], [19, 12]]:
+		var y0: int = row[0]
+		var x := ox + int(row[1])
+		while x < ox + 30:
+			img.fill_rect(Rect2i(x, y0, 4, 4), shade)
+			img.fill_rect(Rect2i(x, y0, 3, 3), body.lerp(light, 0.6))
+			x += 16
+	# A horizontal groove near the bottom, like the edge of a rubber mat.
+	img.fill_rect(Rect2i(ox + 2, 25, 28, 1), groove)
 
 
 func _circle(diameter: int, fill: Color, ring: Color) -> Image:

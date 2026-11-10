@@ -88,8 +88,8 @@ body {
   if (missing.length) { fail('This browser is missing features the game needs: ' + missing.join(', ') + '.'); return; }
 
   const engine = new Engine({
-    args: [], canvasResizePolicy: 2, executable: 'index', experimentalVK: false,
-    fileSizes: { 'index.pck': 41488, 'index.wasm': 37700666 },
+    canvas: document.getElementById('canvas'), args: [], canvasResizePolicy: 2, executable: 'index', experimentalVK: false,
+    fileSizes: { 'index.pck': /*PCK_SIZE*/0, 'index.wasm': /*WASM_SIZE*/0 },
     focusCanvas: true, gdextensionLibs: [], emscriptenPoolSize: 8, godotPoolSize: 4,
     ensureCrossOriginIsolationHeaders: false,
   });

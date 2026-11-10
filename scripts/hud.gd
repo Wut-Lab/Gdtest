@@ -1,6 +1,6 @@
 class_name Hud
 extends CanvasLayer
-## Timer, fall counter, and the start and win menus.
+## Timer, fall counter, the start and win menus, and the Tune button.
 
 signal play_requested
 
@@ -11,11 +11,15 @@ signal play_requested
 @onready var result_label: Label = %ResultLabel
 @onready var play_button: Button = %PlayButton
 @onready var again_button: Button = %AgainButton
+@onready var tune_button: Button = %TuneButton
+@onready var tuning_panel: TuningPanel = %TuningPanel
 
 
 func _ready() -> void:
 	play_button.pressed.connect(play_requested.emit)
 	again_button.pressed.connect(play_requested.emit)
+	tune_button.pressed.connect(tuning_panel.open)
+	tuning_panel.closed.connect(func() -> void: get_viewport().gui_release_focus())
 
 
 func show_start() -> void:

@@ -1,0 +1,570 @@
+<title>Square Hop Level Editor</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: one-screen tool. Top bar (actions), a horizontally scrolling tile grid, and a tile
+   palette at the bottom within thumb reach. Play swaps in the real Godot game full-screen.
+   Single committed dusk look shared with the game. */
+:root {
+  --sky-top: #1b2440;
+  --sky-bot: #3d4f7c;
+  --chrome: #141b33;
+  --chrome-2: #222c4d;
+  --stone: #e2a86f;
+  --stone-top: #f7d5a6;
+  --stone-side: #ad7546;
+  --rubber: #f2c230;
+  --rubber-light: #ffe27a;
+  --rubber-dark: #b8860b;
+  --hero: #ff6b5e;
+  --goal: #79e2c2;
+  --ink: #eef1fa;
+  --ink-dim: #a9b3d1;
+  --line: rgba(238, 241, 250, 0.14);
+  --warn: #ffb44d;
+  --font-display: "Chakra Petch", "Trebuchet MS", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--chrome);
+  color: var(--ink);
+  font-family: var(--font-body);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+button {
+  font: 600 0.875rem var(--font-body);
+  color: var(--ink);
+  background: var(--chrome-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  min-height: 40px;
+  padding: 0 12px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+button:focus-visible { outline: 2px solid var(--goal); outline-offset: 2px; }
+button.primary { background: var(--goal); color: var(--sky-top); border-color: transparent; font-family: var(--font-display); font-size: 1rem; letter-spacing: 0.04em; }
+button:disabled { opacity: 0.4; }
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-block: 8px;
+  padding-left: max(12px, env(safe-area-inset-left, 0px));
+  padding-right: max(12px, env(safe-area-inset-right, 0px));
+  background: var(--chrome);
+  border-bottom: 1px solid var(--line);
+}
+.bar h1 { margin: 0; font: 700 1.05rem var(--font-display); letter-spacing: 0.03em; white-space: nowrap; }
+.bar h1 span { color: var(--hero); }
+.bar .spacer { flex: 1; }
+.status { font-size: 0.75rem; color: var(--warn); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.status.ok { color: var(--ink-dim); }
+
+#gridWrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: linear-gradient(var(--sky-top), var(--sky-bot));
+  overscroll-behavior: contain;
+}
+#grid { display: block; }
+
+.palette {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-top: 8px;
+  padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(12px, env(safe-area-inset-left, 0px));
+  padding-right: max(12px, env(safe-area-inset-right, 0px));
+  background: var(--chrome);
+  border-top: 1px solid var(--line);
+}
+.tool {
+  flex: 0 0 auto;
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  min-width: 58px;
+  min-height: 58px;
+  padding: 6px 6px 4px;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--ink-dim);
+}
+.tool canvas { width: 26px; height: 26px; }
+.tool[aria-pressed="true"] { border-color: var(--goal); color: var(--ink); background: #2b3963; box-shadow: inset 0 0 0 1px var(--goal); }
+
+.sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  align-items: end;
+  background: rgba(0, 0, 0, 0.5);
+}
+.sheet > div {
+  background: var(--chrome);
+  border-top: 1px solid var(--line);
+  border-radius: 14px 14px 0 0;
+  padding-top: 16px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid;
+  gap: 12px;
+  max-height: 85vh;
+  overflow-y: auto;
+  width: 100%;
+  max-width: 640px;
+  justify-self: center;
+  box-sizing: border-box;
+}
+.sheet h2 { margin: 0; font: 700 1.125rem var(--font-display); }
+.sheet .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.sheet label { font-size: 0.8125rem; color: var(--ink-dim); }
+.sheet textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 120px;
+  font: 11px/1.2 ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color: var(--ink);
+  background: #0e1428;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+  white-space: pre;
+  overflow: auto;
+}
+.sheet p { margin: 0; font-size: 0.8125rem; color: var(--ink-dim); line-height: 1.5; }
+.num { font-variant-numeric: tabular-nums; min-width: 3ch; text-align: center; }
+
+#game {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  background: var(--sky-top);
+}
+#game.away { visibility: hidden; pointer-events: none; }
+#canvas { display: block; width: 100%; height: 100%; outline: none; touch-action: none; }
+#backBtn {
+  position: absolute;
+  top: calc(10px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  background: rgba(20, 27, 51, 0.8);
+}
+#loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: 10px;
+  text-align: center;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  background: var(--sky-top);
+}
+#loading p { margin: 0; color: var(--ink-dim); max-width: 34ch; line-height: 1.5; }
+#loadBar { width: min(260px, 70vw); accent-color: var(--goal); }
+</style>
+
+<div class="bar">
+  <h1>Level <span>Editor</span></h1>
+  <span class="status" id="status" role="status"></span>
+  <span class="spacer"></span>
+  <button id="undoBtn" type="button" disabled>Undo</button>
+  <button id="levelBtn" type="button">Level</button>
+  <button id="playBtn" type="button" class="primary">Play &#9654;</button>
+</div>
+
+<div id="gridWrap"><canvas id="grid" aria-label="Level grid. Pick a tile below, then tap or drag to paint."></canvas></div>
+
+<div class="palette" id="palette" role="toolbar" aria-label="Tiles"></div>
+
+<div class="sheet" id="sheet" hidden>
+  <div role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <h2 id="sheetTitle">Level</h2>
+    <div class="row">
+      <label for="widthDown">Width</label>
+      <button id="widthDown" type="button" aria-label="Remove 10 columns">−10</button>
+      <span class="num" id="widthNum">100</span>
+      <button id="widthUp" type="button" aria-label="Add 10 columns">+10</button>
+    </div>
+    <div class="row">
+      <button id="copyBtn" type="button">Copy level text</button>
+      <button id="level1Btn" type="button">Load Level 1</button>
+      <button id="blankBtn" type="button">New blank level</button>
+    </div>
+    <p id="copyNote">Copy the level and paste it to Claude to add it to the game, or keep it to load again later.</p>
+    <label for="levelText">Level text (paste one here to load it)</label>
+    <textarea id="levelText" spellcheck="false" autocomplete="off"></textarea>
+    <div class="row">
+      <button id="loadTextBtn" type="button">Load this text</button>
+      <span class="spacer"></span>
+      <button id="closeSheet" type="button" class="primary">Done</button>
+    </div>
+    <p>Characters: <code>#</code> ground, <code>=</code> platform you can jump up through, <code>R</code> rubber, <code>P</code> start, <code>G</code> goal, <code>.</code> empty. Your work is saved on this device as you go.</p>
+  </div>
+</div>
+
+<div id="game" class="away" aria-hidden="true">
+  <canvas id="canvas" tabindex="0">This game needs a browser with WebGL 2.</canvas>
+  <button id="backBtn" type="button">&#9664; Edit level</button>
+  <div id="loading" hidden>
+    <strong>Loading the game</strong>
+    <p id="loadMsg">Downloading the Godot engine (about 13 MB, first time only)…</p>
+    <progress id="loadBar"></progress>
+  </div>
+</div>
+
+<script>
+// ---------- Godot engine loader (engine and data are published as base64 text) ----------
+(() => {
+  const realFetch = window.fetch.bind(window);
+  async function decodeFile(path) {
+    const res = await realFetch(path);
+    if (!res.ok) throw new Error('could not download ' + path + ' (HTTP ' + res.status + ')');
+    const text = (await res.text()).trim();
+    if (Uint8Array.fromBase64) return Uint8Array.fromBase64(text);
+    const bin = atob(text);
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+  window.fetch = async (input, init) => {
+    const url = typeof input === 'string' ? input : input.url;
+    if (/index\.wasm$/.test(url)) {
+      const gz = await decodeFile('index.wasm.gz.b64.txt');
+      return new Response(new Blob([gz]).stream().pipeThrough(new DecompressionStream('gzip')),
+        { headers: { 'Content-Type': 'application/wasm' } });
+    }
+    if (/index\.pck$/.test(url)) {
+      return new Response(await decodeFile('index.pck.b64.txt'),
+        { headers: { 'Content-Type': 'application/octet-stream' } });
+    }
+    return realFetch(input, init);
+  };
+})();
+</script>
+<script src="index.js"></script>
+<script>
+(() => {
+  const ROWS = 17;
+  const LEVEL_1 = /*LEVEL_01*/"";
+  const TILES = [
+    { ch: 'hand', label: 'Move' },
+    { ch: '#', label: 'Ground' },
+    { ch: '=', label: 'Platform' },
+    { ch: 'R', label: 'Rubber' },
+    { ch: 'P', label: 'Start' },
+    { ch: 'G', label: 'Goal' },
+    { ch: '.', label: 'Erase' },
+  ];
+  const STORE_KEY = 'squarehop-editor-level';
+
+  const css = getComputedStyle(document.documentElement);
+  const C = n => css.getPropertyValue(n).trim();
+  const col = {
+    stone: C('--stone'), stoneTop: C('--stone-top'), stoneSide: C('--stone-side'),
+    rubber: C('--rubber'), rubberLight: C('--rubber-light'), rubberDark: C('--rubber-dark'),
+    hero: C('--hero'), goal: C('--goal'), ink: C('--ink'), skyTop: C('--sky-top'),
+  };
+
+  // ---------- Level data ----------
+  let grid = [];        // ROWS arrays of characters
+  let tool = '#';
+  const undoStack = [];
+
+  function parse(text) {
+    const lines = text.replace(/\r/g, '').split('\n');
+    while (lines.length && lines[lines.length - 1] === '') lines.pop();
+    const width = Math.max(20, ...lines.map(l => l.length));
+    const rows = [];
+    // Keep the bottom 17 rows (the ground is at the bottom); pad short levels at the top.
+    const src = lines.slice(-ROWS);
+    while (src.length < ROWS) src.unshift('');
+    for (const line of src) {
+      const row = [];
+      for (let x = 0; x < width; x++) row.push('.#=RPG'.includes(line[x]) ? line[x] : '.');
+      rows.push(row);
+    }
+    return rows;
+  }
+  const toText = () => grid.map(r => r.join('')).join('\n') + '\n';
+  const width = () => grid[0].length;
+  function blank(w) {
+    const rows = [];
+    for (let y = 0; y < ROWS; y++) rows.push(Array(w).fill(y >= 15 ? '#' : '.'));
+    rows[14][2] = 'P';
+    rows[14][w - 3] = 'G';
+    return rows;
+  }
+  function save() {
+    try { localStorage.setItem(STORE_KEY, toText()); } catch (_) {}
+  }
+  function load() {
+    try { const t = localStorage.getItem(STORE_KEY); if (t) return parse(t); } catch (_) {}
+    return parse(LEVEL_1);
+  }
+  function pushUndo() {
+    undoStack.push(toText());
+    if (undoStack.length > 50) undoStack.shift();
+    undoBtn.disabled = false;
+  }
+  function find(ch) {
+    for (let y = 0; y < ROWS; y++) { const x = grid[y].indexOf(ch); if (x >= 0) return { x, y }; }
+    return null;
+  }
+
+  // ---------- Drawing ----------
+  const wrap = document.getElementById('gridWrap');
+  const canvas = document.getElementById('grid');
+  const ctx = canvas.getContext('2d');
+  let cell = 28;
+
+  function drawTile(g, ch, x, y, s, above) {
+    if (ch === '#') {
+      g.fillStyle = col.stone; g.fillRect(x, y, s, s);
+      if (above !== '#' && above !== 'R') { g.fillStyle = col.stoneTop; g.fillRect(x, y, s, Math.max(2, s * 0.19)); }
+      g.fillStyle = col.stoneSide; g.fillRect(x, y, 1, s);
+    } else if (ch === '=') {
+      g.fillStyle = col.stone; g.fillRect(x, y, s, s);
+      g.fillStyle = col.stoneTop; g.fillRect(x, y, s, Math.max(2, s * 0.19));
+      g.fillStyle = col.stoneSide; g.fillRect(x, y + s * 0.81, s, s * 0.19);
+    } else if (ch === 'R') {
+      const r = s * 0.2;
+      g.fillStyle = col.rubber;
+      g.beginPath(); g.roundRect(x, y, s, s, [r, r, 0, 0]); g.fill();
+      g.fillStyle = col.rubberLight; g.fillRect(x + r * 0.5, y + 1, s - r, Math.max(2, s * 0.1));
+      g.fillStyle = col.rubberDark; g.fillRect(x, y + s * 0.84, s, s * 0.16);
+      const d = Math.max(2, s * 0.12);
+      for (const [fx, fy] of [[0.15, 0.36], [0.65, 0.36], [0.4, 0.6], [0.9, 0.6]]) {
+        if (fx * s + d > s) continue;
+        g.fillRect(x + fx * s, y + fy * s, d, d);
+      }
+    } else if (ch === 'P') {
+      const p = s * 0.75, o = (s - p) / 2;
+      g.fillStyle = col.hero; g.fillRect(x + o, y + s - p, p, p);
+      g.fillStyle = col.skyTop;
+      g.fillRect(x + s * 0.5, y + s - p * 0.72, Math.max(1, s * 0.09), Math.max(2, s * 0.16));
+      g.fillRect(x + s * 0.68, y + s - p * 0.72, Math.max(1, s * 0.09), Math.max(2, s * 0.16));
+    } else if (ch === 'G') {
+      const p = s * 0.75, o = (s - p) / 2;
+      g.globalAlpha = 0.3; g.fillStyle = col.goal; g.fillRect(x, y, s, s);
+      g.globalAlpha = 1; g.fillRect(x + o, y + o, p, p);
+    }
+  }
+
+  function resize() {
+    const avail = wrap.clientHeight;
+    cell = Math.max(14, Math.min(44, Math.floor(avail / ROWS)));
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    canvas.style.width = width() * cell + 'px';
+    canvas.style.height = ROWS * cell + 'px';
+    canvas.width = Math.floor(width() * cell * dpr);
+    canvas.height = Math.floor(ROWS * cell * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    draw();
+  }
+
+  function draw() {
+    const w = width();
+    ctx.clearRect(0, 0, w * cell, ROWS * cell);
+    ctx.strokeStyle = 'rgba(238,241,250,0.08)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let x = 0; x <= w; x++) { ctx.moveTo(x * cell + 0.5, 0); ctx.lineTo(x * cell + 0.5, ROWS * cell); }
+    for (let y = 0; y <= ROWS; y++) { ctx.moveTo(0, y * cell + 0.5); ctx.lineTo(w * cell, y * cell + 0.5); }
+    ctx.stroke();
+    // Column numbers every 10 tiles, to talk about places in the level.
+    ctx.fillStyle = 'rgba(238,241,250,0.35)';
+    ctx.font = '600 10px Inter, sans-serif';
+    for (let x = 0; x < w; x += 10) ctx.fillText(String(x), x * cell + 3, 11);
+    for (let y = 0; y < ROWS; y++)
+      for (let x = 0; x < w; x++)
+        if (grid[y][x] !== '.') drawTile(ctx, grid[y][x], x * cell, y * cell, cell, y > 0 ? grid[y - 1][x] : '.');
+    updateStatus();
+  }
+
+  // ---------- Painting ----------
+  let painting = false, lastCell = null;
+  function cellAt(e) {
+    const r = canvas.getBoundingClientRect();
+    const x = Math.floor((e.clientX - r.left) / cell), y = Math.floor((e.clientY - r.top) / cell);
+    return (x >= 0 && y >= 0 && x < width() && y < ROWS) ? { x, y } : null;
+  }
+  function paint(c) {
+    if (!c || (lastCell && lastCell.x === c.x && lastCell.y === c.y)) return;
+    lastCell = c;
+    if (tool === 'P' || tool === 'G') {
+      const old = find(tool);
+      if (old) grid[old.y][old.x] = '.';
+    }
+    grid[c.y][c.x] = tool;
+    draw();
+  }
+  canvas.addEventListener('pointerdown', e => {
+    if (tool === 'hand') return;
+    e.preventDefault();
+    try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+    pushUndo();
+    painting = true; lastCell = null;
+    paint(cellAt(e));
+  });
+  canvas.addEventListener('pointermove', e => { if (painting) paint(cellAt(e)); });
+  const endPaint = () => { if (painting) { painting = false; save(); } };
+  canvas.addEventListener('pointerup', endPaint);
+  canvas.addEventListener('pointercancel', endPaint);
+
+  // ---------- Palette ----------
+  const palette = document.getElementById('palette');
+  for (const t of TILES) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'tool'; b.dataset.tool = t.ch;
+    b.setAttribute('aria-pressed', String(t.ch === tool));
+    const icon = document.createElement('canvas');
+    icon.width = 52; icon.height = 52;
+    const g = icon.getContext('2d'); g.scale(2, 2);
+    if (t.ch === 'hand') {
+      g.strokeStyle = col.ink; g.lineWidth = 2; g.beginPath();
+      g.moveTo(3, 13); g.lineTo(23, 13); g.moveTo(13, 3); g.lineTo(13, 23);
+      g.moveTo(7, 9); g.lineTo(3, 13); g.lineTo(7, 17); g.moveTo(19, 9); g.lineTo(23, 13); g.lineTo(19, 17);
+      g.moveTo(9, 7); g.lineTo(13, 3); g.lineTo(17, 7); g.moveTo(9, 19); g.lineTo(13, 23); g.lineTo(17, 19);
+      g.stroke();
+    } else if (t.ch === '.') {
+      g.strokeStyle = col.ink; g.lineWidth = 2; g.strokeRect(4, 4, 18, 18);
+      g.beginPath(); g.moveTo(4, 22); g.lineTo(22, 4); g.stroke();
+    } else drawTile(g, t.ch, 0, 0, 26, '.');
+    b.append(icon, t.label);
+    b.addEventListener('click', () => setTool(t.ch));
+    palette.append(b);
+  }
+  function setTool(ch) {
+    tool = ch;
+    for (const b of palette.children) b.setAttribute('aria-pressed', String(b.dataset.tool === ch));
+    canvas.style.touchAction = ch === 'hand' ? 'pan-x pan-y' : 'none';
+  }
+
+  // ---------- Status, undo, level sheet ----------
+  const status = document.getElementById('status');
+  const undoBtn = document.getElementById('undoBtn');
+  function updateStatus() {
+    const missing = [];
+    if (!find('P')) missing.push('start (P)');
+    if (!find('G')) missing.push('goal (G)');
+    status.textContent = missing.length ? 'Add a ' + missing.join(' and a ') : width() + ' tiles wide';
+    status.classList.toggle('ok', !missing.length);
+  }
+  undoBtn.addEventListener('click', () => {
+    const t = undoStack.pop();
+    if (t) { grid = parse(t); resize(); save(); }
+    undoBtn.disabled = undoStack.length === 0;
+  });
+
+  const sheet = document.getElementById('sheet');
+  const levelText = document.getElementById('levelText');
+  const copyNote = document.getElementById('copyNote');
+  const widthNum = document.getElementById('widthNum');
+  function openSheet() {
+    levelText.value = toText();
+    widthNum.textContent = width();
+    copyNote.textContent = 'Copy the level and paste it to Claude to add it to the game, or keep it to load again later.';
+    sheet.hidden = false;
+  }
+  document.getElementById('levelBtn').addEventListener('click', openSheet);
+  document.getElementById('closeSheet').addEventListener('click', () => { sheet.hidden = true; });
+  sheet.addEventListener('click', e => { if (e.target === sheet) sheet.hidden = true; });
+  function setWidth(w) {
+    w = Math.max(20, Math.min(400, w));
+    pushUndo();
+    for (const row of grid) {
+      if (w > row.length) {
+        const fill = row[row.length - 1] === '#' ? '#' : '.';
+        while (row.length < w) row.push(fill === '#' ? '#' : '.');
+      } else row.length = w;
+    }
+    widthNum.textContent = w; levelText.value = toText();
+    resize(); save();
+  }
+  document.getElementById('widthDown').addEventListener('click', () => setWidth(width() - 10));
+  document.getElementById('widthUp').addEventListener('click', () => setWidth(width() + 10));
+  document.getElementById('copyBtn').addEventListener('click', () => {
+    const text = toText();
+    levelText.value = text;
+    const fallback = () => {
+      levelText.focus(); levelText.select();
+      copyNote.textContent = 'Your browser blocked copying. The text below is selected: use your phone\'s Copy.';
+    };
+    try {
+      navigator.clipboard.writeText(text).then(
+        () => { copyNote.textContent = 'Copied. Paste it to Claude to add this level to the game.'; },
+        fallback);
+    } catch (_) { fallback(); }
+  });
+  document.getElementById('level1Btn').addEventListener('click', () => { pushUndo(); grid = parse(LEVEL_1); levelText.value = toText(); widthNum.textContent = width(); resize(); save(); });
+  document.getElementById('blankBtn').addEventListener('click', () => { pushUndo(); grid = blank(40); levelText.value = toText(); widthNum.textContent = width(); resize(); save(); });
+  document.getElementById('loadTextBtn').addEventListener('click', () => {
+    if (!levelText.value.trim()) return;
+    pushUndo(); grid = parse(levelText.value); widthNum.textContent = width(); resize(); save();
+    sheet.hidden = true;
+  });
+
+  // ---------- Play in the real game ----------
+  const game = document.getElementById('game');
+  const loading = document.getElementById('loading');
+  const loadMsg = document.getElementById('loadMsg');
+  const loadBar = document.getElementById('loadBar');
+  let engineState = 'idle';   // idle | loading | ready | failed
+
+  window.addEventListener('squarehop-ready', () => { engineState = 'ready'; loading.hidden = true; });
+
+  function showGame(on) {
+    game.classList.toggle('away', !on);
+    game.setAttribute('aria-hidden', String(!on));
+    if (on) document.getElementById('canvas').focus({ preventScroll: true });
+  }
+
+  document.getElementById('playBtn').addEventListener('click', () => {
+    const text = toText();
+    save();
+    showGame(true);
+    if (engineState === 'ready' && window.squareHopLoadLevel) { window.squareHopLoadLevel(text); return; }
+    window.squareHopPendingLevel = text;
+    if (engineState !== 'idle') return;
+    engineState = 'loading';
+    loading.hidden = false;
+    const fail = msg => { engineState = 'failed'; loadMsg.textContent = msg; loadBar.hidden = true; };
+    if (typeof Engine === 'undefined') { fail('The game files did not load. Reload the page to try again.'); return; }
+    const missing = Engine.getMissingFeatures({ threads: false });
+    if (missing.length) { fail('This browser is missing features the game needs: ' + missing.join(', ') + '.'); return; }
+    const engine = new Engine({
+      canvas: document.getElementById('canvas'), args: [], canvasResizePolicy: 2, executable: 'index', experimentalVK: false,
+      fileSizes: { 'index.pck': /*PCK_SIZE*/0, 'index.wasm': /*WASM_SIZE*/0 },
+      focusCanvas: true, gdextensionLibs: [], emscriptenPoolSize: 8, godotPoolSize: 4,
+      ensureCrossOriginIsolationHeaders: false,
+    });
+    engine.startGame({
+      onProgress(current, total) { if (total > 0) { loadBar.max = total; loadBar.value = current; } },
+    }).catch(err => fail('The game could not start: ' + (err && err.message ? err.message : err)));
+  });
+  document.getElementById('backBtn').addEventListener('click', () => showGame(false));
+
+  // ---------- Start ----------
+  grid = load();
+  setTool('#');
+  new ResizeObserver(resize).observe(wrap);
+  resize();
+})();
+</script>
