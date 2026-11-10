@@ -1,0 +1,95 @@
+[gd_resource type="Theme" format=3]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bftqe"]
+content_margin_left = 10.0
+content_margin_top = 10.0
+content_margin_right = 10.0
+content_margin_bottom = 10.0
+bg_color = Color(0.4745098, 0.8862745, 0.7607843, 1)
+draw_center = false
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.93333334, 0.94509804, 0.98039216, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+expand_margin_left = 3.0
+expand_margin_top = 3.0
+expand_margin_right = 3.0
+expand_margin_bottom = 3.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hubev"]
+content_margin_left = 10.0
+content_margin_top = 10.0
+content_margin_right = 10.0
+content_margin_bottom = 10.0
+bg_color = Color(0.4745098, 0.8862745, 0.7607843, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_oqniv"]
+content_margin_left = 10.0
+content_margin_top = 10.0
+content_margin_right = 10.0
+content_margin_bottom = 10.0
+bg_color = Color(0.4745098, 0.8862745, 0.7607843, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_s2pol"]
+content_margin_left = 10.0
+content_margin_top = 10.0
+content_margin_right = 10.0
+content_margin_bottom = 10.0
+bg_color = Color(0.40333334, 0.7533334, 0.6466667, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hjklq"]
+content_margin_left = 22.0
+content_margin_top = 22.0
+content_margin_right = 22.0
+content_margin_bottom = 22.0
+bg_color = Color(0.067, 0.09, 0.169, 0.92)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.93333334, 0.94509804, 0.98039216, 0.15)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[resource]
+default_font_size = 16
+BodyLabel/base_type = &"Label"
+BodyLabel/colors/font_color = Color(0.6627451, 0.7019608, 0.81960785, 1)
+BodyLabel/font_sizes/font_size = 15
+Button/colors/font_color = Color(0.105882354, 0.14117648, 0.2509804, 1)
+Button/colors/font_focus_color = Color(0.105882354, 0.14117648, 0.2509804, 1)
+Button/colors/font_hover_color = Color(0.105882354, 0.14117648, 0.2509804, 1)
+Button/colors/font_pressed_color = Color(0.105882354, 0.14117648, 0.2509804, 1)
+Button/font_sizes/font_size = 18
+Button/styles/focus = SubResource("StyleBoxFlat_bftqe")
+Button/styles/hover = SubResource("StyleBoxFlat_hubev")
+Button/styles/normal = SubResource("StyleBoxFlat_oqniv")
+Button/styles/pressed = SubResource("StyleBoxFlat_s2pol")
+Label/colors/font_color = Color(0.93333334, 0.94509804, 0.98039216, 1)
+PanelContainer/styles/panel = SubResource("StyleBoxFlat_hjklq")
+SmallLabel/base_type = &"Label"
+SmallLabel/colors/font_color = Color(0.6627451, 0.7019608, 0.81960785, 1)
+SmallLabel/font_sizes/font_size = 14
+StatLabel/base_type = &"Label"
+StatLabel/font_sizes/font_size = 20
+TitleLabel/base_type = &"Label"
+TitleLabel/font_sizes/font_size = 28

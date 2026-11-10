@@ -1,0 +1,42 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/main.gd" id="1_o6xl0"]
+[ext_resource type="PackedScene" path="res://levels/level_01.tscn" id="2_tipki"]
+[ext_resource type="PackedScene" path="res://scenes/player.tscn" id="3_85g3d"]
+[ext_resource type="PackedScene" path="res://scenes/hud.tscn" id="4_choun"]
+[ext_resource type="Script" path="res://scripts/hud.gd" id="5_ya4ey"]
+[ext_resource type="PackedScene" path="res://scenes/touch_controls.tscn" id="6_eb6dy"]
+[ext_resource type="Script" path="res://scripts/touch_controls.gd" id="7_trceg"]
+
+[sub_resource type="Gradient" id="Gradient_a8y0u"]
+colors = PackedColorArray(0.105882354, 0.14117648, 0.2509804, 1, 0.23921569, 0.30980393, 0.4862745, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_jkv2x"]
+gradient = SubResource("Gradient_a8y0u")
+width = 4
+height = 256
+fill_to = Vector2(0, 1)
+
+[node name="Main" type="Node" unique_id=1823879573]
+script = ExtResource("1_o6xl0")
+level_scene = ExtResource("2_tipki")
+player_scene = ExtResource("3_85g3d")
+
+[node name="Background" type="CanvasLayer" parent="." unique_id=255991686]
+layer = -1
+
+[node name="Sky" type="TextureRect" parent="Background" unique_id=315501615]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+texture = SubResource("GradientTexture2D_jkv2x")
+expand_mode = 1
+
+[node name="World" type="Node2D" parent="." unique_id=294234105]
+
+[node name="HUD" type="CanvasLayer" parent="." unique_id=56584878 instance=ExtResource("4_choun")]
+script = ExtResource("5_ya4ey")
+
+[node name="TouchControls" type="CanvasLayer" parent="." unique_id=326371651 instance=ExtResource("6_eb6dy")]
+layer = 2
+script = ExtResource("7_trceg")

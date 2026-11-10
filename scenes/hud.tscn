@@ -1,0 +1,108 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/hud.gd" id="1_oo0fn"]
+[ext_resource type="Theme" path="res://art/ui_theme.tres" id="2_5ysmq"]
+
+[node name="HUD" type="CanvasLayer" unique_id=56584878]
+script = ExtResource("1_oo0fn")
+
+[node name="Root" type="Control" parent="." unique_id=294540285]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+theme = ExtResource("2_5ysmq")
+
+[node name="TimeLabel" type="Label" parent="Root" unique_id=102483039]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 14.0
+offset_top = 8.0
+offset_right = 14.0
+offset_bottom = 8.0
+theme_type_variation = &"StatLabel"
+text = "0.00s"
+
+[node name="FallsLabel" type="Label" parent="Root" unique_id=1983705382]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 14.0
+offset_top = 36.0
+offset_right = 14.0
+offset_bottom = 36.0
+theme_type_variation = &"SmallLabel"
+text = "Falls 0"
+
+[node name="StartMenu" type="CenterContainer" parent="Root" unique_id=2069677093]
+unique_name_in_owner = true
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Panel" type="PanelContainer" parent="Root/StartMenu" unique_id=66960015]
+layout_mode = 2
+
+[node name="Box" type="VBoxContainer" parent="Root/StartMenu/Panel" unique_id=1033845711]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="Root/StartMenu/Panel/Box" unique_id=364151585]
+layout_mode = 2
+theme_type_variation = &"TitleLabel"
+text = "Reach the goal"
+horizontal_alignment = 1
+
+[node name="StartBody" type="Label" parent="Root/StartMenu/Panel/Box" unique_id=394501411]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 0)
+layout_mode = 2
+theme_type_variation = &"BodyLabel"
+text = "Run and jump through the level to the green goal. Hold jump to go higher. You can steer a little in mid-air.
+
+Keys: arrows or A/D to move, Space to jump, R to restart."
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="PlayButton" type="Button" parent="Root/StartMenu/Panel/Box" unique_id=1952829222]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 44)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Play"
+
+[node name="WinMenu" type="CenterContainer" parent="Root" unique_id=958435018]
+unique_name_in_owner = true
+visible = false
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Panel" type="PanelContainer" parent="Root/WinMenu" unique_id=1191010292]
+layout_mode = 2
+
+[node name="Box" type="VBoxContainer" parent="Root/WinMenu/Panel" unique_id=1618722793]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="Root/WinMenu/Panel/Box" unique_id=572696491]
+layout_mode = 2
+theme_type_variation = &"TitleLabel"
+text = "Goal reached"
+horizontal_alignment = 1
+
+[node name="ResultLabel" type="Label" parent="Root/WinMenu/Panel/Box" unique_id=797683878]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 0)
+layout_mode = 2
+theme_type_variation = &"BodyLabel"
+text = "Time 0.00s  ·  Falls 0"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="AgainButton" type="Button" parent="Root/WinMenu/Panel/Box" unique_id=1409306355]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 44)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Play again"
