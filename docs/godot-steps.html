@@ -1,0 +1,549 @@
+<title>Learn Godot with Square Hop</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: a single reading column (phone first) with a sticky step bar. Each step is a section
+   tagged with where it happens (phone or computer), then tasks you tick off. The look is
+   Square Hop's own dusk palette, committed to one dark look like the game. */
+:root {
+  --sky: #1b2440;
+  --sky-deep: #141b33;
+  --panel: #222c4d;
+  --panel-2: #2b3963;
+  --line: rgba(238, 241, 250, 0.14);
+  --ink: #eef1fa;
+  --ink-dim: #a9b3d1;
+  --hero: #ff6b5e;
+  --goal: #79e2c2;
+  --stone: #e2a86f;
+  --rubber: #f2c230;
+  --phone: #79e2c2;
+  --computer: #9db7ff;
+  --font-display: "Chakra Petch", "Trebuchet MS", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme: dark;
+}
+[hidden] { display: none !important; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--sky-deep);
+  color: var(--ink);
+  font: 400 1rem/1.6 var(--font-body);
+  -webkit-text-size-adjust: 100%;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--sky-deep); }
+.wrap {
+  max-width: 680px;
+  margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+a { color: var(--goal); text-underline-offset: 2px; }
+a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--goal); outline-offset: 2px; border-radius: 4px; }
+code, .file {
+  font: 500 0.875em var(--font-mono);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 0.05em 0.35em;
+  overflow-wrap: anywhere;
+}
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; line-height: 1.2; margin: 0; }
+
+/* ---------- Opening ---------- */
+header.intro { padding-block: 28px 8px; background: linear-gradient(var(--sky), var(--sky-deep)); }
+.eyebrow { font: 600 0.75rem var(--font-body); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-dim); }
+h1 { font-size: clamp(1.9rem, 7vw, 2.6rem); margin-top: 6px; }
+h1 span { color: var(--hero); }
+.lede { color: var(--ink-dim); max-width: 60ch; margin: 10px 0 0; }
+.scene { margin-top: 18px; width: 100%; height: auto; display: block; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 14px 0 0; font-size: 0.875rem; color: var(--ink-dim); }
+.tag { display: inline-flex; align-items: center; gap: 6px; font: 600 0.75rem var(--font-body); letter-spacing: 0.04em; padding: 3px 9px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+.tag.phone { color: var(--phone); }
+.tag.computer { color: var(--computer); }
+.tag svg { width: 12px; height: 12px; fill: currentColor; }
+
+/* ---------- Sticky step bar ---------- */
+nav.steps {
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 5;
+  background: rgba(20, 27, 51, 0.94);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--line);
+}
+nav.steps .wrap { display: flex; align-items: center; gap: 8px; padding-block: 10px; overflow-x: auto; }
+nav.steps a {
+  flex: 0 0 auto;
+  font: 600 0.8125rem var(--font-body);
+  color: var(--ink);
+  text-decoration: none;
+  padding: 7px 12px;
+  border-radius: 8px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+nav.steps a .n { color: var(--ink-dim); margin-right: 4px; font-variant-numeric: tabular-nums; }
+nav.steps a.done { border-color: var(--goal); }
+nav.steps a.done .n { color: var(--goal); }
+.progress { margin-left: auto; flex: 0 0 auto; font-size: 0.8125rem; color: var(--ink-dim); font-variant-numeric: tabular-nums; padding-left: 8px; }
+
+/* ---------- Steps ---------- */
+section.step { padding-block: 36px 8px; scroll-margin-top: calc(56px + env(safe-area-inset-top, 0px)); }
+.step-head { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; align-items: start; }
+.step-num {
+  grid-row: span 2;
+  width: 44px; height: 44px;
+  display: grid; place-items: center;
+  font: 700 1.375rem var(--font-display);
+  color: var(--sky);
+  background: var(--hero);
+  border-radius: 6px;
+}
+.step-head h2 { font-size: 1.5rem; }
+.step-meta { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; font-size: 0.8125rem; color: var(--ink-dim); }
+.step p { margin: 14px 0 0; max-width: 65ch; }
+.step h3 { font-size: 1.0625rem; margin-top: 26px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.idea { margin-top: 14px; padding: 14px 16px; background: var(--panel); border-radius: 10px; border: 1px solid var(--line); }
+.idea strong { color: var(--goal); }
+.idea p:first-child { margin-top: 0; }
+
+/* Tasks */
+ol.tasks { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 10px; }
+ol.tasks li {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--sky);
+  border: 1px solid var(--line);
+}
+ol.tasks li.checked { border-color: rgba(121, 226, 194, 0.5); }
+ol.tasks li.checked .task-text { color: var(--ink-dim); }
+.check { width: 24px; height: 24px; margin: 2px 0 0; accent-color: var(--goal); cursor: pointer; }
+.task-text { min-width: 0; }
+.task-text b { color: var(--ink); }
+.task-text small { display: block; color: var(--ink-dim); margin-top: 4px; font-size: 0.8125rem; line-height: 1.5; }
+
+/* Scene tree explorer */
+.explorer { margin-top: 14px; display: grid; gap: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.tree { display: grid; padding: 8px; gap: 2px; background: var(--sky); }
+.tree button {
+  display: flex; align-items: center; gap: 8px;
+  text-align: left;
+  font: 500 0.9375rem var(--font-mono);
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  padding: 8px 10px;
+  min-height: 40px;
+  cursor: pointer;
+}
+.tree button .type { font: 400 0.75rem var(--font-body); color: var(--ink-dim); margin-left: auto; }
+.tree button[aria-pressed="true"] { background: var(--panel-2); box-shadow: inset 3px 0 0 var(--hero); }
+.tree .i1 { padding-left: 30px; }
+.tree .i2 { padding-left: 52px; }
+.tree .dot { width: 10px; height: 10px; border-radius: 2px; flex: 0 0 auto; }
+.node-info { padding: 14px 16px; background: var(--panel); border-top: 1px solid var(--line); min-height: 7.5em; }
+.node-info h4 { margin: 0; font: 700 1rem var(--font-display); }
+.node-info p { margin: 6px 0 0; font-size: 0.9375rem; }
+.node-info .seen { color: var(--ink-dim); font-size: 0.875rem; }
+
+/* Quiz */
+.quiz { margin-top: 14px; display: grid; gap: 14px; }
+.q { padding: 14px 16px; background: var(--sky); border: 1px solid var(--line); border-radius: 10px; }
+.q > p { margin: 0 0 10px; font-weight: 600; }
+.answers { display: grid; gap: 8px; }
+.answers button {
+  text-align: left;
+  font: 400 0.9375rem var(--font-body);
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  min-height: 44px;
+  cursor: pointer;
+}
+.answers button.right { border-color: var(--goal); background: rgba(121, 226, 194, 0.14); }
+.answers button.wrong { border-color: var(--hero); background: rgba(255, 107, 94, 0.12); }
+.feedback { margin: 10px 0 0; font-size: 0.875rem; color: var(--ink-dim); min-height: 1.4em; }
+
+/* Editor map */
+.editor-map { margin-top: 14px; overflow-x: auto; }
+.editor-map svg { display: block; width: 100%; min-width: 320px; height: auto; }
+.map-key { margin: 12px 0 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.map-key li { display: grid; grid-template-columns: 26px 1fr; gap: 10px; font-size: 0.9375rem; }
+.map-key .k { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font: 700 0.8125rem var(--font-display); background: var(--rubber); color: var(--sky); }
+
+/* Jump lab */
+.lab { margin-top: 14px; padding: 14px 16px 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+.lab canvas { display: block; width: 100%; height: auto; border-radius: 6px; background: var(--sky); }
+.lab .row { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; margin-top: 12px; }
+.lab label { font-size: 0.875rem; color: var(--ink-dim); }
+.lab output { font: 500 0.875rem var(--font-mono); font-variant-numeric: tabular-nums; }
+.lab input[type="range"] { grid-column: 1 / -1; width: 100%; accent-color: var(--hero); min-height: 28px; }
+.readout { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 12px; font-size: 0.9375rem; }
+.readout b { font: 700 1.125rem var(--font-display); color: var(--goal); font-variant-numeric: tabular-nums; }
+
+/* Coming next */
+.next { padding-block: 36px 48px; }
+.next h2 { font-size: 1.25rem; }
+.next ul { margin: 12px 0 0; padding-left: 1.2em; color: var(--ink-dim); }
+.next li { margin-top: 6px; }
+.next li b { color: var(--ink); }
+.links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.links a { font-size: 0.875rem; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; text-decoration: none; background: var(--panel); }
+</style>
+
+<header class="intro">
+  <div class="wrap">
+    <div class="eyebrow">A beginner's path, using your own game</div>
+    <h1>Learn Godot with <span>Square Hop</span></h1>
+    <p class="lede">Three short steps from "what is Godot?" to changing your game yourself. Every example is a real part of Square Hop, so you can go and look at it. Tick tasks off as you go; your progress is saved on this device.</p>
+    <svg class="scene" viewBox="0 0 640 120" role="img" aria-label="The red square jumping from the ground toward the green goal on a ledge">
+      <defs><pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" fill="none" stroke="rgba(238,241,250,0.06)"/></pattern></defs>
+      <rect width="640" height="120" fill="url(#grid)"/>
+      <rect x="0" y="100" width="640" height="20" fill="#e2a86f"/><rect x="0" y="100" width="640" height="4" fill="#f7d5a6"/>
+      <rect x="470" y="60" width="120" height="40" fill="#e2a86f"/><rect x="470" y="60" width="120" height="4" fill="#f7d5a6"/>
+      <rect x="250" y="94" width="60" height="6" rx="3" fill="#f2c230"/>
+      <path d="M70 92 Q 170 -10 280 90" fill="none" stroke="rgba(238,241,250,0.35)" stroke-width="2" stroke-dasharray="4 6"/>
+      <path d="M282 90 Q 390 -6 505 52" fill="none" stroke="rgba(238,241,250,0.35)" stroke-width="2" stroke-dasharray="4 6"/>
+      <rect x="58" y="84" width="16" height="16" fill="#ff6b5e"/><rect x="66" y="88" width="2" height="4" fill="#1b2440"/><rect x="70" y="88" width="2" height="4" fill="#1b2440"/>
+      <rect x="532" y="36" width="20" height="20" fill="rgba(121,226,194,0.3)"/><rect x="536" y="40" width="12" height="12" fill="#79e2c2"/>
+    </svg>
+    <div class="legend">
+      <span class="tag phone"><svg viewBox="0 0 12 12"><rect x="3" y="0" width="6" height="12" rx="1.5"/></svg>Phone</span><span>you can do it from your phone</span>
+      <span class="tag computer"><svg viewBox="0 0 12 12"><rect x="0" y="1" width="12" height="8" rx="1"/><rect x="3" y="10" width="6" height="2"/></svg>Computer</span><span>needs Godot on a computer</span>
+    </div>
+  </div>
+</header>
+
+<nav class="steps" aria-label="Steps">
+  <div class="wrap">
+    <a href="#step-1" data-step="1"><span class="n">1</span>The parts</a>
+    <a href="#step-2" data-step="2"><span class="n">2</span>Set up</a>
+    <a href="#step-3" data-step="3"><span class="n">3</span>Change it</a>
+    <span class="progress" id="progress">0 of 9 done</span>
+  </div>
+</nav>
+
+<main class="wrap">
+
+  <!-- ================= STEP 1 ================= -->
+  <section class="step" id="step-1">
+    <div class="step-head">
+      <div class="step-num">1</div>
+      <h2>See how a game is built</h2>
+      <div class="step-meta"><span class="tag phone">Phone</span><span>about 10 minutes</span></div>
+    </div>
+
+    <p>Godot is two things. The <b>engine</b> runs the game: about 60 times a second it reads the buttons, moves everything, checks what bumped into what, and draws the screen. The <b>editor</b> is the app you use to build the game. You'll meet the editor in step 2; this step is about the idea underneath everything.</p>
+
+    <div class="idea">
+      <p><strong>The one big idea: everything is a tree of nodes.</strong> A node is a small part that does one job: a hitbox, a camera, a picture, a sound. You stack nodes into a tree, and a saved tree is called a <b>scene</b>. Scenes can sit inside other scenes, so a whole game is scenes made of scenes.</p>
+    </div>
+
+    <h3>Explore Square Hop's player</h3>
+    <p>This is the real tree from <span class="file">scenes/player.tscn</span>. Tap each node to see what it does.</p>
+    <div class="explorer">
+      <div class="tree" role="group" aria-label="Player scene tree">
+        <button type="button" data-node="player" aria-pressed="true"><span class="dot" style="background:#ff6b5e"></span>Player<span class="type">CharacterBody2D</span></button>
+        <button type="button" class="i1" data-node="shape" aria-pressed="false"><span class="dot" style="background:#9db7ff"></span>CollisionShape2D<span class="type">hitbox</span></button>
+        <button type="button" class="i1" data-node="camera" aria-pressed="false"><span class="dot" style="background:#9db7ff"></span>Camera2D<span class="type">camera</span></button>
+        <button type="button" class="i1" data-node="dust" aria-pressed="false"><span class="dot" style="background:#9db7ff"></span>Dust<span class="type">CPUParticles2D</span></button>
+      </div>
+      <div class="node-info" id="nodeInfo" aria-live="polite"></div>
+    </div>
+
+    <p>The whole game is the same idea, one level up. The <span class="file">Main</span> scene holds the sky, the level, the HUD (timer, menus, Tune button) and the touch buttons. The level holds the tiles, the start point, the goal, the teleporters and the player.</p>
+
+    <h3>Your tasks <span class="tag phone">Phone</span></h3>
+    <ol class="tasks">
+      <li><input class="check" type="checkbox" id="t1a" data-step="1"><label class="task-text" for="t1a"><b>Open your game's files in the GitHub app.</b><small>Go to <a href="https://github.com/Wut-Lab/gdtest" target="_blank" rel="noopener">Wut-Lab/gdtest</a>, then <span class="file">scenes</span> → <span class="file">player.tscn</span>. Find the lines that start with <code>[node name=</code>. There are four: the same four nodes as the tree above.</small></label></li>
+      <li><input class="check" type="checkbox" id="t1b" data-step="1"><label class="task-text" for="t1b"><b>Look at a level as text.</b><small>Open <span class="file">levels</span> → <span class="file">level_01.txt</span>. <code>#</code> is ground, <code>R</code> rubber, <code>W</code> rubber wall, <code>P</code> where you start, <code>G</code> the goal. When the game loads, this text is turned into tiles.</small></label></li>
+      <li><input class="check" type="checkbox" id="t1c" data-step="1"><label class="task-text" for="t1c"><b>Answer the three questions below.</b><small>Tick this when you've got them all right.</small></label></li>
+    </ol>
+
+    <div class="quiz" id="quiz1">
+      <div class="q" data-answer="1">
+        <p>Which node decides what the game shows on screen as you move?</p>
+        <div class="answers"><button type="button">CollisionShape2D</button><button type="button">Camera2D</button><button type="button">Dust</button></div>
+        <p class="feedback" aria-live="polite"></p>
+      </div>
+      <div class="q" data-answer="0">
+        <p>What is a scene?</p>
+        <div class="answers"><button type="button">A saved tree of nodes</button><button type="button">One level of the game</button><button type="button">A picture of the game</button></div>
+        <p class="feedback" aria-live="polite"></p>
+      </div>
+      <div class="q" data-answer="2">
+        <p>The square falls through the floor. Which node is most likely missing or broken?</p>
+        <div class="answers"><button type="button">Camera2D</button><button type="button">Dust</button><button type="button">CollisionShape2D</button></div>
+        <p class="feedback" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= STEP 2 ================= -->
+  <section class="step" id="step-2">
+    <div class="step-head">
+      <div class="step-num">2</div>
+      <h2>Get Godot running</h2>
+      <div class="step-meta"><span class="tag computer">Computer</span><span>about 15 minutes, once</span></div>
+    </div>
+
+    <p>To see your game the way Godot sees it, you need the editor on a computer. It's free, it's one app, and Square Hop opens in it like any Godot project. You only do this once.</p>
+    <div class="idea">
+      <p><strong>On a phone?</strong> Godot's editor is also available for Android, through the Google Play Store. It works, but it's cramped on a phone screen and better on a tablet. There's no iPhone version, so on an iPhone, use a computer for this step.</p>
+    </div>
+
+    <h3>Your tasks <span class="tag computer">Computer</span></h3>
+    <ol class="tasks">
+      <li><input class="check" type="checkbox" id="t2a" data-step="2"><label class="task-text" for="t2a"><b>Download Godot.</b><small>Go to <a href="https://godotengine.org/download/" target="_blank" rel="noopener">godotengine.org/download</a> and get <b>Godot Engine</b>, version 4.6 or newer. Skip the <b>.NET</b> version; Square Hop doesn't use it. On Windows it's a zip with the app inside, no installer. On a Mac, open the download and drag Godot to Applications.</small></label></li>
+      <li><input class="check" type="checkbox" id="t2b" data-step="2"><label class="task-text" for="t2b"><b>Download your project.</b><small>On the computer, open <a href="https://github.com/Wut-Lab/gdtest" target="_blank" rel="noopener">github.com/Wut-Lab/gdtest</a> (signed in), tap the green <b>Code</b> button, then <b>Download ZIP</b>. Unzip it somewhere easy to find, like your Documents folder.</small></label></li>
+      <li><input class="check" type="checkbox" id="t2c" data-step="2"><label class="task-text" for="t2c"><b>Open it and press Play.</b><small>Start Godot. In the Project Manager choose <b>Import</b>, pick the <span class="file">project.godot</span> file in the folder you unzipped, then <b>Import</b> (or <b>Import &amp; Edit</b>). The first time, Godot spends a few seconds preparing the art. Then press <b>F5</b>, or the ▶ button at the top right. Square Hop opens in its own window.</small></label></li>
+    </ol>
+
+    <h3>Find your way around the editor</h3>
+    <p>The editor has a lot of buttons, but you only need five areas to start.</p>
+    <div class="editor-map">
+      <svg viewBox="0 0 640 380" role="img" aria-label="Map of the Godot editor: Scene panel top left, FileSystem bottom left, the main view in the middle, Inspector on the right, and the play buttons at the top right.">
+        <rect x="0" y="0" width="640" height="380" rx="8" fill="#202230"/>
+        <rect x="0" y="0" width="640" height="30" rx="8" fill="#2a2d3d"/>
+        <rect x="0" y="22" width="640" height="8" fill="#2a2d3d"/>
+        <text x="14" y="20" fill="#a9b3d1" font-family="Inter, sans-serif" font-size="11">Scene  Project  Debug  Editor  Help</text>
+        <g font-family="Inter, sans-serif" font-size="11" fill="#a9b3d1"><text x="270" y="20">2D</text><text x="296" y="20">3D</text><text x="322" y="20">Script</text></g>
+        <g fill="#79e2c2"><path d="M560 10 l9 5 -9 5z"/><rect x="578" y="10" width="10" height="10" rx="1" fill="none" stroke="#79e2c2"/><rect x="596" y="10" width="10" height="10" rx="1" fill="none" stroke="#79e2c2"/></g>
+        <!-- Scene dock -->
+        <rect x="8" y="38" width="150" height="160" rx="4" fill="#262938"/>
+        <text x="16" y="54" fill="#eef1fa" font-family="Inter, sans-serif" font-size="11" font-weight="600">Scene</text>
+        <g font-family="JetBrains Mono, monospace" font-size="10" fill="#eef1fa"><rect x="14" y="62" width="138" height="16" rx="2" fill="#38406a"/><text x="20" y="74">Player</text><text x="32" y="92">CollisionShape2D</text><text x="32" y="108">Camera2D</text><text x="32" y="124">Dust</text></g>
+        <!-- FileSystem dock -->
+        <rect x="8" y="206" width="150" height="166" rx="4" fill="#262938"/>
+        <text x="16" y="222" fill="#eef1fa" font-family="Inter, sans-serif" font-size="11" font-weight="600">FileSystem</text>
+        <g font-family="JetBrains Mono, monospace" font-size="10" fill="#a9b3d1"><text x="20" y="242">art/</text><text x="20" y="258">levels/</text><text x="20" y="274">scenes/</text><text x="32" y="290" fill="#eef1fa">player.tscn</text><text x="20" y="306">scripts/</text><text x="20" y="322">tools/</text></g>
+        <!-- Viewport -->
+        <rect x="166" y="38" width="300" height="334" rx="4" fill="#1b2440"/>
+        <g stroke="rgba(238,241,250,0.07)"><path d="M166 98H466M166 158H466M166 218H466M166 278H466M226 38V372M286 38V372M346 38V372M406 38V372"/></g>
+        <rect x="296" y="196" width="40" height="40" fill="none" stroke="#ff9a6b" stroke-width="2"/><rect x="302" y="202" width="28" height="28" fill="#ff6b5e"/>
+        <!-- Inspector -->
+        <rect x="474" y="38" width="158" height="334" rx="4" fill="#262938"/>
+        <text x="482" y="54" fill="#eef1fa" font-family="Inter, sans-serif" font-size="11" font-weight="600">Inspector</text>
+        <g font-family="Inter, sans-serif" font-size="10" fill="#a9b3d1"><text x="482" y="78">▾ Running</text><text x="490" y="96">Run Speed</text><text x="490" y="112">Air Accel</text><text x="482" y="134">▾ Jumping</text><text x="490" y="152">Jump Velocity</text><text x="490" y="168">Gravity</text><text x="482" y="190">▸ Rubber</text><text x="482" y="208">▸ Look</text></g>
+        <g font-family="JetBrains Mono, monospace" font-size="10" fill="#eef1fa"><text x="586" y="96">250</text><text x="586" y="112">900</text><rect x="580" y="142" width="44" height="14" rx="2" fill="#38406a"/><text x="586" y="152">760</text><text x="580" y="168">2200</text></g>
+        <!-- Number markers -->
+        <g font-family="Chakra Petch, sans-serif" font-size="13" font-weight="700" text-anchor="middle">
+          <circle cx="146" cy="50" r="11" fill="#f2c230"/><text x="146" y="55" fill="#1b2440">1</text>
+          <circle cx="146" cy="218" r="11" fill="#f2c230"/><text x="146" y="223" fill="#1b2440">2</text>
+          <circle cx="454" cy="50" r="11" fill="#f2c230"/><text x="454" y="55" fill="#1b2440">3</text>
+          <circle cx="620" cy="50" r="11" fill="#f2c230"/><text x="620" y="55" fill="#1b2440">4</text>
+          <circle cx="540" cy="15" r="11" fill="#f2c230"/><text x="540" y="20" fill="#1b2440">5</text>
+        </g>
+      </svg>
+    </div>
+    <ul class="map-key">
+      <li><span class="k">1</span><span><b>Scene</b> shows the tree of the scene you have open, like the explorer in step 1. Click a node to select it.</span></li>
+      <li><span class="k">2</span><span><b>FileSystem</b> lists every file in the project. Double-click a <span class="file">.tscn</span> file to open that scene.</span></li>
+      <li><span class="k">3</span><span>The <b>main view</b> shows the scene. The tabs above it switch between 2D, 3D and the <b>Script</b> editor.</span></li>
+      <li><span class="k">4</span><span><b>Inspector</b> shows the settings of whatever node you selected. This is where you change things without writing code.</span></li>
+      <li><span class="k">5</span><span><b>Play buttons.</b> ▶ runs the whole game (<b>F5</b>). The others run just the scene you have open, or stop the game.</span></li>
+    </ul>
+  </section>
+
+  <!-- ================= STEP 3 ================= -->
+  <section class="step" id="step-3">
+    <div class="step-head">
+      <div class="step-num">3</div>
+      <h2>Change something and see it</h2>
+      <div class="step-meta"><span class="tag computer">Computer</span><span class="tag phone">Phone</span><span>about 10 minutes</span></div>
+    </div>
+
+    <p>Most of making a game is this loop: change a setting, play, notice how it feels, change it again. In Godot, a node's settings live in the <b>Inspector</b>. Square Hop's player has its feel there: run speed, jump strength, gravity, how bouncy rubber is.</p>
+
+    <div class="idea">
+      <p><strong>Settings are just numbers with a meaning.</strong> In <span class="file">scripts/player.gd</span>, a line like <code>@export var jump_velocity := 760.0</code> does two things: it gives the player a jump strength of 760, and the word <code>@export</code> makes it show up in the Inspector so you can change it without touching code. Your in-game <b>Tune</b> panel shows the very same numbers.</p>
+    </div>
+
+    <h3>Try it here first</h3>
+    <p>Drag the sliders to see how jump strength and gravity work together. The math is the same as in the game.</p>
+    <div class="lab">
+      <canvas id="jumpCanvas" width="640" height="260" aria-label="Diagram of the square's jump arc over a tile grid"></canvas>
+      <div class="row"><label for="jv">Jump Velocity (jump strength)</label><output id="jvOut" for="jv">760</output><input type="range" id="jv" min="400" max="1200" step="10" value="760"></div>
+      <div class="row"><label for="gr">Gravity</label><output id="grOut" for="gr">2200</output><input type="range" id="gr" min="800" max="4000" step="50" value="2200"></div>
+      <div class="readout">
+        <span>Jump height <b id="hOut">4.1</b> tiles</span>
+        <span>Time in the air <b id="tOut">0.69</b> s</span>
+        <span>Distance at full run <b id="dOut">5.4</b> tiles</span>
+      </div>
+    </div>
+    <p>Notice that doubling jump strength makes you jump four times as high, while doubling gravity halves it. Level design depends on this: a wall 5 tiles tall needs a jump of more than 5 tiles, which is why level 1 gives you rubber there.</p>
+
+    <h3>Your tasks</h3>
+    <ol class="tasks">
+      <li><input class="check" type="checkbox" id="t3a" data-step="3"><label class="task-text" for="t3a"><b>Change the jump in the Inspector.</b> <span class="tag computer">Computer</span><small>In FileSystem, double-click <span class="file">scenes/player.tscn</span>. In the Scene panel, click <b>Player</b>. In the Inspector, open <b>Jumping</b> and change <b>Jump Velocity</b> from 760 to 1000. Press <b>F5</b> and jump. You should clear things you couldn't before.</small></label></li>
+      <li><input class="check" type="checkbox" id="t3b" data-step="3"><label class="task-text" for="t3b"><b>Change the color, then save.</b> <span class="tag computer">Computer</span><small>Still on Player, open <b>Look</b> and click the <b>Color</b> box to pick a new one. Save with <b>Ctrl+S</b> (<b>Cmd+S</b> on a Mac) and play again. This copy of the project is just for practice: changes you make here don't reach GitHub or your published game yet. Connecting the two is a later step.</small></label></li>
+      <li><input class="check" type="checkbox" id="t3c" data-step="3"><label class="task-text" for="t3c"><b>Do the same on your phone.</b> <span class="tag phone">Phone</span><small>Open <a href="https://claude.ai/artifact/2gMkwUS3qg2sqVGHM762Cw" target="_blank" rel="noopener">Square Hop</a>, tap <b>Tune</b>, and set <b>Jump strength</b> to 1000. Play a little. When you like a setting, tap <b>Copy settings</b> and paste it to Claude: that makes it the game's real default.</small></label></li>
+    </ol>
+  </section>
+
+  <section class="next">
+    <h2>Coming next</h2>
+    <ul>
+      <li><b>Step 4: Scripts.</b> Read the player's code and find where the jump happens, then add a tiny behavior of your own.</li>
+      <li><b>Step 5: Signals.</b> How the goal tells the game "you won" without knowing anything about menus.</li>
+      <li><b>Step 6: Keep your changes.</b> Connect your computer's copy to GitHub, so what you change in Godot reaches your published game.</li>
+    </ul>
+    <div class="links">
+      <a href="https://claude.ai/artifact/2gMkwUS3qg2sqVGHM762Cw" target="_blank" rel="noopener">Play Square Hop</a>
+      <a href="https://claude.ai/artifact/8As8FYAdjdxrbhuugZhsWZ" target="_blank" rel="noopener">Level editor</a>
+      <a href="https://github.com/Wut-Lab/gdtest" target="_blank" rel="noopener">Project on GitHub</a>
+      <a href="https://docs.godotengine.org/en/stable/getting_started/introduction/index.html" target="_blank" rel="noopener">Godot's own docs</a>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  // ---------- Scene tree explorer ----------
+  const NODES = {
+    player: {
+      title: 'Player · CharacterBody2D',
+      body: 'The square itself. A CharacterBody2D is a body that your code moves. Each frame the script reads the buttons, applies gravity, then calls move_and_slide(), which moves it, stops it at walls and floors, and reports what it hit. That report is how rubber knows to bounce you.',
+      seen: 'In the game: the red square. Its script is scripts/player.gd.',
+    },
+    shape: {
+      title: 'CollisionShape2D · the hitbox',
+      body: 'An invisible 24 × 24 square that gives the player a size for collisions. Without it the body has nothing to bump with, and it falls straight through the floor.',
+      seen: 'In the game: you never see it. It is exactly the size of the square.',
+    },
+    camera: {
+      title: 'Camera2D · what the screen shows',
+      body: 'Because it is a child of the player, it moves with the player, so the screen follows you. Its limits keep it inside the level, and smoothing makes it glide instead of snapping.',
+      seen: 'In the game: the view scrolling as you run through the level.',
+    },
+    dust: {
+      title: 'Dust · CPUParticles2D',
+      body: 'A particle emitter: it throws out little squares that fly up, fall and fade. The player script fires a burst whenever you jump, land, bounce or teleport.',
+      seen: 'In the game: the white puffs at your feet.',
+    },
+  };
+  const info = document.getElementById('nodeInfo');
+  const treeButtons = document.querySelectorAll('.tree button');
+  function showNode(key) {
+    const n = NODES[key];
+    info.innerHTML = '';
+    const h = document.createElement('h4'); h.textContent = n.title;
+    const p = document.createElement('p'); p.textContent = n.body;
+    const s = document.createElement('p'); s.className = 'seen'; s.textContent = n.seen;
+    info.append(h, p, s);
+    treeButtons.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.node === key)));
+  }
+  treeButtons.forEach(b => b.addEventListener('click', () => showNode(b.dataset.node)));
+  showNode('player');
+
+  // ---------- Quiz ----------
+  const EXPLAIN = [
+    ['The hitbox only handles bumping into things.', 'Right. The camera follows the player and decides what is on screen.', 'Dust only makes the puffs.'],
+    ['Right. A scene is any saved tree: a level, the player, the HUD, even a single goal.', 'Close: a level is one kind of scene, but so is the player or the menu.', 'No, a scene is a saved tree of nodes.'],
+    ['The camera only decides what you see.', 'Dust is just decoration.', 'Right. Without a hitbox the body has nothing to collide with.'],
+  ];
+  document.querySelectorAll('#quiz1 .q').forEach((q, qi) => {
+    const right = Number(q.dataset.answer);
+    const fb = q.querySelector('.feedback');
+    q.querySelectorAll('.answers button').forEach((b, bi) => {
+      b.addEventListener('click', () => {
+        q.querySelectorAll('.answers button').forEach(x => x.classList.remove('right', 'wrong'));
+        b.classList.add(bi === right ? 'right' : 'wrong');
+        fb.textContent = EXPLAIN[qi][bi];
+      });
+    });
+  });
+
+  // ---------- Progress (saved on this device) ----------
+  const KEY = 'godot-steps-progress';
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (_) {}
+  const checks = [...document.querySelectorAll('.check')];
+  function refresh() {
+    const done = checks.filter(c => c.checked).length;
+    document.getElementById('progress').textContent = done + ' of ' + checks.length + ' done';
+    checks.forEach(c => c.closest('li').classList.toggle('checked', c.checked));
+    document.querySelectorAll('nav.steps a').forEach(a => {
+      const mine = checks.filter(c => c.dataset.step === a.dataset.step);
+      a.classList.toggle('done', mine.length > 0 && mine.every(c => c.checked));
+    });
+  }
+  checks.forEach(c => {
+    c.checked = !!saved[c.id];
+    c.addEventListener('change', () => {
+      saved[c.id] = c.checked;
+      try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch (_) {}
+      refresh();
+    });
+  });
+  refresh();
+
+  // ---------- Jump lab ----------
+  const T = 32, RUN = 250;
+  const canvas = document.getElementById('jumpCanvas');
+  const ctx = canvas.getContext('2d');
+  const jv = document.getElementById('jv'), gr = document.getElementById('gr');
+  const css = getComputedStyle(document.documentElement);
+  const col = n => css.getPropertyValue(n).trim();
+  function drawLab() {
+    const v = Number(jv.value), g = Number(gr.value);
+    const h = v * v / (2 * g), t = 2 * v / g, d = RUN * t;
+    document.getElementById('jvOut').textContent = v;
+    document.getElementById('grOut').textContent = g;
+    document.getElementById('hOut').textContent = (h / T).toFixed(1);
+    document.getElementById('tOut').textContent = t.toFixed(2);
+    document.getElementById('dOut').textContent = (d / T).toFixed(1);
+
+    const W = canvas.width, H = canvas.height, groundY = H - 24;
+    // Fixed scale (about 7 tiles tall) so a stronger jump visibly goes higher.
+    const scale = (groundY - 12) / (7.2 * T);
+    const tile = T * scale;
+    ctx.clearRect(0, 0, W, H);
+    ctx.strokeStyle = 'rgba(238,241,250,0.07)'; ctx.lineWidth = 1;
+    for (let x = 0; x < W; x += tile) { ctx.beginPath(); ctx.moveTo(x + 0.5, 0); ctx.lineTo(x + 0.5, groundY); ctx.stroke(); }
+    for (let y = groundY; y > 0; y -= tile) { ctx.beginPath(); ctx.moveTo(0, y + 0.5); ctx.lineTo(W, y + 0.5); ctx.stroke(); }
+    ctx.fillStyle = col('--stone'); ctx.fillRect(0, groundY, W, H - groundY);
+    ctx.fillStyle = '#f7d5a6'; ctx.fillRect(0, groundY, W, 4);
+    // Tile ruler on the left.
+    ctx.fillStyle = col('--ink-dim'); ctx.font = '600 12px Inter, sans-serif';
+    for (let k = 1; k * tile < groundY - 10; k++) if (k % Math.max(1, Math.round(1 / scale)) === 0 || scale > 0.6) ctx.fillText(String(k), 4, groundY - k * tile + 4);
+    // The arc.
+    const x0 = 36, sq = 24 * scale;
+    ctx.strokeStyle = 'rgba(238,241,250,0.5)'; ctx.setLineDash([4, 6]); ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i <= 60; i++) {
+      const tt = t * i / 60, px = x0 + RUN * tt * scale, py = groundY - (v * tt - g * tt * tt / 2) * scale - sq / 2;
+      i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+    }
+    ctx.stroke(); ctx.setLineDash([]);
+    // Peak line.
+    const peakY = groundY - h * scale;
+    ctx.strokeStyle = col('--goal'); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x0, peakY + 0.5); ctx.lineTo(x0 + d * scale / 2 + sq, peakY + 0.5); ctx.stroke();
+    if (peakY < 18) {
+      ctx.fillStyle = col('--goal'); ctx.font = '600 13px Inter, sans-serif';
+      ctx.fillText('\u2191 peak is above this view', x0 + 40, 16);
+    }
+    // Square at the peak.
+    ctx.fillStyle = col('--hero');
+    ctx.fillRect(x0 + RUN * t / 2 * scale - sq / 2, peakY - sq, sq, sq);
+    ctx.fillStyle = col('--sky');
+    ctx.fillRect(x0 + RUN * t / 2 * scale + sq * 0.05, peakY - sq * 0.75, Math.max(1.5, sq * 0.1), Math.max(2, sq * 0.2));
+    ctx.fillRect(x0 + RUN * t / 2 * scale + sq * 0.3, peakY - sq * 0.75, Math.max(1.5, sq * 0.1), Math.max(2, sq * 0.2));
+  }
+  jv.addEventListener('input', drawLab);
+  gr.addEventListener('input', drawLab);
+  drawLab();
+})();
+</script>

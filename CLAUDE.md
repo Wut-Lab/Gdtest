@@ -7,6 +7,8 @@ them headless, publish the web build, and commit/push to `main`.
 - Game: https://claude.ai/artifact/2gMkwUS3qg2sqVGHM762Cw (from `web/play.html`)
 - Level editor: https://claude.ai/artifact/8As8FYAdjdxrbhuugZhsWZ (from `web/editor.html`)
 - Browser prototype: https://claude.ai/artifact/WnDaX7BMJnxDeaTTJKLrd5 (from `prototype/square-hop.html`)
+- Godot tutorial: https://claude.ai/artifact/9LMtZAkEX2TLZLSGrAaCRF (from `docs/godot-steps.html`;
+  steps 1-3 done, steps 4-6 planned: scripts, signals, syncing the computer copy with GitHub)
 
 ## Workflow
 1. Godot 4.6.3 (Linux, official build from github.com/godotengine/godot releases) is needed for
