@@ -1,6 +1,6 @@
 class_name Hud
 extends CanvasLayer
-## Timer, fall counter, the start and win menus, and the Tune button.
+## Timer, fall counter, hearts, the start and win menus, and the Tune button.
 
 signal play_requested
 signal player_color_changed(color: Color)
@@ -12,6 +12,10 @@ signal player_color_changed(color: Color)
 @onready var result_label: Label = %ResultLabel
 @onready var play_button: Button = %PlayButton
 @onready var again_button: Button = %AgainButton
+@onready var out_menu: Control = %OutMenu
+@onready var out_label: Label = %OutLabel
+@onready var retry_button: Button = %RetryButton
+@onready var hearts_display: HeartsDisplay = %HeartsDisplay
 @onready var tune_button: Button = %TuneButton
 @onready var tuning_panel: TuningPanel = %TuningPanel
 @onready var color_wheel: ColorWheel = %ColorWheel
@@ -26,6 +30,7 @@ var default_color := Color("ff6b5e")
 func _ready() -> void:
 	play_button.pressed.connect(play_requested.emit)
 	again_button.pressed.connect(play_requested.emit)
+	retry_button.pressed.connect(play_requested.emit)
 	tune_button.pressed.connect(tuning_panel.open)
 	tuning_panel.closed.connect(func() -> void: get_viewport().gui_release_focus())
 	color_wheel.changed.connect(_on_color_input)
@@ -52,19 +57,33 @@ func _on_color_input() -> void:
 func show_start() -> void:
 	start_menu.show()
 	win_menu.hide()
+	out_menu.hide()
 	play_button.grab_focus()
 
 
-func show_win(time: float, falls: int) -> void:
-	result_label.text = "Time %.2fs  ·  Falls %d" % [time, falls]
+func show_win(time: float, falls: int, hearts: int) -> void:
+	result_label.text = "Time %.2fs  ·  Falls %d  ·  Hearts %d" % [time, falls, hearts]
 	start_menu.hide()
 	win_menu.show()
 	again_button.grab_focus()
 
 
+func show_out(time: float, falls: int) -> void:
+	out_label.text = "You fell %d times in %.2fs. Try again?" % [falls, time]
+	start_menu.hide()
+	out_menu.show()
+	retry_button.grab_focus()
+
+
+func set_hearts(hearts: int, slots: int) -> void:
+	hearts_display.slots = slots
+	hearts_display.hearts = hearts
+
+
 func hide_menus() -> void:
 	start_menu.hide()
 	win_menu.hide()
+	out_menu.hide()
 	get_viewport().gui_release_focus()
 
 

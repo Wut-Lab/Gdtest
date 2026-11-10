@@ -1,10 +1,14 @@
 extends Node
-## Runs the game: loads the level, spawns the player, and tracks time, falls and winning.
+## Runs the game: loads the level, spawns the player, and tracks time, hearts, falls and winning.
+## You start with 3 hearts; each fall costs one, and losing the last ends the run.
 ## In a web build it also lets the page send a level in (used by the level editor).
 
-enum State { READY, PLAY, WON }
+enum State { READY, PLAY, WON, OUT }
 
 const SETTINGS_PATH := "user://settings.cfg"
+const START_HEARTS := 3
+## Heart pickups can take you above the starting amount, up to this.
+const MAX_HEARTS := 5
 
 @export var level_scene: PackedScene
 @export var player_scene: PackedScene
@@ -12,6 +16,7 @@ const SETTINGS_PATH := "user://settings.cfg"
 var state := State.READY
 var run_time := 0.0
 var falls := 0
+var hearts := START_HEARTS
 var level: Level
 var player: Player
 
@@ -31,6 +36,7 @@ func _ready() -> void:
 	player.reset_to(level.start.position)
 	player.fell.connect(_on_player_fell)
 	level.goal_reached.connect(_on_goal_reached)
+	level.heart_collected.connect(_on_heart_collected)
 	hud.play_requested.connect(new_run)
 	hud.tuning_panel.player = player
 	hud.default_color = player.color
@@ -38,6 +44,7 @@ func _ready() -> void:
 	hud.set_player_color(player.color)
 	hud.player_color_changed.connect(_on_player_color_changed)
 	hud.set_stats(0.0, 0)
+	hud.set_hearts(hearts, START_HEARTS)
 	hud.show_start()
 	get_viewport().size_changed.connect(_on_screen_changed)
 	_on_screen_changed()
@@ -85,6 +92,9 @@ func new_run() -> void:
 	player.active = true
 	run_time = 0.0
 	falls = 0
+	hearts = START_HEARTS
+	hud.set_hearts(hearts, START_HEARTS)
+	level.reset_pickups()
 	state = State.PLAY
 	hud.hide_menus()
 
@@ -121,7 +131,23 @@ func _load_player_color(fallback: Color) -> Color:
 
 func _on_player_fell() -> void:
 	falls += 1
+	if state != State.PLAY:
+		player.reset_to(level.start.position)
+		return
+	hearts -= 1
+	hud.set_hearts(hearts, START_HEARTS)
+	hud.hearts_display.flash()
 	player.reset_to(level.start.position)
+	if hearts <= 0:
+		state = State.OUT
+		player.active = false
+		player.velocity = Vector2.ZERO
+		hud.show_out(run_time, falls)
+
+
+func _on_heart_collected() -> void:
+	hearts = mini(hearts + 1, MAX_HEARTS)
+	hud.set_hearts(hearts, START_HEARTS)
 
 
 func _on_goal_reached() -> void:
@@ -130,7 +156,7 @@ func _on_goal_reached() -> void:
 	state = State.WON
 	player.active = false
 	player.velocity = Vector2.ZERO
-	hud.show_win(run_time, falls)
+	hud.show_win(run_time, falls, hearts)
 
 
 # ---------- Web page bridge ----------

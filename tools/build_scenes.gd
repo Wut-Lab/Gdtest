@@ -267,14 +267,25 @@ func _hud_scene() -> Node:
 	falls_label.text = "Falls 0"
 	root.add_child(falls_label)
 
+	var hearts := Control.new()
+	hearts.name = "HeartsDisplay"
+	hearts.unique_name_in_owner = true
+	hearts.set_script(load("res://scripts/hearts_display.gd"))
+	hearts.position = Vector2(16, 64)
+	root.add_child(hearts)
+
 	var start := _menu(root, "StartMenu", "Reach the goal",
 		"Run, jump and bounce to the green goal. Hold jump to go higher.\n"
+		+ "You have 3 hearts: each fall costs one. Grab floating hearts for more.\n"
 		+ "Keys: arrows or A/D move, Space jumps, R restarts.",
 		"StartBody", "PlayButton", "Play")
 	_color_row(start.get_node("Panel/Box"))
 	var win := _menu(root, "WinMenu", "Goal reached", "Time 0.00s  ·  Falls 0",
 		"ResultLabel", "AgainButton", "Play again")
 	win.visible = false
+	var out := _menu(root, "OutMenu", "Out of hearts", "You fell 3 times. Try again?",
+		"OutLabel", "RetryButton", "Try again")
+	out.visible = false
 
 	var tune := Button.new()
 	tune.name = "TuneButton"

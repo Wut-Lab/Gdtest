@@ -15,13 +15,13 @@ radius = 38.0
 [sub_resource type="CircleShape2D" id="CircleShape2D_tve8x"]
 radius = 46.0
 
-[node name="TouchControls" type="CanvasLayer" unique_id=156527928]
+[node name="TouchControls" type="CanvasLayer" unique_id=1426940049]
 layer = 2
 script = ExtResource("1_c1tq5")
 
-[node name="Pad" type="Node2D" parent="." unique_id=199549173]
+[node name="Pad" type="Node2D" parent="." unique_id=1648387785]
 
-[node name="Left" type="TouchScreenButton" parent="Pad" unique_id=1554233045]
+[node name="Left" type="TouchScreenButton" parent="Pad" unique_id=802058865]
 position = Vector2(18, 450)
 texture_normal = ExtResource("2_pefoi")
 texture_pressed = ExtResource("3_mc04f")
@@ -29,11 +29,11 @@ shape = SubResource("CircleShape2D_j2vku")
 passby_press = true
 action = "move_left"
 
-[node name="Arrow" type="Polygon2D" parent="Pad/Left" unique_id=852586417]
+[node name="Arrow" type="Polygon2D" parent="Pad/Left" unique_id=248402545]
 color = Color(0.93333334, 0.94509804, 0.98039216, 1)
 polygon = PackedVector2Array(29, 38, 45, 24, 45, 52)
 
-[node name="Right" type="TouchScreenButton" parent="Pad" unique_id=452209803]
+[node name="Right" type="TouchScreenButton" parent="Pad" unique_id=1634640880]
 position = Vector2(106, 450)
 texture_normal = ExtResource("2_pefoi")
 texture_pressed = ExtResource("3_mc04f")
@@ -41,11 +41,11 @@ shape = SubResource("CircleShape2D_4wk4v")
 passby_press = true
 action = "move_right"
 
-[node name="Arrow" type="Polygon2D" parent="Pad/Right" unique_id=1813711132]
+[node name="Arrow" type="Polygon2D" parent="Pad/Right" unique_id=1073805453]
 color = Color(0.93333334, 0.94509804, 0.98039216, 1)
 polygon = PackedVector2Array(47, 38, 31, 24, 31, 52)
 
-[node name="Jump" type="TouchScreenButton" parent="Pad" unique_id=1390288498]
+[node name="Jump" type="TouchScreenButton" parent="Pad" unique_id=1270750005]
 position = Vector2(850, 434)
 texture_normal = ExtResource("4_i7au1")
 texture_pressed = ExtResource("5_lkmae")
@@ -53,7 +53,7 @@ shape = SubResource("CircleShape2D_tve8x")
 passby_press = true
 action = "jump"
 
-[node name="Label" type="Label" parent="Pad/Jump" unique_id=1320251436]
+[node name="Label" type="Label" parent="Pad/Jump" unique_id=458371230]
 offset_right = 92.0
 offset_bottom = 92.0
 theme_override_font_sizes/font_size = 18

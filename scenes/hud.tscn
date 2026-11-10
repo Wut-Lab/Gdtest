@@ -1,23 +1,24 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" path="res://scripts/hud.gd" id="1_6fi6k"]
-[ext_resource type="Theme" path="res://art/ui_theme.tres" id="2_uo2fv"]
-[ext_resource type="Script" path="res://scripts/color_wheel.gd" id="3_047uy"]
-[ext_resource type="Script" path="res://scripts/tuning_panel.gd" id="4_5pdws"]
+[ext_resource type="Script" path="res://scripts/hud.gd" id="1_uo2fv"]
+[ext_resource type="Theme" path="res://art/ui_theme.tres" id="2_047uy"]
+[ext_resource type="Script" path="res://scripts/hearts_display.gd" id="3_5pdws"]
+[ext_resource type="Script" path="res://scripts/color_wheel.gd" id="4_hd3ao"]
+[ext_resource type="Script" path="res://scripts/tuning_panel.gd" id="5_0i1j5"]
 
-[node name="HUD" type="CanvasLayer" unique_id=282740292]
+[node name="HUD" type="CanvasLayer" unique_id=576848087]
 process_mode = 3
-script = ExtResource("1_6fi6k")
+script = ExtResource("1_uo2fv")
 
-[node name="Root" type="Control" parent="." unique_id=341579259]
+[node name="Root" type="Control" parent="." unique_id=1921879408]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
-theme = ExtResource("2_uo2fv")
+theme = ExtResource("2_047uy")
 
-[node name="TimeLabel" type="Label" parent="Root" unique_id=864450747]
+[node name="TimeLabel" type="Label" parent="Root" unique_id=957188871]
 unique_name_in_owner = true
 layout_mode = 0
 offset_left = 14.0
@@ -27,7 +28,7 @@ offset_bottom = 8.0
 theme_type_variation = &"StatLabel"
 text = "0.00s"
 
-[node name="FallsLabel" type="Label" parent="Root" unique_id=1519956054]
+[node name="FallsLabel" type="Label" parent="Root" unique_id=155310070]
 unique_name_in_owner = true
 layout_mode = 0
 offset_left = 14.0
@@ -37,68 +38,78 @@ offset_bottom = 36.0
 theme_type_variation = &"SmallLabel"
 text = "Falls 0"
 
-[node name="StartMenu" type="CenterContainer" parent="Root" unique_id=800785806]
+[node name="HeartsDisplay" type="Control" parent="Root" unique_id=1035134861]
+unique_name_in_owner = true
+anchors_preset = 0
+offset_left = 16.0
+offset_top = 64.0
+offset_right = 16.0
+offset_bottom = 64.0
+script = ExtResource("3_5pdws")
+
+[node name="StartMenu" type="CenterContainer" parent="Root" unique_id=993704139]
 unique_name_in_owner = true
 layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 
-[node name="Panel" type="PanelContainer" parent="Root/StartMenu" unique_id=330190150]
+[node name="Panel" type="PanelContainer" parent="Root/StartMenu" unique_id=1821500642]
 layout_mode = 2
 
-[node name="Box" type="VBoxContainer" parent="Root/StartMenu/Panel" unique_id=925423990]
+[node name="Box" type="VBoxContainer" parent="Root/StartMenu/Panel" unique_id=1868094709]
 layout_mode = 2
 theme_override_constants/separation = 14
 
-[node name="Title" type="Label" parent="Root/StartMenu/Panel/Box" unique_id=871165259]
+[node name="Title" type="Label" parent="Root/StartMenu/Panel/Box" unique_id=1487414474]
 layout_mode = 2
 theme_type_variation = &"TitleLabel"
 text = "Reach the goal"
 horizontal_alignment = 1
 
-[node name="StartBody" type="Label" parent="Root/StartMenu/Panel/Box" unique_id=1560919276]
+[node name="StartBody" type="Label" parent="Root/StartMenu/Panel/Box" unique_id=1758905000]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(320, 0)
 layout_mode = 2
 theme_type_variation = &"BodyLabel"
 text = "Run, jump and bounce to the green goal. Hold jump to go higher.
+You have 3 hearts: each fall costs one. Grab floating hearts for more.
 Keys: arrows or A/D move, Space jumps, R restarts."
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="ColorRow" type="HBoxContainer" parent="Root/StartMenu/Panel/Box" unique_id=710244679]
+[node name="ColorRow" type="HBoxContainer" parent="Root/StartMenu/Panel/Box" unique_id=1766733208]
 layout_mode = 2
 theme_override_constants/separation = 18
 alignment = 1
 
-[node name="ColorWheel" type="Control" parent="Root/StartMenu/Panel/Box/ColorRow" unique_id=1658818585]
+[node name="ColorWheel" type="Control" parent="Root/StartMenu/Panel/Box/ColorRow" unique_id=883092652]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(136, 136)
 layout_mode = 2
-script = ExtResource("3_047uy")
+script = ExtResource("4_hd3ao")
 
-[node name="ColorSide" type="VBoxContainer" parent="Root/StartMenu/Panel/Box/ColorRow" unique_id=992418174]
+[node name="ColorSide" type="VBoxContainer" parent="Root/StartMenu/Panel/Box/ColorRow" unique_id=896892940]
 layout_mode = 2
 theme_override_constants/separation = 8
 alignment = 1
 
-[node name="Heading" type="Label" parent="Root/StartMenu/Panel/Box/ColorRow/ColorSide" unique_id=1068769557]
+[node name="Heading" type="Label" parent="Root/StartMenu/Panel/Box/ColorRow/ColorSide" unique_id=818224653]
 layout_mode = 2
 text = "Your color"
 
-[node name="ColorPreview" type="ColorRect" parent="Root/StartMenu/Panel/Box/ColorRow/ColorSide" unique_id=431966447]
+[node name="ColorPreview" type="ColorRect" parent="Root/StartMenu/Panel/Box/ColorRow/ColorSide" unique_id=1516314928]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(36, 36)
 layout_mode = 2
 size_flags_horizontal = 0
 color = Color(1, 0.41960785, 0.36862746, 1)
 
-[node name="BrightnessLabel" type="Label" parent="Root/StartMenu/Panel/Box/ColorRow/ColorSide" unique_id=759119463]
+[node name="BrightnessLabel" type="Label" parent="Root/StartMenu/Panel/Box/ColorRow/ColorSide" unique_id=1963351932]
 layout_mode = 2
 theme_type_variation = &"SmallLabel"
 text = "Brightness"
 
-[node name="Brightness" type="HSlider" parent="Root/StartMenu/Panel/Box/ColorRow/ColorSide" unique_id=878602400]
+[node name="Brightness" type="HSlider" parent="Root/StartMenu/Panel/Box/ColorRow/ColorSide" unique_id=146515354]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(150, 30)
 layout_mode = 2
@@ -107,7 +118,7 @@ max_value = 1.0
 step = 0.01
 value = 1.0
 
-[node name="ColorReset" type="Button" parent="Root/StartMenu/Panel/Box/ColorRow/ColorSide" unique_id=1067449474]
+[node name="ColorReset" type="Button" parent="Root/StartMenu/Panel/Box/ColorRow/ColorSide" unique_id=757566109]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 36)
 layout_mode = 2
@@ -119,34 +130,34 @@ theme_override_font_sizes/font_size = 14
 text = "Reset color"
 flat = true
 
-[node name="PlayButton" type="Button" parent="Root/StartMenu/Panel/Box" unique_id=2008351623]
+[node name="PlayButton" type="Button" parent="Root/StartMenu/Panel/Box" unique_id=1387889035]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(160, 44)
 layout_mode = 2
 size_flags_horizontal = 4
 text = "Play"
 
-[node name="WinMenu" type="CenterContainer" parent="Root" unique_id=1388703099]
+[node name="WinMenu" type="CenterContainer" parent="Root" unique_id=1574411289]
 unique_name_in_owner = true
 visible = false
 layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 
-[node name="Panel" type="PanelContainer" parent="Root/WinMenu" unique_id=341047799]
+[node name="Panel" type="PanelContainer" parent="Root/WinMenu" unique_id=746825397]
 layout_mode = 2
 
-[node name="Box" type="VBoxContainer" parent="Root/WinMenu/Panel" unique_id=492068710]
+[node name="Box" type="VBoxContainer" parent="Root/WinMenu/Panel" unique_id=1314250239]
 layout_mode = 2
 theme_override_constants/separation = 14
 
-[node name="Title" type="Label" parent="Root/WinMenu/Panel/Box" unique_id=1854423823]
+[node name="Title" type="Label" parent="Root/WinMenu/Panel/Box" unique_id=855017307]
 layout_mode = 2
 theme_type_variation = &"TitleLabel"
 text = "Goal reached"
 horizontal_alignment = 1
 
-[node name="ResultLabel" type="Label" parent="Root/WinMenu/Panel/Box" unique_id=1002927384]
+[node name="ResultLabel" type="Label" parent="Root/WinMenu/Panel/Box" unique_id=797425898]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(320, 0)
 layout_mode = 2
@@ -155,14 +166,50 @@ text = "Time 0.00s  ·  Falls 0"
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="AgainButton" type="Button" parent="Root/WinMenu/Panel/Box" unique_id=50989294]
+[node name="AgainButton" type="Button" parent="Root/WinMenu/Panel/Box" unique_id=1218875679]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(160, 44)
 layout_mode = 2
 size_flags_horizontal = 4
 text = "Play again"
 
-[node name="TuneButton" type="Button" parent="Root" unique_id=281961833]
+[node name="OutMenu" type="CenterContainer" parent="Root" unique_id=1542921505]
+unique_name_in_owner = true
+visible = false
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Panel" type="PanelContainer" parent="Root/OutMenu" unique_id=463378296]
+layout_mode = 2
+
+[node name="Box" type="VBoxContainer" parent="Root/OutMenu/Panel" unique_id=426993252]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="Root/OutMenu/Panel/Box" unique_id=1842486484]
+layout_mode = 2
+theme_type_variation = &"TitleLabel"
+text = "Out of hearts"
+horizontal_alignment = 1
+
+[node name="OutLabel" type="Label" parent="Root/OutMenu/Panel/Box" unique_id=1451949518]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 0)
+layout_mode = 2
+theme_type_variation = &"BodyLabel"
+text = "You fell 3 times. Try again?"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="RetryButton" type="Button" parent="Root/OutMenu/Panel/Box" unique_id=1756578830]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 44)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Try again"
+
+[node name="TuneButton" type="Button" parent="Root" unique_id=297190304]
 unique_name_in_owner = true
 layout_mode = 0
 anchor_left = 1.0
@@ -174,9 +221,9 @@ offset_bottom = 54.0
 focus_mode = 0
 text = "Tune"
 
-[node name="TuningPanel" type="Control" parent="Root" unique_id=281701727]
+[node name="TuningPanel" type="Control" parent="Root" unique_id=1291195453]
 unique_name_in_owner = true
 anchors_preset = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
-script = ExtResource("4_5pdws")
+script = ExtResource("5_0i1j5")
