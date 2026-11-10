@@ -1,11 +1,12 @@
 extends Area2D
+# This script makes one rock drift, spin and draw itself.
 
 @export var speed := 80.0    # how fast it drifts
 @export var radius := 30.0   # how big it is
 
-var velocity := Vector2.ZERO
-var spin := 0.0
-var outline := PackedVector2Array()
+var velocity := Vector2.ZERO           # speed and direction
+var spin := 0.0                        # how fast it turns
+var outline := PackedVector2Array()    # the corner points of its lumpy shape
 
 
 func _ready() -> void:
@@ -17,6 +18,7 @@ func _ready() -> void:
 		outline.append(Vector2.from_angle(angle) * radius * randf_range(0.75, 1.1))
 
 
+# Every frame: move, spin, and wrap around the screen edges.
 func _process(delta: float) -> void:
 	position += velocity * delta
 	rotation += spin * delta

@@ -1,5 +1,7 @@
 extends Node2D
+# The main scene's script: it adds the rocks when the game starts.
 
+# Load the rock scene once, so we can make copies of it.
 const ROCK := preload("res://rock.tscn")
 
 

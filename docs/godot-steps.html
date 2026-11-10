@@ -154,13 +154,33 @@ dl.explain dd { margin: 2px 0 0; font-size: 0.9375rem; }
 .next li b { color: var(--ink); }
 .links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
 .links a { font-size: 0.875rem; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; text-decoration: none; background: var(--panel); }
+
+/* Beginner helpers: "you should see" checkpoints, help-when-stuck boxes, glossary. */
+.see { margin: 8px 0 0; padding: 8px 12px; border-radius: 8px; background: rgba(121, 226, 194, 0.08); border-left: 3px solid var(--ok); font-size: 0.875rem; color: var(--ink); }
+.see::before { content: "You should see: "; font-weight: 600; color: var(--ok); }
+details.trouble, details.words { margin-top: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--space-2); }
+details.trouble summary, details.words summary { cursor: pointer; padding: 12px 14px; font-weight: 600; min-height: 24px; }
+details.trouble summary { color: var(--flame); }
+details.trouble[open] summary, details.words[open] summary { border-bottom: 1px solid var(--line); }
+.trouble-body { padding: 4px 14px 14px; display: grid; gap: 12px; }
+.trouble-body p { margin: 0; font-size: 0.9375rem; }
+.trouble-body b { color: var(--ink); }
+.words dl { margin: 0; padding: 6px 14px 14px; display: grid; gap: 10px; }
+.words dt { font: 700 0.9375rem var(--font-display); color: var(--ok); }
+.words dd { margin: 2px 0 0; font-size: 0.9375rem; }
+.before { padding-block: 28px 0; }
+.before h2 { font-size: 1.25rem; }
+.before ul { margin: 10px 0 0; padding-left: 1.2em; display: grid; gap: 6px; }
+.primer { margin-top: 14px; padding: 14px 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+.primer h4 { margin: 0; font: 700 1rem var(--font-display); }
+.primer ul { margin: 8px 0 0; padding-left: 1.2em; display: grid; gap: 6px; font-size: 0.9375rem; }
 </style>
 
 <header class="intro">
   <div class="wrap">
     <div class="eyebrow">A beginner's path in Godot</div>
     <h1>Learn Godot with <span>Rock Drift</span></h1>
-    <p class="lede">You'll build a small space game: a ship that turns, thrusts and drifts while rocks float past. Each step adds one piece and teaches one idea. Tick tasks off as you go; your progress is saved on this device.</p>
+    <p class="lede">For complete beginners. You'll build a small space game: a ship that turns, thrusts and drifts while rocks float past. Each step adds one piece and teaches one idea. Tick tasks off as you go; your progress is saved on this device.</p>
     <div class="legend">
       <span class="tag phone"><svg viewBox="0 0 12 12"><rect x="3" y="0" width="6" height="12" rx="1.5"/></svg>Phone</span><span>read and try it on your phone</span>
       <span class="tag computer"><svg viewBox="0 0 12 12"><rect x="0" y="1" width="12" height="8" rx="1"/><rect x="3" y="10" width="6" height="2"/></svg>Computer</span><span>build it in Godot on a computer</span>
@@ -170,6 +190,7 @@ dl.explain dd { margin: 2px 0 0; font-size: 0.9375rem; }
 
 <nav class="steps" aria-label="Steps">
   <div class="wrap">
+    <a href="#before" data-step="0">Start</a>
     <a href="#step-1" data-step="1"><span class="n">1</span>Plan</a>
     <a href="#step-2" data-step="2"><span class="n">2</span>Ship</a>
     <a href="#step-3" data-step="3"><span class="n">3</span>Rocks</a>
@@ -178,6 +199,39 @@ dl.explain dd { margin: 2px 0 0; font-size: 0.9375rem; }
 </nav>
 
 <main class="wrap">
+
+  <section class="before" id="before">
+    <h2>Before you start</h2>
+    <ul>
+      <li><b>No experience needed.</b> You don't need to know how to code. You'll copy short pieces of code, run them, then read what they mean in plain English.</li>
+      <li><b>You won't understand every line at first, and that's normal.</b> Getting it working comes first; understanding grows with each step.</li>
+      <li><b>What you need:</b> this page on your phone for reading, and for steps 2 and 3 a Windows, Mac or Linux computer with a keyboard and mouse. Godot is free and about 150 MB.</li>
+      <li><b>How long:</b> step 1 takes about 10 minutes. Steps 2 and 3 take 30 to 45 minutes each the first time. Do one step per sitting if you like; your ticks are saved.</li>
+      <li><b>Getting the code onto your computer:</b> open this same page on the computer (you're signed in to Claude there too) and use the <b>Copy</b> buttons. That's easier than typing it.</li>
+    </ul>
+
+    <details class="words" id="words">
+      <summary>Words you'll meet (tap to open)</summary>
+      <dl>
+        <dt>Game engine</dt><dd>The program that runs a game for you: it draws the screen, reads the controls, and moves things. Godot is a game engine.</dd>
+        <dt>Editor</dt><dd>The app where you build the game: the Godot window with all its panels.</dd>
+        <dt>Project</dt><dd>One game's folder, holding all its files.</dd>
+        <dt>Node</dt><dd>One building block with one job, like "a hitbox" or "a camera".</dd>
+        <dt>Scene</dt><dd>A group of nodes arranged in a tree and saved as a file ending in <code>.tscn</code>. The ship is a scene; so is a rock.</dd>
+        <dt>Instance</dt><dd>A copy of a scene placed inside another scene. The game has five instances of the rock scene.</dd>
+        <dt>Script / code</dt><dd>Written instructions for a node, in a file ending in <code>.gd</code>. Godot's language is called GDScript.</dd>
+        <dt>Variable</dt><dd>A named box that holds a value, like <code>velocity</code> or <code>thrust</code>. Its value can change while the game runs.</dd>
+        <dt>Function</dt><dd>A named set of instructions, starting with <code>func</code>. Godot runs some by itself, like <code>_ready</code> and <code>_process</code>.</dd>
+        <dt>Frame</dt><dd>One update of the screen. Games run about 60 frames a second, and the code runs once per frame.</dd>
+        <dt>Position</dt><dd>Where something is, as two numbers: x (how far right) and y (how far <b>down</b>). The top-left corner of the screen is 0, 0.</dd>
+        <dt>Velocity</dt><dd>Speed plus direction: how far something moves each second, and which way.</dd>
+        <dt>Signal</dt><dd>A message a node sends when something happens, like "something touched me". Other code can listen for it.</dd>
+        <dt>Inspector</dt><dd>The panel on the right of the editor that shows the settings of whatever you selected.</dd>
+        <dt>res://</dt><dd>Godot's name for your project folder. <code>res://ship.gd</code> means "ship.gd in this project".</dd>
+      </dl>
+    </details>
+  </section>
+
 
   <!-- ================= STEP 1 ================= -->
   <section class="step" id="step-1">
@@ -259,19 +313,29 @@ dl.explain dd { margin: 2px 0 0; font-size: 0.9375rem; }
     <div class="step-head">
       <div class="step-num">2</div>
       <h2>Make the ship fly</h2>
-      <div class="step-meta"><span class="tag computer">Computer</span><span>about 25 minutes</span></div>
+      <div class="step-meta"><span class="tag computer">Computer</span><span>about 30 to 45 minutes</span></div>
     </div>
 
     <p>Now you'll install Godot, start a project, and build the ship: one scene with two nodes, plus a script that makes it turn, thrust and drift.</p>
     <div class="tip"><b>On a phone?</b> Godot's editor is available for Android through the Google Play Store. It works, but it's cramped on a phone and better on a tablet. There's no iPhone version, so use a computer for steps 2 and 3. You can still read them on your phone first.</div>
 
-    <h3>Get Godot and start a project</h3>
+    <h3>Get Godot</h3>
     <ol class="how">
-      <li>Download <b>Godot Engine</b> 4.6 or newer from <a href="https://godotengine.org/download/" target="_blank" rel="noopener">godotengine.org/download</a>. Choose the plain version, not <b>.NET</b>. On Windows it's a zip with the app inside; on a Mac, drag it to Applications.</li>
-      <li>Open Godot. In the Project Manager, click <b>Create</b>.</li>
-      <li>Name it <b>Rock Drift</b> and choose a folder. Set <b>Renderer</b> to <b>Compatibility</b>; it runs on the most devices, phones and browsers included. Click <b>Create</b> (or <b>Create &amp; Edit</b>).</li>
+      <li>On your computer, open <a href="https://godotengine.org/download/" target="_blank" rel="noopener">godotengine.org/download</a> in a web browser. The page detects whether you're on Windows, Mac or Linux.</li>
+      <li>Click the download for <b>Godot Engine</b> (version 4.6 or newer). Don't pick the one marked <b>.NET</b>; that's for a different programming language.</li>
+      <li><b>Windows:</b> the download is a zip file. Open it and drag the Godot app out to your Desktop, then double-click it. If Windows shows "Windows protected your PC", click <b>More info</b>, then <b>Run anyway</b>. That warning is common for apps downloaded from the web.<br><b>Mac:</b> open the download and drag Godot into your Applications folder, then open it. If your Mac says it can't be opened, right-click it, choose <b>Open</b>, then <b>Open</b> again.</li>
     </ol>
+    <p class="see">The Godot <b>Project Manager</b>: a window listing your projects. It's empty for now.</p>
 
+    <h3>Start a project</h3>
+    <ol class="how">
+      <li>Click <b>Create</b> (top left of the Project Manager).</li>
+      <li>In <b>Project Name</b>, type <b>Rock Drift</b>.</li>
+      <li>For <b>Project Path</b>, click <b>Browse</b> and choose a place you'll find again, like Documents. Godot makes a Rock Drift folder there.</li>
+      <li>Under <b>Renderer</b>, choose <b>Compatibility</b>. The renderer is the part that draws the game; Compatibility works on the most devices, including phones and web browsers.</li>
+      <li>Click <b>Create</b> (it may say <b>Create &amp; Edit</b>).</li>
+    </ol>
+    <p class="see">The Godot editor: panels on the left and right, and a big area in the middle, which may show a 3D grid. That's fine; it switches to 2D when you add your first node.</p>
     <h3>Find your way around</h3>
     <div class="editor-map">
       <svg viewBox="0 0 640 380" role="img" aria-label="Map of the Godot editor: Scene panel top left, FileSystem bottom left, the main view in the middle, Inspector on the right, and the play buttons at the top right.">
@@ -312,31 +376,64 @@ dl.explain dd { margin: 2px 0 0; font-size: 0.9375rem; }
 
     <h3>Build the ship scene</h3>
     <ol class="how">
-      <li>In the <b>Scene</b> panel, click <b>Other Node</b>, search for <b>Area2D</b>, and click <b>Create</b>. Double-click it and rename it <b>Ship</b>.</li>
-      <li>With Ship selected, click <b>+</b> (Add Child Node), search for <b>CollisionShape2D</b>, and create it. A yellow warning appears: it has no shape yet.</li>
-      <li>In the <b>Inspector</b>, click the empty <b>Shape</b> field and choose <b>New CircleShape2D</b>. Click the circle that appears and set <b>Radius</b> to <b>12</b>. The warning goes away.</li>
-      <li>Save with <kbd>Ctrl</kbd>+<kbd>S</kbd> (<kbd>Cmd</kbd>+<kbd>S</kbd> on a Mac) as <span class="file">ship.tscn</span>.</li>
-      <li>Right-click <b>Ship</b> and choose <b>Attach Script</b>. Keep the path <span class="file">res://ship.gd</span> and click <b>Create</b>. The script editor opens.</li>
-      <li>Select everything in the script (<kbd>Ctrl</kbd>+<kbd>A</kbd>), delete it, and paste the code below. Save.</li>
+      <li>In the <b>Scene</b> panel (top left), under <b>Create Root Node</b>, click <b>Other Node</b>. A window with a long list of node types opens.</li>
+      <li>Type <b>Area2D</b> in the search box at the top, click <b>Area2D</b> in the list, then click <b>Create</b>.</li>
     </ol>
+    <p class="see"><b>Area2D</b> in the Scene panel, with a small yellow warning triangle. The warning says it has no shape yet; you'll fix that in a moment.</p>
+    <ol class="how" start="3">
+      <li>Double-click the word <b>Area2D</b>, type <b>Ship</b>, and press <kbd>Enter</kbd> to rename it.</li>
+      <li>With <b>Ship</b> highlighted, click the <b>+</b> button at the top of the Scene panel (Add Child Node). Search for <b>CollisionShape2D</b> and click <b>Create</b>.</li>
+    </ol>
+    <p class="see"><b>CollisionShape2D</b> indented under <b>Ship</b>, which means it belongs to the ship. It has a warning too.</p>
+    <ol class="how" start="5">
+      <li>Keep <b>CollisionShape2D</b> selected. In the <b>Inspector</b> on the right, find <b>Shape</b>, which says <b>&lt;empty&gt;</b>. Click it and choose <b>New CircleShape2D</b>.</li>
+      <li>Click the word <b>CircleShape2D</b> that appeared, to open its settings. Set <b>Radius</b> to <b>12</b> and press <kbd>Enter</kbd>.</li>
+    </ol>
+    <p class="see">A small blue circle in the middle of the view, and the warning triangles are gone.</p>
+    <ol class="how" start="7">
+      <li>Save: press <kbd>Ctrl</kbd>+<kbd>S</kbd> (<kbd>Cmd</kbd>+<kbd>S</kbd> on a Mac). A save window opens with the name <span class="file">ship.tscn</span> filled in. Click <b>Save</b>.</li>
+      <li>Right-click <b>Ship</b> (the top node, not CollisionShape2D) and choose <b>Attach Script</b>. In the window that opens, leave everything as it is (Language: GDScript, Path: <span class="file">res://ship.gd</span>) and click <b>Create</b>.</li>
+    </ol>
+    <p class="see">The middle area switches to the <b>Script</b> view, showing a few lines of starter code, and <span class="file">ship.gd</span> appears in the FileSystem panel.</p>
+    <ol class="how" start="9">
+      <li>Click inside the code. Press <kbd>Ctrl</kbd>+<kbd>A</kbd> to select it all and <kbd>Delete</kbd> to remove it.</li>
+      <li>Tap <b>Copy</b> on the code below, click back in Godot's script area, and paste with <kbd>Ctrl</kbd>+<kbd>V</kbd> (<kbd>Cmd</kbd>+<kbd>V</kbd> on a Mac). Save with <kbd>Ctrl</kbd>+<kbd>S</kbd>.</li>
+    </ol>
+
+    <div class="primer">
+      <h4>How to read code</h4>
+      <ul>
+        <li>Godot reads a script from top to bottom.</li>
+        <li>Lines starting with <code>#</code> are notes for people. Godot skips them, so they're where the explanations are.</li>
+        <li><code>var</code> makes a <b>variable</b>: a named box holding a value, like <code>velocity</code>.</li>
+        <li><code>func</code> starts a <b>function</b>: a named set of instructions. Godot runs <code>_ready</code> once at the start and <code>_process</code> every frame.</li>
+        <li>Lines pushed to the right (indented with a <kbd>Tab</kbd>) belong to the line above them that ends with a colon <code>:</code>.</li>
+      </ul>
+    </div>
 
     <div class="code">
       <div class="code-head"><span class="file">ship.gd</span><button type="button" data-copy="code-ship2">Copy</button></div>
       <pre id="code-ship2">extends Area2D
+<span class="c"># This script tells the ship what to do. Lines starting with # are notes</span>
+<span class="c"># for people: Godot skips them.</span>
 
-<span class="c"># How the ship handles. Change these in the Inspector.</span>
+<span class="c"># Settings. @export also shows them in the Inspector, so you can change them there.</span>
 @export var turn_speed := 3.5   <span class="c"># how fast it turns</span>
 @export var thrust := 400.0     <span class="c"># how hard the engine pushes</span>
 @export var max_speed := 500.0  <span class="c"># top speed</span>
 @export var drag := 40.0        <span class="c"># how quickly it slows down when coasting</span>
 
+<span class="c"># The ship's speed and direction right now. It starts at zero: not moving.</span>
 var velocity := Vector2.ZERO
 
 
+<span class="c"># Godot runs _ready once, when the ship first appears.</span>
 func _ready() -&gt; void:
-	position = get_viewport_rect().size / 2
+	position = get_viewport_rect().size / 2   <span class="c"># start in the middle of the screen</span>
 
 
+<span class="c"># Godot runs _process every frame, about 60 times a second.</span>
+<span class="c"># delta is how many seconds passed since the last frame (about 0.016).</span>
 func _process(delta: float) -&gt; void:
 	<span class="c"># Turn with left and right.</span>
 	var turn := Input.get_axis("ui_left", "ui_right")
@@ -348,15 +445,16 @@ func _process(delta: float) -&gt; void:
 	else:
 		velocity = velocity.move_toward(Vector2.ZERO, drag * delta)
 	velocity = velocity.limit_length(max_speed)
-	position += velocity * delta
+	position += velocity * delta   <span class="c"># move by this frame's share of the velocity</span>
 
 	<span class="c"># Leave one edge of the screen, come back on the other.</span>
 	var screen := get_viewport_rect().size
 	position.x = wrapf(position.x, 0.0, screen.x)
 	position.y = wrapf(position.y, 0.0, screen.y)
-	queue_redraw()
+	queue_redraw()   <span class="c"># ask Godot to run _draw again, so the flame shows up</span>
 
 
+<span class="c"># Draws the ship: a pointed shape, plus a flame while thrusting.</span>
 func _draw() -&gt; void:
 	var body := PackedVector2Array([Vector2(16, 0), Vector2(-12, -10), Vector2(-6, 0), Vector2(-12, 10)])
 	draw_colored_polygon(body, Color("ff6b5e"))
@@ -364,7 +462,15 @@ func _draw() -&gt; void:
 		var flame := PackedVector2Array([Vector2(-7, -4), Vector2(-18, 0), Vector2(-7, 4)])
 		draw_colored_polygon(flame, Color("ffd23f"))</pre>
     </div>
+    <p class="see">No red text at the bottom of the script area. If there is, see "Something not working?" further down.</p>
 
+    <h3>Fly it</h3>
+    <ol class="how">
+      <li>Press <kbd>F6</kbd> to run the scene you have open. On many laptops you need to hold <kbd>Fn</kbd> too. Or click the <b>Run Current Scene</b> button at the top right (the one beside the ▶ play button).</li>
+      <li>Use <kbd>&uarr;</kbd> to thrust and <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to turn. If the keys do nothing, click inside the game window first.</li>
+      <li>To stop, close the game window.</li>
+    </ol>
+    <p class="see">A new dark window with your red ship in the middle. It drifts after you let go of thrust, and wraps around the edges.</p>
     <h3>What the code says</h3>
     <dl class="explain">
       <dt>@export var thrust := 400.0</dt>
@@ -397,12 +503,23 @@ func _draw() -&gt; void:
 
     <h3>Your tasks <span class="tag computer">Computer</span></h3>
     <ol class="tasks">
-      <li><input class="check" type="checkbox" id="t2a" data-step="2"><label class="task-text" for="t2a"><b>Install Godot and create the Rock Drift project.</b><small>Remember: Compatibility renderer.</small></label></li>
-      <li><input class="check" type="checkbox" id="t2b" data-step="2"><label class="task-text" for="t2b"><b>Build the ship scene and paste in the script.</b><small>Two nodes: Ship (Area2D) with a CollisionShape2D child, radius 12.</small></label></li>
-      <li><input class="check" type="checkbox" id="t2c" data-step="2"><label class="task-text" for="t2c"><b>Fly it.</b><small>Press <kbd>F6</kbd> to run the scene you have open. Use <kbd>&uarr;</kbd> to thrust and <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to turn. Close the game window to stop.</small></label></li>
-      <li><input class="check" type="checkbox" id="t2d" data-step="2"><label class="task-text" for="t2d"><b>Change a setting in the Inspector.</b><small>Click <b>Ship</b> in the Scene panel. In the Inspector, set <b>Drag</b> to 200 and run again: the ship now stops quickly. Put it back to 40 when you're done.</small></label></li>
+      <li><input class="check" type="checkbox" id="t2a" data-step="2"><label class="task-text" for="t2a"><b>Install Godot and create the Rock Drift project.</b><small>Remember to choose the Compatibility renderer.</small></label></li>
+      <li><input class="check" type="checkbox" id="t2b" data-step="2"><label class="task-text" for="t2b"><b>Build the ship scene and paste in the script.</b><small>Two nodes: Ship (Area2D) with a CollisionShape2D under it, radius 12.</small></label></li>
+      <li><input class="check" type="checkbox" id="t2c" data-step="2"><label class="task-text" for="t2c"><b>Fly it.</b><small>Run it with <kbd>F6</kbd> and try to stop the ship completely.</small></label></li>
+      <li><input class="check" type="checkbox" id="t2d" data-step="2"><label class="task-text" for="t2d"><b>Change a setting in the Inspector.</b><small>Close the game. Click <b>Ship</b> in the Scene panel; in the Inspector, change <b>Drag</b> from 40 to 200, and run again: now it stops quickly. Change it back to 40 afterwards.</small></label></li>
     </ol>
-    <div class="tip"><b>Red errors after pasting?</b> Make sure you replaced the whole script, not just part of it. Godot cares about indentation: each indented line starts with a tab.</div>
+
+    <details class="trouble">
+      <summary>Something not working?</summary>
+      <div class="trouble-body">
+        <p><b>"Script inherits from native type 'Area2D', so it can't be assigned to an object of type 'CollisionShape2D'."</b> The script went on the wrong node. Right-click <b>CollisionShape2D</b>, choose <b>Detach Script</b>, then right-click <b>Ship</b> and attach it there.</p>
+        <p><b>Red text about indentation, "Unexpected indent" or "Mixed use of tabs and spaces".</b> Part of the code got lost or changed while pasting. Select all the code in Godot, delete it, and paste it again with the Copy button. Don't add spaces at the start of lines.</p>
+        <p><b>A window opens but there's no ship.</b> Check that the whole script was pasted, including <code>func _draw()</code> at the bottom, and that the <span class="file">ship.tscn</span> tab was open when you pressed <kbd>F6</kbd>.</p>
+        <p><b>F6 does nothing.</b> Hold <kbd>Fn</kbd> and press <kbd>F6</kbd>, or use the Run Current Scene button at the top right.</p>
+        <p><b>The keys don't move the ship.</b> Click inside the game window once so it receives the keys.</p>
+        <p><b>Still stuck?</b> Take a photo of the screen and ask Claude. Error messages are clues, not failures.</p>
+      </div>
+    </details>
   </section>
 
   <!-- ================= STEP 3 ================= -->
@@ -410,7 +527,7 @@ func _draw() -&gt; void:
     <div class="step-head">
       <div class="step-num">3</div>
       <h2>Add rocks and crashing</h2>
-      <div class="step-meta"><span class="tag computer">Computer</span><span>about 25 minutes</span></div>
+      <div class="step-meta"><span class="tag computer">Computer</span><span>about 30 to 45 minutes</span></div>
     </div>
 
     <p>Now you'll make a rock scene, a main scene that brings the ship and five rocks together, and a crash that starts the round over. Along the way you'll use two of Godot's most important ideas: <b>instancing</b> and <b>signals</b>.</p>
@@ -421,20 +538,26 @@ func _draw() -&gt; void:
     </div>
 
     <h3>Build the rock</h3>
+    <p>You'll build the rock the same way as the ship.</p>
     <ol class="how">
-      <li>Choose <b>Scene</b> &rarr; <b>New Scene</b>. Build it like the ship: an <b>Area2D</b> named <b>Rock</b>, with a <b>CollisionShape2D</b> child using a <b>New CircleShape2D</b>, but with <b>Radius 30</b>.</li>
-      <li>Save it as <span class="file">rock.tscn</span>, attach a script <span class="file">rock.gd</span>, and replace its contents with this:</li>
+      <li>At the very top left of the editor, open the <b>Scene</b> menu and choose <b>New Scene</b>. A new empty tab opens.</li>
+      <li>Click <b>Other Node</b>, search for <b>Area2D</b>, and click <b>Create</b>. Double-click it and rename it <b>Rock</b>.</li>
+      <li>With <b>Rock</b> selected, click <b>+</b>, add a <b>CollisionShape2D</b>, and in the Inspector set its <b>Shape</b> to <b>New CircleShape2D</b>. Click it and set <b>Radius</b> to <b>30</b> this time.</li>
+      <li>Save with <kbd>Ctrl</kbd>+<kbd>S</kbd> as <span class="file">rock.tscn</span>.</li>
+      <li>Right-click <b>Rock</b>, choose <b>Attach Script</b>, and click <b>Create</b> (the path should say <span class="file">res://rock.gd</span>).</li>
+      <li>Select all of the starter code, delete it, paste the code below, and save.</li>
     </ol>
     <div class="code">
       <div class="code-head"><span class="file">rock.gd</span><button type="button" data-copy="code-rock">Copy</button></div>
       <pre id="code-rock">extends Area2D
+<span class="c"># This script makes one rock drift, spin and draw itself.</span>
 
 @export var speed := 80.0    <span class="c"># how fast it drifts</span>
 @export var radius := 30.0   <span class="c"># how big it is</span>
 
-var velocity := Vector2.ZERO
-var spin := 0.0
-var outline := PackedVector2Array()
+var velocity := Vector2.ZERO           <span class="c"># speed and direction</span>
+var spin := 0.0                        <span class="c"># how fast it turns</span>
+var outline := PackedVector2Array()    <span class="c"># the corner points of its lumpy shape</span>
 
 
 func _ready() -&gt; void:
@@ -446,6 +569,7 @@ func _ready() -&gt; void:
 		outline.append(Vector2.from_angle(angle) * radius * randf_range(0.75, 1.1))
 
 
+<span class="c"># Every frame: move, spin, and wrap around the screen edges.</span>
 func _process(delta: float) -&gt; void:
 	position += velocity * delta
 	rotation += spin * delta
@@ -456,19 +580,25 @@ func _process(delta: float) -&gt; void:
 
 func _draw() -&gt; void:
 	draw_colored_polygon(outline, Color("8a8fa8"))</pre>
-      <div class="code-note">Press <kbd>F6</kbd> to test it: one rock drifts out of the top-left corner, spinning. Each run picks a new direction and shape.</div>
     </div>
+    <p class="see">Press <kbd>F6</kbd>: a grey lumpy rock drifts out from the top-left corner, spinning. It starts in the corner because its position is 0, 0; the main scene will place rocks properly. Each run picks a new direction and shape.</p>
 
     <h3>Build the main scene</h3>
     <ol class="how">
-      <li>Choose <b>Scene</b> &rarr; <b>New Scene</b> and click <b>2D Scene</b>. That makes a <b>Node2D</b>; rename it <b>Main</b>.</li>
-      <li>Drag <span class="file">ship.tscn</span> from the FileSystem panel onto <b>Main</b>. That adds an instance of your ship. (Or use the chain-link button, Instantiate Child Scene.)</li>
-      <li>Save as <span class="file">main.tscn</span>, attach a script <span class="file">main.gd</span>, and replace its contents with this:</li>
+      <li>Open the <b>Scene</b> menu, choose <b>New Scene</b>, and this time click <b>2D Scene</b>. That makes a <b>Node2D</b>, a plain node with a position. Rename it <b>Main</b>.</li>
+      <li>In the <b>FileSystem</b> panel (bottom left), find <span class="file">ship.tscn</span>. Drag it up and drop it on the word <b>Main</b> in the Scene panel.</li>
+    </ol>
+    <p class="see"><b>Ship</b> indented under <b>Main</b>, with a small icon beside it showing it's an instance (a copy of your ship scene), and the red ship in the view.</p>
+    <ol class="how" start="3">
+      <li>Save with <kbd>Ctrl</kbd>+<kbd>S</kbd> as <span class="file">main.tscn</span>.</li>
+      <li>Right-click <b>Main</b>, choose <b>Attach Script</b>, and click <b>Create</b> (<span class="file">res://main.gd</span>). Replace the starter code with this, and save:</li>
     </ol>
     <div class="code">
       <div class="code-head"><span class="file">main.gd</span><button type="button" data-copy="code-main">Copy</button></div>
       <pre id="code-main">extends Node2D
+<span class="c"># The main scene's script: it adds the rocks when the game starts.</span>
 
+<span class="c"># Load the rock scene once, so we can make copies of it.</span>
 const ROCK := preload("res://rock.tscn")
 
 
@@ -482,32 +612,43 @@ func _ready() -&gt; void:
     </div>
     <dl class="explain">
       <dt>const ROCK := preload("res://rock.tscn")</dt>
-      <dd>Loads the rock scene once, ready to copy.</dd>
+      <dd>Loads the rock scene once and calls it ROCK, ready to copy. <code>const</code> is like <code>var</code>, but for a value that never changes.</dd>
+      <dt>for i in 5:</dt>
+      <dd>A <b>loop</b>: do the indented lines below it five times.</dd>
       <dt>ROCK.instantiate() &middot; add_child(rock)</dt>
-      <dd>Makes a new rock and puts it into the main scene. The loop does it five times.</dd>
+      <dd>Make a new copy of the rock, then put it into the main scene so it appears.</dd>
     </dl>
 
     <h3>Make the ship crash</h3>
-    <p>Open <span class="file">ship.gd</span> again and replace it with this version. The highlighted lines are new.</p>
+    <ol class="how">
+      <li>In the <b>FileSystem</b> panel, double-click <span class="file">ship.gd</span>. It opens in the Script view.</li>
+      <li>Select all of it, delete it, paste this new version, and save. The highlighted lines are the new ones; everything else is the same as before.</li>
+    </ol>
     <div class="code">
       <div class="code-head"><span class="file">ship.gd</span><button type="button" data-copy="code-ship3">Copy</button></div>
       <pre id="code-ship3">extends Area2D
+<span class="c"># This script tells the ship what to do. Lines starting with # are notes</span>
+<span class="c"># for people: Godot skips them.</span>
 
-<span class="c"># How the ship handles. Change these in the Inspector.</span>
+<span class="c"># Settings. @export also shows them in the Inspector, so you can change them there.</span>
 @export var turn_speed := 3.5   <span class="c"># how fast it turns</span>
 @export var thrust := 400.0     <span class="c"># how hard the engine pushes</span>
 @export var max_speed := 500.0  <span class="c"># top speed</span>
 @export var drag := 40.0        <span class="c"># how quickly it slows down when coasting</span>
 
+<span class="c"># The ship's speed and direction right now. It starts at zero: not moving.</span>
 var velocity := Vector2.ZERO
-<mark>var crashed := false</mark>
+<mark>var crashed := false   <span class="c"># becomes true once we hit a rock</span></mark>
 
 
+<span class="c"># Godot runs _ready once, when the ship first appears.</span>
 func _ready() -&gt; void:
-	position = get_viewport_rect().size / 2
+	position = get_viewport_rect().size / 2   <span class="c"># start in the middle of the screen</span>
 <mark>	area_entered.connect(_on_area_entered)</mark>
 
 
+<span class="c"># Godot runs _process every frame, about 60 times a second.</span>
+<span class="c"># delta is how many seconds passed since the last frame (about 0.016).</span>
 func _process(delta: float) -&gt; void:
 	<span class="c"># Turn with left and right.</span>
 	var turn := Input.get_axis("ui_left", "ui_right")
@@ -519,13 +660,13 @@ func _process(delta: float) -&gt; void:
 	else:
 		velocity = velocity.move_toward(Vector2.ZERO, drag * delta)
 	velocity = velocity.limit_length(max_speed)
-	position += velocity * delta
+	position += velocity * delta   <span class="c"># move by this frame's share of the velocity</span>
 
 	<span class="c"># Leave one edge of the screen, come back on the other.</span>
 	var screen := get_viewport_rect().size
 	position.x = wrapf(position.x, 0.0, screen.x)
 	position.y = wrapf(position.y, 0.0, screen.y)
-	queue_redraw()
+	queue_redraw()   <span class="c"># ask Godot to run _draw again, so the flame shows up</span>
 
 
 <mark><span class="c"># Something touched the ship: crash, and start the round again.</span></mark>
@@ -536,6 +677,7 @@ func _process(delta: float) -&gt; void:
 <mark>	get_tree().reload_current_scene.call_deferred()   <span class="c"># wait until the collision check is done</span></mark>
 
 
+<span class="c"># Draws the ship: a pointed shape, plus a flame while thrusting.</span>
 func _draw() -&gt; void:
 	var body := PackedVector2Array([Vector2(16, 0), Vector2(-12, -10), Vector2(-6, 0), Vector2(-12, 10)])
 	draw_colored_polygon(body, Color("ff6b5e"))
@@ -545,20 +687,38 @@ func _draw() -&gt; void:
     </div>
     <dl class="explain">
       <dt>area_entered.connect(_on_area_entered)</dt>
-      <dd>"When a rock touches me, run <code>_on_area_entered</code>." This is listening to a signal.</dd>
+      <dd>Listen for a <b>signal</b>: "when another area touches me, run the function <code>_on_area_entered</code>."</dd>
       <dt>if crashed: return</dt>
-      <dd>Two rocks can touch you at the same moment. This makes sure the round only restarts once.</dd>
+      <dd>Two rocks can touch you at the same moment. This makes sure the round only restarts once. <code>return</code> means "stop this function here".</dd>
       <dt>reload_current_scene.call_deferred()</dt>
-      <dd>Start the scene over, but wait until Godot finishes checking collisions this frame. Godot doesn't allow removing things in the middle of that check.</dd>
+      <dd>Start the scene over from the beginning, but wait until Godot finishes checking for collisions this frame. Godot doesn't allow removing things in the middle of that check.</dd>
     </dl>
+
+    <h3>Play the whole game</h3>
+    <ol class="how">
+      <li>Click the <b>main.tscn</b> tab at the top of the view, then press <kbd>F5</kbd> (or the ▶ play button at the top right). <kbd>F5</kbd> runs the whole game, not just the open scene.</li>
+      <li>The first time, Godot asks which scene the game should start with. Click <b>Select Current</b>, which picks <span class="file">main.tscn</span>.</li>
+    </ol>
+    <p class="see">Your ship in the middle and five rocks drifting around it. Fly into one and the round starts over. That's the game from step 1's demo, built by you.</p>
 
     <h3>Your tasks <span class="tag computer">Computer</span></h3>
     <ol class="tasks">
       <li><input class="check" type="checkbox" id="t3a" data-step="3"><label class="task-text" for="t3a"><b>Build the rock scene and test it with F6.</b></label></li>
       <li><input class="check" type="checkbox" id="t3b" data-step="3"><label class="task-text" for="t3b"><b>Build the main scene with the ship and the rock-making script.</b></label></li>
-      <li><input class="check" type="checkbox" id="t3c" data-step="3"><label class="task-text" for="t3c"><b>Add the crash to the ship, then play the whole game.</b><small>Press <kbd>F5</kbd>. The first time, Godot asks which scene is the main one: choose <b>Select Current</b> (with main.tscn open) or pick <span class="file">main.tscn</span>. Now you have the game from step 1's demo.</small></label></li>
-      <li><input class="check" type="checkbox" id="t3d" data-step="3"><label class="task-text" for="t3d"><b>Make it yours.</b><small>Change <code>for i in 5</code> to 10 rocks, or a rock's <b>Speed</b> in the Inspector of <span class="file">rock.tscn</span>, and see how the game changes.</small></label></li>
+      <li><input class="check" type="checkbox" id="t3c" data-step="3"><label class="task-text" for="t3c"><b>Add the crash to the ship, then play the whole game with F5.</b></label></li>
+      <li><input class="check" type="checkbox" id="t3d" data-step="3"><label class="task-text" for="t3d"><b>Make it yours.</b><small>In <span class="file">main.gd</span>, change <code>for i in 5</code> to <code>for i in 10</code> and play again. Or open <span class="file">rock.tscn</span>, click <b>Rock</b>, and change <b>Speed</b> in the Inspector.</small></label></li>
     </ol>
+
+    <details class="trouble">
+      <summary>Something not working?</summary>
+      <div class="trouble-body">
+        <p><b>"Could not preload resource file 'res://rock.tscn'".</b> The rock scene was saved under a different name. In FileSystem, right-click it, choose <b>Rename</b>, and call it exactly <span class="file">rock.tscn</span>, all lowercase.</p>
+        <p><b>No rocks appear.</b> Check that <span class="file">main.gd</span> is attached to <b>Main</b> (it shows a small scroll icon) and that you saved it. Also make sure you pressed <kbd>F5</kbd>, not <kbd>F6</kbd>, or had main.tscn open.</p>
+        <p><b>Rocks pass through the ship.</b> One of the CollisionShape2D nodes has no shape. Open <span class="file">ship.tscn</span> and <span class="file">rock.tscn</span> and check each has a circle with the right radius. Also check you saved the new <span class="file">ship.gd</span>.</p>
+        <p><b>F5 opens the wrong scene.</b> Open <b>Project</b> &rarr; <b>Project Settings</b>, search for <b>Main Scene</b>, and choose <span class="file">main.tscn</span>.</p>
+        <p><b>Still stuck?</b> Take a photo of the screen and ask Claude.</p>
+      </div>
+    </details>
   </section>
 
   <section class="next">

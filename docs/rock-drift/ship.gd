@@ -1,20 +1,26 @@
 extends Area2D
+# This script tells the ship what to do. Lines starting with # are notes
+# for people: Godot skips them.
 
-# How the ship handles. Change these in the Inspector.
+# Settings. @export also shows them in the Inspector, so you can change them there.
 @export var turn_speed := 3.5   # how fast it turns
 @export var thrust := 400.0     # how hard the engine pushes
 @export var max_speed := 500.0  # top speed
 @export var drag := 40.0        # how quickly it slows down when coasting
 
+# The ship's speed and direction right now. It starts at zero: not moving.
 var velocity := Vector2.ZERO
-var crashed := false
+var crashed := false   # becomes true once we hit a rock
 
 
+# Godot runs _ready once, when the ship first appears.
 func _ready() -> void:
-	position = get_viewport_rect().size / 2
+	position = get_viewport_rect().size / 2   # start in the middle of the screen
 	area_entered.connect(_on_area_entered)
 
 
+# Godot runs _process every frame, about 60 times a second.
+# delta is how many seconds passed since the last frame (about 0.016).
 func _process(delta: float) -> void:
 	# Turn with left and right.
 	var turn := Input.get_axis("ui_left", "ui_right")
@@ -26,13 +32,13 @@ func _process(delta: float) -> void:
 	else:
 		velocity = velocity.move_toward(Vector2.ZERO, drag * delta)
 	velocity = velocity.limit_length(max_speed)
-	position += velocity * delta
+	position += velocity * delta   # move by this frame's share of the velocity
 
 	# Leave one edge of the screen, come back on the other.
 	var screen := get_viewport_rect().size
 	position.x = wrapf(position.x, 0.0, screen.x)
 	position.y = wrapf(position.y, 0.0, screen.y)
-	queue_redraw()
+	queue_redraw()   # ask Godot to run _draw again, so the flame shows up
 
 
 # Something touched the ship: crash, and start the round again.
@@ -43,6 +49,7 @@ func _on_area_entered(_area: Area2D) -> void:
 	get_tree().reload_current_scene.call_deferred()   # wait until the collision check is done
 
 
+# Draws the ship: a pointed shape, plus a flame while thrusting.
 func _draw() -> void:
 	var body := PackedVector2Array([Vector2(16, 0), Vector2(-12, -10), Vector2(-6, 0), Vector2(-12, 10)])
 	draw_colored_polygon(body, Color("ff6b5e"))
