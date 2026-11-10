@@ -1,0 +1,636 @@
+<title>Learn Godot with Rock Drift</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: one reading column (phone first) with a sticky step bar. Each step is tagged with
+   where it happens (phone or computer), teaches one idea, then lists tasks to tick off.
+   Committed to one dark "deep space" look that matches the game you build. */
+:root {
+  --space: #0f1226;
+  --space-2: #151a33;
+  --panel: #1d2346;
+  --panel-2: #29315c;
+  --line: rgba(232, 236, 250, 0.14);
+  --ink: #e8ecfa;
+  --ink-dim: #a3abc9;
+  --ship: #ff6b5e;
+  --flame: #ffd23f;
+  --rock: #8a8fa8;
+  --ok: #79e2c2;
+  --phone: #79e2c2;
+  --computer: #9db7ff;
+  --font-display: "Chakra Petch", "Trebuchet MS", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme: dark;
+}
+[hidden] { display: none !important; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { margin: 0; background: var(--space); color: var(--ink); font: 400 1rem/1.6 var(--font-body); -webkit-text-size-adjust: 100%; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--space); }
+.wrap { max-width: 700px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+a { color: var(--ok); text-underline-offset: 2px; }
+a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--ok); outline-offset: 2px; border-radius: 4px; }
+code, .file, pre { font-variant-ligatures: none; }
+code, .file { font: 500 0.875em var(--font-mono); background: var(--panel); border: 1px solid var(--line); border-radius: 5px; padding: 0.05em 0.35em; overflow-wrap: anywhere; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; line-height: 1.2; margin: 0; }
+kbd { font: 600 0.8125em var(--font-body); padding: 1px 6px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; background: var(--panel); white-space: nowrap; }
+
+/* ---------- Opening ---------- */
+header.intro { padding-block: 28px 10px; }
+.eyebrow { font: 600 0.75rem var(--font-body); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-dim); }
+h1 { font-size: clamp(1.9rem, 7vw, 2.6rem); margin-top: 6px; }
+h1 span { color: var(--ship); }
+.lede { color: var(--ink-dim); max-width: 60ch; margin: 10px 0 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin: 16px 0 0; font-size: 0.875rem; color: var(--ink-dim); }
+.tag { display: inline-flex; align-items: center; gap: 6px; font: 600 0.75rem var(--font-body); letter-spacing: 0.04em; padding: 3px 9px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+.tag.phone { color: var(--phone); }
+.tag.computer { color: var(--computer); }
+.tag svg { width: 12px; height: 12px; fill: currentColor; }
+
+/* ---------- Games (demo and lab) ---------- */
+.game { margin-top: 16px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--space-2); }
+.game canvas { display: block; width: 100%; height: auto; touch-action: none; }
+.pad { display: grid; grid-template-columns: 1fr 1fr 1.4fr; gap: 8px; padding: 10px; border-top: 1px solid var(--line); }
+.pad button {
+  min-height: 52px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+  font: 700 0.9375rem var(--font-display); letter-spacing: 0.04em; touch-action: none; user-select: none; -webkit-user-select: none; cursor: pointer;
+}
+.pad button.down { background: var(--panel-2); border-color: var(--flame); }
+.pad .thrust { color: var(--flame); }
+.game-note { padding: 0 10px 10px; font-size: 0.8125rem; color: var(--ink-dim); }
+.sliders { display: grid; gap: 4px 12px; grid-template-columns: 1fr auto; padding: 4px 12px 12px; align-items: center; }
+.sliders label { font: 500 0.8125rem var(--font-mono); color: var(--ink-dim); }
+.sliders output { font: 500 0.875rem var(--font-mono); font-variant-numeric: tabular-nums; }
+.sliders input { grid-column: 1 / -1; width: 100%; accent-color: var(--ship); min-height: 28px; margin: 0 0 6px; }
+
+/* ---------- Sticky step bar ---------- */
+nav.steps { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: rgba(15, 18, 38, 0.94); backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); }
+nav.steps .wrap { display: flex; align-items: center; gap: 8px; padding-block: 10px; overflow-x: auto; }
+nav.steps a { flex: 0 0 auto; font: 600 0.8125rem var(--font-body); color: var(--ink); text-decoration: none; padding: 7px 12px; border-radius: 8px; background: var(--panel); border: 1px solid var(--line); }
+nav.steps a .n { color: var(--ink-dim); margin-right: 4px; }
+nav.steps a.done { border-color: var(--ok); }
+nav.steps a.done .n { color: var(--ok); }
+.progress { margin-left: auto; flex: 0 0 auto; font-size: 0.8125rem; color: var(--ink-dim); font-variant-numeric: tabular-nums; padding-left: 8px; }
+
+/* ---------- Steps ---------- */
+section.step { padding-block: 36px 8px; scroll-margin-top: calc(56px + env(safe-area-inset-top, 0px)); }
+.step-head { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; align-items: start; }
+.step-num { grid-row: span 2; width: 44px; height: 44px; display: grid; place-items: center; font: 700 1.375rem var(--font-display); color: var(--space); background: var(--ship); border-radius: 6px; }
+.step-head h2 { font-size: 1.5rem; }
+.step-meta { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; font-size: 0.8125rem; color: var(--ink-dim); }
+.step p { margin: 14px 0 0; max-width: 65ch; }
+.step h3 { font-size: 1.0625rem; margin-top: 28px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.idea { margin-top: 14px; padding: 14px 16px; background: var(--panel); border-radius: 10px; border: 1px solid var(--line); }
+.idea strong { color: var(--ok); }
+.idea p:first-child { margin-top: 0; }
+.tip { margin-top: 14px; padding: 12px 14px; border-radius: 10px; border: 1px dashed rgba(255, 210, 63, 0.5); font-size: 0.9375rem; }
+.tip b { color: var(--flame); }
+
+/* Numbered how-to: the order matters here, so numbers carry meaning. */
+ol.how { margin: 12px 0 0; padding-left: 1.4em; display: grid; gap: 8px; }
+ol.how li { padding-left: 4px; }
+ol.how li::marker { font: 700 0.9375rem var(--font-display); color: var(--ship); }
+
+/* Tasks */
+ol.tasks { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 10px; }
+ol.tasks li { display: grid; grid-template-columns: 28px 1fr; gap: 10px; padding: 12px 14px; border-radius: 10px; background: var(--space-2); border: 1px solid var(--line); }
+ol.tasks li.checked { border-color: rgba(121, 226, 194, 0.5); }
+ol.tasks li.checked .task-text { color: var(--ink-dim); }
+.check { width: 24px; height: 24px; margin: 2px 0 0; accent-color: var(--ok); cursor: pointer; }
+.task-text { min-width: 0; }
+.task-text small { display: block; color: var(--ink-dim); margin-top: 4px; font-size: 0.8125rem; line-height: 1.5; }
+
+/* Code */
+.code { margin-top: 14px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #0b0e1f; }
+.code-head { display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 12px; background: var(--panel); border-bottom: 1px solid var(--line); }
+.code-head .file { background: transparent; border: 0; padding: 0; }
+.code-head button { margin-left: auto; font: 600 0.8125rem var(--font-body); color: var(--space); background: var(--ok); border: 0; border-radius: 7px; padding: 0 14px; min-height: 36px; cursor: pointer; }
+.code pre { margin: 0; padding: 12px 14px; overflow-x: auto; font: 500 0.8125rem/1.55 var(--font-mono); tab-size: 4; -moz-tab-size: 4; color: var(--ink); }
+.code pre .c { color: #8f99c4; }
+.code mark { background: rgba(255, 210, 63, 0.16); color: inherit; box-shadow: -14px 0 0 rgba(255, 210, 63, 0.16), 14px 0 0 rgba(255, 210, 63, 0.16); border-left: 0; }
+.code-note { padding: 8px 12px; font-size: 0.8125rem; color: var(--ink-dim); border-top: 1px solid var(--line); }
+dl.explain { margin: 14px 0 0; display: grid; gap: 10px; }
+dl.explain dt { font: 500 0.875rem var(--font-mono); color: var(--flame); }
+dl.explain dd { margin: 2px 0 0; font-size: 0.9375rem; }
+
+/* Scene explorer */
+.explorer { margin-top: 14px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.trees { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1px; background: var(--line); }
+.tree { padding: 10px 8px; background: var(--space-2); display: grid; align-content: start; gap: 2px; }
+.tree .label { font: 600 0.6875rem var(--font-body); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-dim); padding: 2px 10px 6px; }
+.tree button { display: flex; align-items: center; gap: 8px; text-align: left; font: 500 0.9375rem var(--font-mono); color: var(--ink); background: transparent; border: 0; border-radius: 6px; padding: 8px 10px; min-height: 40px; cursor: pointer; }
+.tree button .type { font: 400 0.75rem var(--font-body); color: var(--ink-dim); margin-left: auto; }
+.tree button[aria-pressed="true"] { background: var(--panel-2); box-shadow: inset 3px 0 0 var(--ship); }
+.tree .i1 { padding-left: 28px; }
+.dot { width: 10px; height: 10px; border-radius: 2px; flex: 0 0 auto; }
+.node-info { padding: 14px 16px; background: var(--panel); border-top: 1px solid var(--line); min-height: 7em; }
+.node-info h4 { margin: 0; font: 700 1rem var(--font-display); }
+.node-info p { margin: 6px 0 0; font-size: 0.9375rem; }
+
+/* Quiz */
+.quiz { margin-top: 14px; display: grid; gap: 14px; }
+.q { padding: 14px 16px; background: var(--space-2); border: 1px solid var(--line); border-radius: 10px; }
+.q > p { margin: 0 0 10px; font-weight: 600; }
+.answers { display: grid; gap: 8px; }
+.answers button { text-align: left; font: 400 0.9375rem var(--font-body); color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; min-height: 44px; cursor: pointer; }
+.answers button.right { border-color: var(--ok); background: rgba(121, 226, 194, 0.14); }
+.answers button.wrong { border-color: var(--ship); background: rgba(255, 107, 94, 0.12); }
+.feedback { margin: 10px 0 0; font-size: 0.875rem; color: var(--ink-dim); min-height: 1.4em; }
+
+/* Editor map */
+.editor-map { margin-top: 14px; overflow-x: auto; }
+.editor-map svg { display: block; width: 100%; min-width: 320px; height: auto; }
+.map-key { margin: 12px 0 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.map-key li { display: grid; grid-template-columns: 26px 1fr; gap: 10px; font-size: 0.9375rem; }
+.map-key .k { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font: 700 0.8125rem var(--font-display); background: var(--flame); color: var(--space); }
+
+.next { padding-block: 36px 48px; }
+.next h2 { font-size: 1.25rem; }
+.next ul { margin: 12px 0 0; padding-left: 1.2em; color: var(--ink-dim); }
+.next li { margin-top: 6px; }
+.next li b { color: var(--ink); }
+.links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.links a { font-size: 0.875rem; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; text-decoration: none; background: var(--panel); }
+</style>
+
+<header class="intro">
+  <div class="wrap">
+    <div class="eyebrow">A beginner's path in Godot</div>
+    <h1>Learn Godot with <span>Rock Drift</span></h1>
+    <p class="lede">You'll build a small space game: a ship that turns, thrusts and drifts while rocks float past. Each step adds one piece and teaches one idea. Tick tasks off as you go; your progress is saved on this device.</p>
+    <div class="legend">
+      <span class="tag phone"><svg viewBox="0 0 12 12"><rect x="3" y="0" width="6" height="12" rx="1.5"/></svg>Phone</span><span>read and try it on your phone</span>
+      <span class="tag computer"><svg viewBox="0 0 12 12"><rect x="0" y="1" width="12" height="8" rx="1"/><rect x="3" y="10" width="6" height="2"/></svg>Computer</span><span>build it in Godot on a computer</span>
+    </div>
+  </div>
+</header>
+
+<nav class="steps" aria-label="Steps">
+  <div class="wrap">
+    <a href="#step-1" data-step="1"><span class="n">1</span>Plan</a>
+    <a href="#step-2" data-step="2"><span class="n">2</span>Ship</a>
+    <a href="#step-3" data-step="3"><span class="n">3</span>Rocks</a>
+    <span class="progress" id="progress">0 of 11 done</span>
+  </div>
+</nav>
+
+<main class="wrap">
+
+  <!-- ================= STEP 1 ================= -->
+  <section class="step" id="step-1">
+    <div class="step-head">
+      <div class="step-num">1</div>
+      <h2>Plan the game</h2>
+      <div class="step-meta"><span class="tag phone">Phone</span><span>about 10 minutes</span></div>
+    </div>
+
+    <p>Here's what you'll have at the end of step 3. Hold <b>Thrust</b> to push forward and the arrows to turn. Notice that the ship keeps drifting after you let go, and that flying off one edge brings you back on the other. Touch a rock and the round starts over.</p>
+
+    <div class="game" id="demo">
+      <canvas width="800" height="450" aria-label="Rock Drift: a red ship among drifting grey rocks"></canvas>
+      <div class="pad">
+        <button type="button" data-key="left" aria-label="Turn left">&#9664; Turn</button>
+        <button type="button" data-key="right" aria-label="Turn right">Turn &#9654;</button>
+        <button type="button" data-key="up" class="thrust">Thrust</button>
+      </div>
+      <div class="game-note">On a keyboard: arrow keys, after tapping the game once.</div>
+    </div>
+
+    <p>Godot is two things. The <b>engine</b> runs the game: about 60 times a second it reads the controls, moves everything, checks what's touching what, and draws the screen. The <b>editor</b> is the app where you build the game. You'll meet it in step 2.</p>
+
+    <div class="idea">
+      <p><strong>The one big idea: everything is a tree of nodes.</strong> A node is a small part with one job: a body, a hitbox, a camera, a sound. You put nodes together into a tree, and a saved tree is a <b>scene</b>. Scenes can be placed inside other scenes, like the ship and rocks inside the main scene.</p>
+    </div>
+
+    <h3>The three scenes you'll make</h3>
+    <p>Tap each node to see its job.</p>
+    <div class="explorer">
+      <div class="trees">
+        <div class="tree" role="group" aria-label="Ship scene">
+          <div class="label">ship.tscn</div>
+          <button type="button" data-node="ship" aria-pressed="true"><span class="dot" style="background:var(--ship)"></span>Ship<span class="type">Area2D</span></button>
+          <button type="button" class="i1" data-node="shipshape" aria-pressed="false"><span class="dot" style="background:var(--computer)"></span>CollisionShape2D<span class="type">hitbox</span></button>
+        </div>
+        <div class="tree" role="group" aria-label="Rock scene">
+          <div class="label">rock.tscn</div>
+          <button type="button" data-node="rock" aria-pressed="false"><span class="dot" style="background:var(--rock)"></span>Rock<span class="type">Area2D</span></button>
+          <button type="button" class="i1" data-node="rockshape" aria-pressed="false"><span class="dot" style="background:var(--computer)"></span>CollisionShape2D<span class="type">hitbox</span></button>
+        </div>
+        <div class="tree" role="group" aria-label="Main scene">
+          <div class="label">main.tscn</div>
+          <button type="button" data-node="main" aria-pressed="false"><span class="dot" style="background:var(--ok)"></span>Main<span class="type">Node2D</span></button>
+          <button type="button" class="i1" data-node="shipinst" aria-pressed="false"><span class="dot" style="background:var(--ship)"></span>Ship<span class="type">ship.tscn</span></button>
+        </div>
+      </div>
+      <div class="node-info" id="nodeInfo" aria-live="polite"></div>
+    </div>
+
+    <h3>Your tasks <span class="tag phone">Phone</span></h3>
+    <ol class="tasks">
+      <li><input class="check" type="checkbox" id="t1a" data-step="1"><label class="task-text" for="t1a"><b>Play the demo for a minute.</b><small>Try to stop the ship completely. You can't just let go; you have to turn around and thrust the other way. That "drift" is what you'll code in step 2.</small></label></li>
+      <li><input class="check" type="checkbox" id="t1b" data-step="1"><label class="task-text" for="t1b"><b>Tap through all three scenes above.</b><small>Notice that the ship and rock are built the same way. Only their scripts differ.</small></label></li>
+      <li><input class="check" type="checkbox" id="t1c" data-step="1"><label class="task-text" for="t1c"><b>Answer the three questions below.</b><small>Tick this when you've got them all right.</small></label></li>
+    </ol>
+
+    <div class="quiz" id="quiz1">
+      <div class="q" data-answer="1">
+        <p>Why are the ship and rocks Area2D nodes?</p>
+        <div class="answers"><button type="button">They need to fall with gravity</button><button type="button">They only need to notice when they touch something</button><button type="button">Area2D is the only node that can be drawn</button></div>
+        <p class="feedback" aria-live="polite"></p>
+      </div>
+      <div class="q" data-answer="2">
+        <p>What is a scene?</p>
+        <div class="answers"><button type="button">One screen of the game</button><button type="button">A picture</button><button type="button">A saved tree of nodes</button></div>
+        <p class="feedback" aria-live="polite"></p>
+      </div>
+      <div class="q" data-answer="0">
+        <p>A rock flies straight through the ship and nothing happens. Which node is most likely missing?</p>
+        <div class="answers"><button type="button">A CollisionShape2D</button><button type="button">The Main node</button><button type="button">Nothing; that's normal</button></div>
+        <p class="feedback" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= STEP 2 ================= -->
+  <section class="step" id="step-2">
+    <div class="step-head">
+      <div class="step-num">2</div>
+      <h2>Make the ship fly</h2>
+      <div class="step-meta"><span class="tag computer">Computer</span><span>about 25 minutes</span></div>
+    </div>
+
+    <p>Now you'll install Godot, start a project, and build the ship: one scene with two nodes, plus a script that makes it turn, thrust and drift.</p>
+    <div class="tip"><b>On a phone?</b> Godot's editor is available for Android through the Google Play Store. It works, but it's cramped on a phone and better on a tablet. There's no iPhone version, so use a computer for steps 2 and 3. You can still read them on your phone first.</div>
+
+    <h3>Get Godot and start a project</h3>
+    <ol class="how">
+      <li>Download <b>Godot Engine</b> 4.6 or newer from <a href="https://godotengine.org/download/" target="_blank" rel="noopener">godotengine.org/download</a>. Choose the plain version, not <b>.NET</b>. On Windows it's a zip with the app inside; on a Mac, drag it to Applications.</li>
+      <li>Open Godot. In the Project Manager, click <b>Create</b>.</li>
+      <li>Name it <b>Rock Drift</b> and choose a folder. Set <b>Renderer</b> to <b>Compatibility</b>; it runs on the most devices, phones and browsers included. Click <b>Create</b> (or <b>Create &amp; Edit</b>).</li>
+    </ol>
+
+    <h3>Find your way around</h3>
+    <div class="editor-map">
+      <svg viewBox="0 0 640 380" role="img" aria-label="Map of the Godot editor: Scene panel top left, FileSystem bottom left, the main view in the middle, Inspector on the right, and the play buttons at the top right.">
+        <rect x="0" y="0" width="640" height="380" rx="8" fill="#202230"/>
+        <rect x="0" y="0" width="640" height="30" rx="8" fill="#2a2d3d"/><rect x="0" y="22" width="640" height="8" fill="#2a2d3d"/>
+        <text x="14" y="20" fill="#a3abc9" font-family="Inter, sans-serif" font-size="11">Scene  Project  Debug  Editor  Help</text>
+        <g font-family="Inter, sans-serif" font-size="11" fill="#a3abc9"><text x="270" y="20">2D</text><text x="296" y="20">3D</text><text x="322" y="20">Script</text></g>
+        <g><path d="M560 10 l9 5 -9 5z" fill="#79e2c2"/><rect x="578" y="10" width="10" height="10" rx="1" fill="none" stroke="#79e2c2"/><rect x="596" y="10" width="10" height="10" rx="1" fill="none" stroke="#79e2c2"/></g>
+        <rect x="8" y="38" width="150" height="160" rx="4" fill="#262938"/>
+        <text x="16" y="54" fill="#e8ecfa" font-family="Inter, sans-serif" font-size="11" font-weight="600">Scene</text>
+        <g font-family="JetBrains Mono, monospace" font-size="10" fill="#e8ecfa"><rect x="14" y="62" width="138" height="16" rx="2" fill="#38406a"/><text x="20" y="74">Ship</text><text x="32" y="92">CollisionShape2D</text></g>
+        <rect x="8" y="206" width="150" height="166" rx="4" fill="#262938"/>
+        <text x="16" y="222" fill="#e8ecfa" font-family="Inter, sans-serif" font-size="11" font-weight="600">FileSystem</text>
+        <g font-family="JetBrains Mono, monospace" font-size="10" fill="#a3abc9"><text x="20" y="242">res://</text><text x="32" y="258" fill="#e8ecfa">ship.tscn</text><text x="32" y="274" fill="#e8ecfa">ship.gd</text><text x="32" y="290">icon.svg</text></g>
+        <rect x="166" y="38" width="300" height="334" rx="4" fill="#151a33"/>
+        <rect x="166" y="38" width="300" height="334" rx="4" fill="none" stroke="rgba(157,183,255,0.35)" stroke-dasharray="4 4"/>
+        <g transform="translate(316 205)"><circle r="20" fill="none" stroke="#9db7ff" stroke-width="1.5"/><path d="M16 0 L-12 -10 L-6 0 L-12 10Z" fill="#ff6b5e"/></g>
+        <rect x="474" y="38" width="158" height="334" rx="4" fill="#262938"/>
+        <text x="482" y="54" fill="#e8ecfa" font-family="Inter, sans-serif" font-size="11" font-weight="600">Inspector</text>
+        <g font-family="Inter, sans-serif" font-size="10" fill="#a3abc9"><text x="482" y="78">Ship.gd</text><text x="490" y="96">Turn Speed</text><text x="490" y="112">Thrust</text><text x="490" y="128">Max Speed</text><text x="490" y="144">Drag</text><text x="482" y="168">▸ Transform</text></g>
+        <g font-family="JetBrains Mono, monospace" font-size="10" fill="#e8ecfa"><text x="586" y="96">3.5</text><rect x="580" y="102" width="44" height="14" rx="2" fill="#38406a"/><text x="586" y="112">400</text><text x="586" y="128">500</text><text x="586" y="144">40</text></g>
+        <g font-family="Chakra Petch, sans-serif" font-size="13" font-weight="700" text-anchor="middle">
+          <circle cx="146" cy="50" r="11" fill="#ffd23f"/><text x="146" y="55" fill="#0f1226">1</text>
+          <circle cx="146" cy="218" r="11" fill="#ffd23f"/><text x="146" y="223" fill="#0f1226">2</text>
+          <circle cx="454" cy="50" r="11" fill="#ffd23f"/><text x="454" y="55" fill="#0f1226">3</text>
+          <circle cx="620" cy="50" r="11" fill="#ffd23f"/><text x="620" y="55" fill="#0f1226">4</text>
+          <circle cx="540" cy="15" r="11" fill="#ffd23f"/><text x="540" y="20" fill="#0f1226">5</text>
+        </g>
+      </svg>
+    </div>
+    <ul class="map-key">
+      <li><span class="k">1</span><span><b>Scene</b>: the node tree of the scene you have open. The <b>+</b> button adds a child node.</span></li>
+      <li><span class="k">2</span><span><b>FileSystem</b>: your project's files. Double-click one to open it.</span></li>
+      <li><span class="k">3</span><span><b>Main view</b>: shows the scene. The tabs above it switch to the <b>Script</b> editor.</span></li>
+      <li><span class="k">4</span><span><b>Inspector</b>: the settings of the selected node.</span></li>
+      <li><span class="k">5</span><span><b>Play buttons</b>: run the whole game (<kbd>F5</kbd>) or just the scene you have open (<kbd>F6</kbd>).</span></li>
+    </ul>
+
+    <h3>Build the ship scene</h3>
+    <ol class="how">
+      <li>In the <b>Scene</b> panel, click <b>Other Node</b>, search for <b>Area2D</b>, and click <b>Create</b>. Double-click it and rename it <b>Ship</b>.</li>
+      <li>With Ship selected, click <b>+</b> (Add Child Node), search for <b>CollisionShape2D</b>, and create it. A yellow warning appears: it has no shape yet.</li>
+      <li>In the <b>Inspector</b>, click the empty <b>Shape</b> field and choose <b>New CircleShape2D</b>. Click the circle that appears and set <b>Radius</b> to <b>12</b>. The warning goes away.</li>
+      <li>Save with <kbd>Ctrl</kbd>+<kbd>S</kbd> (<kbd>Cmd</kbd>+<kbd>S</kbd> on a Mac) as <span class="file">ship.tscn</span>.</li>
+      <li>Right-click <b>Ship</b> and choose <b>Attach Script</b>. Keep the path <span class="file">res://ship.gd</span> and click <b>Create</b>. The script editor opens.</li>
+      <li>Select everything in the script (<kbd>Ctrl</kbd>+<kbd>A</kbd>), delete it, and paste the code below. Save.</li>
+    </ol>
+
+    <div class="code">
+      <div class="code-head"><span class="file">ship.gd</span><button type="button" data-copy="code-ship2">Copy</button></div>
+      <pre id="code-ship2">{{SHIP2}}</pre>
+    </div>
+
+    <h3>What the code says</h3>
+    <dl class="explain">
+      <dt>@export var thrust := 400.0</dt>
+      <dd>A setting with a starting value. <code>@export</code> also shows it in the Inspector, so you can change it there without touching the code.</dd>
+      <dt>func _process(delta)</dt>
+      <dd>Godot calls this every frame. <code>delta</code> is how many seconds passed since the last frame, so movement is the same speed on fast and slow computers.</dd>
+      <dt>velocity += ... * thrust * delta</dt>
+      <dd>Thrust doesn't move the ship directly. It changes the <b>velocity</b> (speed and direction), and velocity moves the ship. That's why it keeps drifting.</dd>
+      <dt>wrapf(position.x, 0.0, screen.x)</dt>
+      <dd>If the ship goes past an edge, put it back on the opposite side.</dd>
+      <dt>func _draw()</dt>
+      <dd>Draws the ship as a shape, plus a flame while you're thrusting. No picture file needed.</dd>
+    </dl>
+
+    <h3>Try the settings here first</h3>
+    <p>This is the ship you just built, with the same three settings from the code.</p>
+    <div class="game" id="lab">
+      <canvas width="800" height="450" aria-label="The ship on its own, for trying the settings"></canvas>
+      <div class="pad">
+        <button type="button" data-key="left" aria-label="Turn left">&#9664; Turn</button>
+        <button type="button" data-key="right" aria-label="Turn right">Turn &#9654;</button>
+        <button type="button" data-key="up" class="thrust">Thrust</button>
+      </div>
+      <div class="sliders">
+        <label for="s-turn">turn_speed</label><output id="o-turn" for="s-turn">3.5</output><input id="s-turn" type="range" min="1" max="8" step="0.1" value="3.5">
+        <label for="s-thrust">thrust</label><output id="o-thrust" for="s-thrust">400</output><input id="s-thrust" type="range" min="100" max="1200" step="10" value="400">
+        <label for="s-drag">drag</label><output id="o-drag" for="s-drag">40</output><input id="s-drag" type="range" min="0" max="400" step="5" value="40">
+      </div>
+    </div>
+
+    <h3>Your tasks <span class="tag computer">Computer</span></h3>
+    <ol class="tasks">
+      <li><input class="check" type="checkbox" id="t2a" data-step="2"><label class="task-text" for="t2a"><b>Install Godot and create the Rock Drift project.</b><small>Remember: Compatibility renderer.</small></label></li>
+      <li><input class="check" type="checkbox" id="t2b" data-step="2"><label class="task-text" for="t2b"><b>Build the ship scene and paste in the script.</b><small>Two nodes: Ship (Area2D) with a CollisionShape2D child, radius 12.</small></label></li>
+      <li><input class="check" type="checkbox" id="t2c" data-step="2"><label class="task-text" for="t2c"><b>Fly it.</b><small>Press <kbd>F6</kbd> to run the scene you have open. Use <kbd>&uarr;</kbd> to thrust and <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to turn. Close the game window to stop.</small></label></li>
+      <li><input class="check" type="checkbox" id="t2d" data-step="2"><label class="task-text" for="t2d"><b>Change a setting in the Inspector.</b><small>Click <b>Ship</b> in the Scene panel. In the Inspector, set <b>Drag</b> to 200 and run again: the ship now stops quickly. Put it back to 40 when you're done.</small></label></li>
+    </ol>
+    <div class="tip"><b>Red errors after pasting?</b> Make sure you replaced the whole script, not just part of it. Godot cares about indentation: each indented line starts with a tab.</div>
+  </section>
+
+  <!-- ================= STEP 3 ================= -->
+  <section class="step" id="step-3">
+    <div class="step-head">
+      <div class="step-num">3</div>
+      <h2>Add rocks and crashing</h2>
+      <div class="step-meta"><span class="tag computer">Computer</span><span>about 25 minutes</span></div>
+    </div>
+
+    <p>Now you'll make a rock scene, a main scene that brings the ship and five rocks together, and a crash that starts the round over. Along the way you'll use two of Godot's most important ideas: <b>instancing</b> and <b>signals</b>.</p>
+
+    <div class="idea">
+      <p><strong>Instancing: one scene, many copies.</strong> You build the rock once. The main scene then makes five copies of it, called instances. Change <span class="file">rock.tscn</span> and every rock changes.</p>
+      <p><strong>Signals: "this just happened."</strong> Nodes announce events, and other code can listen. An Area2D announces <code>area_entered</code> when another area touches it. The ship listens for that and crashes.</p>
+    </div>
+
+    <h3>Build the rock</h3>
+    <ol class="how">
+      <li>Choose <b>Scene</b> &rarr; <b>New Scene</b>. Build it like the ship: an <b>Area2D</b> named <b>Rock</b>, with a <b>CollisionShape2D</b> child using a <b>New CircleShape2D</b>, but with <b>Radius 30</b>.</li>
+      <li>Save it as <span class="file">rock.tscn</span>, attach a script <span class="file">rock.gd</span>, and replace its contents with this:</li>
+    </ol>
+    <div class="code">
+      <div class="code-head"><span class="file">rock.gd</span><button type="button" data-copy="code-rock">Copy</button></div>
+      <pre id="code-rock">{{ROCK}}</pre>
+      <div class="code-note">Press <kbd>F6</kbd> to test it: one rock drifts out of the top-left corner, spinning. Each run picks a new direction and shape.</div>
+    </div>
+
+    <h3>Build the main scene</h3>
+    <ol class="how">
+      <li>Choose <b>Scene</b> &rarr; <b>New Scene</b> and click <b>2D Scene</b>. That makes a <b>Node2D</b>; rename it <b>Main</b>.</li>
+      <li>Drag <span class="file">ship.tscn</span> from the FileSystem panel onto <b>Main</b>. That adds an instance of your ship. (Or use the chain-link button, Instantiate Child Scene.)</li>
+      <li>Save as <span class="file">main.tscn</span>, attach a script <span class="file">main.gd</span>, and replace its contents with this:</li>
+    </ol>
+    <div class="code">
+      <div class="code-head"><span class="file">main.gd</span><button type="button" data-copy="code-main">Copy</button></div>
+      <pre id="code-main">{{MAIN}}</pre>
+    </div>
+    <dl class="explain">
+      <dt>const ROCK := preload("res://rock.tscn")</dt>
+      <dd>Loads the rock scene once, ready to copy.</dd>
+      <dt>ROCK.instantiate() &middot; add_child(rock)</dt>
+      <dd>Makes a new rock and puts it into the main scene. The loop does it five times.</dd>
+    </dl>
+
+    <h3>Make the ship crash</h3>
+    <p>Open <span class="file">ship.gd</span> again and replace it with this version. The highlighted lines are new.</p>
+    <div class="code">
+      <div class="code-head"><span class="file">ship.gd</span><button type="button" data-copy="code-ship3">Copy</button></div>
+      <pre id="code-ship3">{{SHIP3}}</pre>
+    </div>
+    <dl class="explain">
+      <dt>area_entered.connect(_on_area_entered)</dt>
+      <dd>"When a rock touches me, run <code>_on_area_entered</code>." This is listening to a signal.</dd>
+      <dt>if crashed: return</dt>
+      <dd>Two rocks can touch you at the same moment. This makes sure the round only restarts once.</dd>
+      <dt>reload_current_scene.call_deferred()</dt>
+      <dd>Start the scene over, but wait until Godot finishes checking collisions this frame. Godot doesn't allow removing things in the middle of that check.</dd>
+    </dl>
+
+    <h3>Your tasks <span class="tag computer">Computer</span></h3>
+    <ol class="tasks">
+      <li><input class="check" type="checkbox" id="t3a" data-step="3"><label class="task-text" for="t3a"><b>Build the rock scene and test it with F6.</b></label></li>
+      <li><input class="check" type="checkbox" id="t3b" data-step="3"><label class="task-text" for="t3b"><b>Build the main scene with the ship and the rock-making script.</b></label></li>
+      <li><input class="check" type="checkbox" id="t3c" data-step="3"><label class="task-text" for="t3c"><b>Add the crash to the ship, then play the whole game.</b><small>Press <kbd>F5</kbd>. The first time, Godot asks which scene is the main one: choose <b>Select Current</b> (with main.tscn open) or pick <span class="file">main.tscn</span>. Now you have the game from step 1's demo.</small></label></li>
+      <li><input class="check" type="checkbox" id="t3d" data-step="3"><label class="task-text" for="t3d"><b>Make it yours.</b><small>Change <code>for i in 5</code> to 10 rocks, or a rock's <b>Speed</b> in the Inspector of <span class="file">rock.tscn</span>, and see how the game changes.</small></label></li>
+    </ol>
+  </section>
+
+  <section class="next">
+    <h2>Coming next</h2>
+    <ul>
+      <li><b>Step 4: Shooting.</b> Fire bullets and break big rocks into smaller ones.</li>
+      <li><b>Step 5: Score and lives.</b> Add text on screen, and a game over.</li>
+      <li><b>Step 6: Play it on your phone.</b> Export Rock Drift for the web and open it on your phone.</li>
+    </ul>
+    <div class="links">
+      <a href="https://godotengine.org/download/" target="_blank" rel="noopener">Download Godot</a>
+      <a href="https://docs.godotengine.org/en/stable/getting_started/introduction/index.html" target="_blank" rel="noopener">Godot's own docs</a>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  // ---------- Scene explorer ----------
+  const NODES = {
+    ship: ['Ship · Area2D', 'An Area2D is a region that notices when another area overlaps it. The ship doesn’t need real physics like bouncing or gravity; its script moves it, and the area tells us when it touches a rock.'],
+    shipshape: ['CollisionShape2D · the ship’s hitbox', 'An invisible circle, radius 12, that gives the area its size. Without a shape, the area has nothing to touch with and rocks pass straight through.'],
+    rock: ['Rock · Area2D', 'Built exactly like the ship. Its own script makes it drift in a random direction, spin, and draw a lumpy shape.'],
+    rockshape: ['CollisionShape2D · the rock’s hitbox', 'A bigger invisible circle, radius 30.'],
+    main: ['Main · Node2D', 'The scene that holds the whole game. A Node2D is a plain node with a position. Its script makes five copies of the rock scene when the game starts.'],
+    shipinst: ['Ship · an instance of ship.tscn', 'The ship scene placed inside Main. It’s a link, not a copy you edit here: change ship.tscn and this ship changes too.'],
+  };
+  const info = document.getElementById('nodeInfo');
+  const nodeButtons = document.querySelectorAll('.tree button');
+  function showNode(key) {
+    info.innerHTML = '';
+    const h = document.createElement('h4'); h.textContent = NODES[key][0];
+    const p = document.createElement('p'); p.textContent = NODES[key][1];
+    info.append(h, p);
+    nodeButtons.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.node === key)));
+  }
+  nodeButtons.forEach(b => b.addEventListener('click', () => showNode(b.dataset.node)));
+  showNode('ship');
+
+  // ---------- Quiz ----------
+  const EXPLAIN = [
+    ['No: nothing in Rock Drift falls. Gravity would need a different kind of body.', 'Right. Areas notice overlaps, and that’s all a crash needs.', 'No: many node types can draw. The ship draws itself in its script.'],
+    ['Close, but a scene can be much smaller: the ship alone is a scene.', 'No: a scene is a saved tree of nodes.', 'Right. The ship, a rock and the whole game are each a scene.'],
+    ['Right. With no hitbox, the area has no size to touch with.', 'Main only places the rocks; it doesn’t detect touches.', 'Rocks should crash the ship, so something is missing.'],
+  ];
+  document.querySelectorAll('#quiz1 .q').forEach((q, qi) => {
+    const right = Number(q.dataset.answer);
+    const fb = q.querySelector('.feedback');
+    q.querySelectorAll('.answers button').forEach((b, bi) => b.addEventListener('click', () => {
+      q.querySelectorAll('.answers button').forEach(x => x.classList.remove('right', 'wrong'));
+      b.classList.add(bi === right ? 'right' : 'wrong');
+      fb.textContent = EXPLAIN[qi][bi];
+    }));
+  });
+
+  // ---------- Copy buttons ----------
+  document.querySelectorAll('[data-copy]').forEach(btn => btn.addEventListener('click', () => {
+    const pre = document.getElementById(btn.dataset.copy);
+    const text = pre.textContent;
+    const selectIt = () => {
+      const r = document.createRange(); r.selectNodeContents(pre);
+      const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+      btn.textContent = 'Selected: copy it';
+    };
+    try {
+      navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = 'Copied';
+        setTimeout(() => { btn.textContent = 'Copy'; }, 1800);
+      }, selectIt);
+    } catch (_) { selectIt(); }
+  }));
+
+  // ---------- Progress (saved on this device) ----------
+  const KEY = 'rock-drift-progress';
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (_) {}
+  const checks = [...document.querySelectorAll('.check')];
+  function refresh() {
+    const done = checks.filter(c => c.checked).length;
+    document.getElementById('progress').textContent = done + ' of ' + checks.length + ' done';
+    checks.forEach(c => c.closest('li').classList.toggle('checked', c.checked));
+    document.querySelectorAll('nav.steps a').forEach(a => {
+      const mine = checks.filter(c => c.dataset.step === a.dataset.step);
+      a.classList.toggle('done', mine.length > 0 && mine.every(c => c.checked));
+    });
+  }
+  checks.forEach(c => {
+    c.checked = !!saved[c.id];
+    c.addEventListener('change', () => {
+      saved[c.id] = c.checked;
+      try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch (_) {}
+      refresh();
+    });
+  });
+  refresh();
+
+  // ---------- The game (same rules and numbers as the Godot scripts) ----------
+  // A smaller play area than Godot's 1152×648 window, so things are visible on a phone.
+  const W = 800, H = 450, RING = 180;
+  const css = getComputedStyle(document.documentElement);
+  const color = n => css.getPropertyValue(n).trim();
+  const wrap = (v, lo, hi) => { const r = hi - lo; return lo + ((((v - lo) % r) + r) % r); };
+  let active = null;   // the game the keyboard controls (the last one touched)
+
+  function makeGame(root, withRocks) {
+    const canvas = root.querySelector('canvas');
+    const ctx = canvas.getContext('2d');
+    const keys = { left: false, right: false, up: false };
+    const ship = { x: W / 2, y: H / 2, rot: -Math.PI / 2, vx: 0, vy: 0, turn_speed: 3.5, thrust: 400, max_speed: 500, drag: 40 };
+    let rocks = [], flash = 0;
+    const stars = Array.from({ length: 70 }, () => [Math.random() * W, Math.random() * H, Math.random() * 1.5 + 0.5]);
+
+    function newRound() {
+      ship.x = W / 2; ship.y = H / 2; ship.vx = 0; ship.vy = 0; ship.rot = -Math.PI / 2;
+      rocks = [];
+      if (!withRocks) return;
+      for (let i = 0; i < 5; i++) {
+        const a = Math.random() * Math.PI * 2, d = Math.random() * Math.PI * 2;
+        const outline = [];
+        for (let k = 0; k < 10; k++) outline.push([Math.PI * 2 * k / 10, 30 * (0.75 + Math.random() * 0.35)]);
+        rocks.push({ x: W / 2 + Math.cos(a) * RING, y: H / 2 + Math.sin(a) * RING, vx: Math.cos(d) * 80, vy: Math.sin(d) * 80, rot: 0, spin: Math.random() * 3 - 1.5, outline });
+      }
+    }
+
+    function step(dt) {
+      const turn = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+      ship.rot += turn * ship.turn_speed * dt;
+      if (keys.up) {
+        ship.vx += Math.cos(ship.rot) * ship.thrust * dt;
+        ship.vy += Math.sin(ship.rot) * ship.thrust * dt;
+      } else {
+        const sp = Math.hypot(ship.vx, ship.vy), ns = Math.max(0, sp - ship.drag * dt);
+        if (sp > 0) { ship.vx *= ns / sp; ship.vy *= ns / sp; }
+      }
+      const sp = Math.hypot(ship.vx, ship.vy);
+      if (sp > ship.max_speed) { ship.vx *= ship.max_speed / sp; ship.vy *= ship.max_speed / sp; }
+      ship.x = wrap(ship.x + ship.vx * dt, 0, W);
+      ship.y = wrap(ship.y + ship.vy * dt, 0, H);
+      for (const r of rocks) {
+        r.x = wrap(r.x + r.vx * dt, -30, W + 30);
+        r.y = wrap(r.y + r.vy * dt, -30, H + 30);
+        r.rot += r.spin * dt;
+        if (Math.hypot(r.x - ship.x, r.y - ship.y) < 12 + 30) { flash = 0.35; newRound(); break; }
+      }
+      flash = Math.max(0, flash - dt);
+    }
+
+    function draw() {
+      ctx.fillStyle = color('--space-2'); ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = 'rgba(232,236,250,0.5)';
+      for (const [x, y, s] of stars) ctx.fillRect(x, y, s * 2, s * 2);
+      for (const r of rocks) {
+        ctx.save(); ctx.translate(r.x, r.y); ctx.rotate(r.rot);
+        ctx.fillStyle = color('--rock'); ctx.beginPath();
+        r.outline.forEach(([a, d], i) => { const px = Math.cos(a) * d, py = Math.sin(a) * d; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); });
+        ctx.closePath(); ctx.fill(); ctx.restore();
+      }
+      ctx.save(); ctx.translate(ship.x, ship.y); ctx.rotate(ship.rot); ctx.scale(1.6, 1.6);
+      if (keys.up) { ctx.fillStyle = color('--flame'); ctx.beginPath(); ctx.moveTo(-7, -4); ctx.lineTo(-18, 0); ctx.lineTo(-7, 4); ctx.fill(); }
+      ctx.fillStyle = color('--ship'); ctx.beginPath(); ctx.moveTo(16, 0); ctx.lineTo(-12, -10); ctx.lineTo(-6, 0); ctx.lineTo(-12, 10); ctx.closePath(); ctx.fill();
+      ctx.restore();
+      if (flash > 0) { ctx.fillStyle = `rgba(255,107,94,${flash})`; ctx.fillRect(0, 0, W, H); }
+    }
+
+    // Touch buttons: hold to press. Pointer capture keeps a button held while your finger slides.
+    root.querySelectorAll('.pad button').forEach(b => {
+      const k = b.dataset.key;
+      const on = e => { e.preventDefault(); active = game; try { b.setPointerCapture(e.pointerId); } catch (_) {} keys[k] = true; b.classList.add('down'); };
+      const off = () => { keys[k] = false; b.classList.remove('down'); };
+      b.addEventListener('pointerdown', on);
+      ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(t => b.addEventListener(t, off));
+      b.addEventListener('contextmenu', e => e.preventDefault());
+    });
+    canvas.addEventListener('pointerdown', () => { active = game; });
+
+    const game = { keys, ship, step, draw };
+    newRound();
+    return game;
+  }
+
+  const demo = makeGame(document.getElementById('demo'), true);
+  const lab = makeGame(document.getElementById('lab'), false);
+  active = demo;
+
+  // Lab sliders change the lab ship's settings, like the Inspector.
+  [['s-turn', 'o-turn', 'turn_speed'], ['s-thrust', 'o-thrust', 'thrust'], ['s-drag', 'o-drag', 'drag']].forEach(([sid, oid, prop]) => {
+    const s = document.getElementById(sid), o = document.getElementById(oid);
+    s.addEventListener('input', () => { lab.ship[prop] = Number(s.value); o.textContent = s.value; });
+  });
+
+  const KEYMAP = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up' };
+  window.addEventListener('keydown', e => { const k = KEYMAP[e.key]; if (k && active) { active.keys[k] = true; e.preventDefault(); } });
+  window.addEventListener('keyup', e => { const k = KEYMAP[e.key]; if (k && active) active.keys[k] = false; });
+  window.addEventListener('blur', () => { for (const g of [demo, lab]) for (const k in g.keys) g.keys[k] = false; });
+
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min((now - last) / 1000, 0.05); last = now;
+    for (const g of [demo, lab]) { g.step(dt); g.draw(); }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
