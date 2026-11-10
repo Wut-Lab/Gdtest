@@ -69,7 +69,7 @@ func show_win(time: float, falls: int, hearts: int) -> void:
 
 
 func show_out(time: float, falls: int) -> void:
-	out_label.text = "You fell %d times in %.2fs. Try again?" % [falls, time]
+	out_label.text = "Out of hearts after %.2fs. Try again?" % time
 	start_menu.hide()
 	out_menu.show()
 	retry_button.grab_focus()

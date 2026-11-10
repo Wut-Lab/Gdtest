@@ -81,13 +81,13 @@ func _physics_process(_d: float) -> bool:
 	_dust_was_emitting = emitting
 
 	if main.state == main.State.WON:
-		print("HEARTS: %d (picked up %d)" % [main.hearts, main.hearts - main.START_HEARTS])
+		print("HEARTS: %d (spike hits %d)" % [main.hearts, main.hits])
 		print("RESULT: WON in %.2fs, falls %d, rubber bounces %d, wall bounces %d, teleports %d" % [main.run_time, main.falls, bounces, wall_bounces, teleports])
 		print("ANIM: stretch up to %.2f, squash down to %.2f, dust puffs %d" % [max_squash_y, min_squash_y, puffs])
 		quit(0)
 		return true
-	if main.falls > 0 or frame > 4000:
-		print("RESULT: FAILED falls=%d x=%.0f y=%.0f bounces=%d" % [main.falls, x, p.position.y, bounces])
+	if main.falls > 0 or main.hits > 0 or frame > 4000:
+		print("RESULT: FAILED falls=%d hits=%d x=%.0f y=%.0f bounces=%d" % [main.falls, main.hits, x, p.position.y, bounces])
 		quit(1)
 		return true
 	return false

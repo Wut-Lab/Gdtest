@@ -1,6 +1,6 @@
 extends Node
 ## Runs the game: loads the level, spawns the player, and tracks time, hearts, falls and winning.
-## You start with 3 hearts; each fall costs one, and losing the last ends the run.
+## You start with 3 hearts; each fall or spike hit costs one, and losing the last ends the run.
 ## In a web build it also lets the page send a level in (used by the level editor).
 
 enum State { READY, PLAY, WON, OUT }
@@ -17,6 +17,7 @@ var state := State.READY
 var run_time := 0.0
 var falls := 0
 var hearts := START_HEARTS
+var hits := 0
 var level: Level
 var player: Player
 
@@ -37,6 +38,7 @@ func _ready() -> void:
 	player.fell.connect(_on_player_fell)
 	level.goal_reached.connect(_on_goal_reached)
 	level.heart_collected.connect(_on_heart_collected)
+	level.player_hurt.connect(_on_player_hurt)
 	hud.play_requested.connect(new_run)
 	hud.tuning_panel.player = player
 	hud.default_color = player.color
@@ -92,6 +94,7 @@ func new_run() -> void:
 	player.active = true
 	run_time = 0.0
 	falls = 0
+	hits = 0
 	hearts = START_HEARTS
 	hud.set_hearts(hearts, START_HEARTS)
 	level.reset_pickups()
@@ -134,10 +137,23 @@ func _on_player_fell() -> void:
 	if state != State.PLAY:
 		player.reset_to(level.start.position)
 		return
+	player.reset_to(level.start.position)
+	_lose_heart()
+
+
+## Touched a spike: lose a heart and get knocked away, unless still blinking from the last hit.
+func _on_player_hurt(direction: float) -> void:
+	if state != State.PLAY or player.invincible > 0.0:
+		return
+	hits += 1
+	player.knock_back(direction if direction != 0.0 else -1.0)
+	_lose_heart()
+
+
+func _lose_heart() -> void:
 	hearts -= 1
 	hud.set_hearts(hearts, START_HEARTS)
 	hud.hearts_display.flash()
-	player.reset_to(level.start.position)
 	if hearts <= 0:
 		state = State.OUT
 		player.active = false

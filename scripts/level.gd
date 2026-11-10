@@ -7,10 +7,11 @@ extends Node2D
 ##   .  empty        #  ground        =  floating platform (jump up through it)
 ##   R  rubber       W  rubber wall   P  player start  G  goal
 ##   1  red teleport     2  yellow teleport     3  blue teleport   (each color links its pair)
-##   H  extra heart
+##   H  extra heart      S  spike square (paces left and right; spiky sides, safe top)
 
 signal goal_reached
 signal heart_collected
+signal player_hurt(direction: float)
 
 const T := 32
 const ATLAS_GROUND_TOP := Vector2i(0, 0)
@@ -27,6 +28,7 @@ const TELEPORT_COLORS := {"1": "red", "2": "yellow", "3": "blue"}
 var _walls: Array[CollisionShape2D] = []
 var _teleporters: Node2D
 var _pickups: Node2D
+var _obstacles: Node2D
 
 @onready var ground: TileMapLayer = $Ground
 @onready var start: Marker2D = $Start
@@ -48,6 +50,9 @@ func _ready() -> void:
 	_pickups = Node2D.new()
 	_pickups.name = "Pickups"
 	add_child(_pickups)
+	_obstacles = Node2D.new()
+	_obstacles.name = "Obstacles"
+	add_child(_obstacles)
 	if map_file != "":
 		load_map_text(FileAccess.get_file_as_string(map_file))
 	else:
@@ -62,6 +67,7 @@ func load_map_text(text: String) -> void:
 	var goal_cell := Vector2i(-1, -1)
 	var pads := {}   # color name -> Array of cells, in reading order
 	var hearts: Array[Vector2i] = []
+	var spikes: Array[Vector2i] = []
 	var lines := text.replace("\r", "").split("\n")
 	for y in lines.size():
 		var line: String = lines[y]
@@ -76,6 +82,8 @@ func load_map_text(text: String) -> void:
 					goal_cell = Vector2i(x, y)
 				"H":
 					hearts.append(Vector2i(x, y))
+				"S":
+					spikes.append(Vector2i(x, y))
 				"1", "2", "3":
 					var color_name: String = TELEPORT_COLORS[ch]
 					if not pads.has(color_name):
@@ -95,6 +103,7 @@ func load_map_text(text: String) -> void:
 		goal.set_deferred("monitoring", false)
 	_place_teleporters(pads)
 	_place_hearts(hearts)
+	_place_spikes(spikes)
 	_update_walls()
 	queue_redraw()
 
@@ -131,10 +140,23 @@ func _place_hearts(cells: Array[Vector2i]) -> void:
 		_pickups.add_child(h)
 
 
-## Bring back every heart pickup for a new run.
+func _place_spikes(cells: Array[Vector2i]) -> void:
+	for child in _obstacles.get_children():
+		_obstacles.remove_child(child)
+		child.queue_free()
+	for cell in cells:
+		var s := SpikeSquare.new()
+		s.position = Vector2(cell.x * T + T / 2.0, cell.y * T + T / 2.0)
+		s.hurt_player.connect(func(d: float) -> void: player_hurt.emit(d))
+		_obstacles.add_child(s)
+
+
+## Bring back every heart pickup and send obstacles to their starting spots, for a new run.
 func reset_pickups() -> void:
 	for h in _pickups.get_children():
 		(h as HeartPickup).reset()
+	for s in _obstacles.get_children():
+		(s as SpikeSquare).reset()
 
 
 func get_teleporters() -> Array[Node]:

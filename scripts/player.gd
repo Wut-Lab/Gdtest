@@ -61,6 +61,8 @@ const SIZE := 24.0
 
 var active := false
 var fall_limit_y := INF
+## Seconds of blinking after being hurt, when nothing can hurt you again.
+var invincible := 0.0
 
 var _coyote := 0.0
 var _jump_buffer := 0.0
@@ -83,7 +85,18 @@ func reset_to(pos: Vector2) -> void:
 	_was_on_floor = true
 	_bouncing = false
 	_stun = 0.0
+	invincible = 0.0
 	camera.reset_smoothing()
+
+
+## Knocked back by a hazard (direction -1 = left, 1 = right), then a moment of safety.
+func knock_back(direction: float) -> void:
+	velocity = Vector2(direction * 320.0, -420.0)
+	_stun = 0.3
+	_bouncing = true
+	invincible = 1.2
+	_squash = Vector2(0.65, 1.3)
+	_puff()
 
 
 ## Move to a teleport pad, keeping the current velocity.
@@ -104,6 +117,7 @@ func get_squash() -> Vector2:
 
 func _physics_process(delta: float) -> void:
 	_squash = _squash.lerp(Vector2.ONE, 1.0 - exp(-squash_recovery * delta))
+	invincible = maxf(invincible - delta, 0.0)
 	queue_redraw()
 	if not active:
 		return
@@ -227,6 +241,8 @@ func _puff() -> void:
 
 
 func _draw() -> void:
+	if invincible > 0.0 and fmod(invincible, 0.2) < 0.1:
+		return   # blink while invincible
 	# Squash and stretch, anchored at the feet.
 	var s := Vector2(SIZE * _squash.x, SIZE * _squash.y)
 	var rect := Rect2(Vector2(-s.x / 2.0, SIZE / 2.0 - s.y), s)
