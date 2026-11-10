@@ -142,11 +142,11 @@ func _on_player_fell() -> void:
 
 
 ## Touched a spike: lose a heart and get knocked away, unless still blinking from the last hit.
-func _on_player_hurt(direction: float) -> void:
+func _on_player_hurt(push: Vector2) -> void:
 	if state != State.PLAY or player.invincible > 0.0:
 		return
 	hits += 1
-	player.knock_back(direction if direction != 0.0 else -1.0)
+	player.knock_back(push)
 	_lose_heart()
 
 

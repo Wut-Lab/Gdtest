@@ -218,7 +218,7 @@ button:disabled { opacity: 0.4; }
       <span class="spacer"></span>
       <button id="closeSheet" type="button" class="primary">Done</button>
     </div>
-    <p>Characters: <code>#</code> ground, <code>=</code> platform you can jump up through, <code>R</code> rubber, <code>W</code> rubber wall (kicks you back; hold jump against it mid-air to wall-jump), <code>P</code> start, <code>G</code> goal, <code>H</code> extra heart, <code>S</code> spike square (paces 2 tiles each way; spiky sides cost a heart, the top is safe to ride), <code>1</code> <code>2</code> <code>3</code> red, yellow and blue warps (place two of a color to link them), <code>.</code> empty. Tip: put the pad you arrive at somewhere off the main path, or players walking past it get sent back. Your work is saved on this device as you go.</p>
+    <p>Characters: <code>#</code> ground, <code>=</code> platform you can jump up through, <code>R</code> rubber, <code>W</code> rubber wall (kicks you back; hold jump against it mid-air to wall-jump), <code>P</code> start, <code>G</code> goal, <code>H</code> extra heart, <code>S</code> spike square (paces 2 tiles each way; spiky sides cost a heart, the top is safe to ride), <code>V</code> up-down spike square (rises 3 tiles from its cell and back; spikes on top and bottom), <code>1</code> <code>2</code> <code>3</code> red, yellow and blue warps (place two of a color to link them), <code>.</code> empty. Tip: put the pad you arrive at somewhere off the main path, or players walking past it get sent back. Your work is saved on this device as you go.</p>
   </div>
 </div>
 
@@ -276,6 +276,7 @@ button:disabled { opacity: 0.4; }
     { ch: 'G', label: 'Goal' },
     { ch: 'H', label: 'Heart' },
     { ch: 'S', label: 'Spike square' },
+    { ch: 'V', label: 'Up-down spikes' },
     { ch: '1', label: 'Red warp' },
     { ch: '2', label: 'Yellow warp' },
     { ch: '3', label: 'Blue warp' },
@@ -308,7 +309,7 @@ button:disabled { opacity: 0.4; }
     while (src.length < ROWS) src.unshift('');
     for (const line of src) {
       const row = [];
-      for (let x = 0; x < width; x++) row.push(line[x] && '.#=RWPGHS123'.includes(line[x]) ? line[x] : '.');
+      for (let x = 0; x < width; x++) row.push(line[x] && '.#=RWPGHSV123'.includes(line[x]) ? line[x] : '.');
       rows.push(row);
     }
     return rows;
@@ -389,6 +390,19 @@ button:disabled { opacity: 0.4; }
       }
       g.globalAlpha = 1; g.fillRect(x + o, y + o, p, p);
       g.fillStyle = 'rgba(0,0,0,0.35)'; g.fillRect(x + s * 0.4, y + s * 0.4, s * 0.2, s * 0.2);
+    } else if (ch === 'V') {
+      // Up-down spike square: same block, spikes on top and bottom.
+      const b = s * 0.62, o = (s - b) / 2, k = Math.max(1, s / 16);
+      g.fillStyle = '#5b4b8a'; g.fillRect(x + o, y + o, b, b);
+      g.fillStyle = '#7d6bb3'; g.fillRect(x + o, y + o, b, b * 0.16);
+      g.fillStyle = '#eef1fa';
+      g.fillRect(x + s * 0.4, y + s * 0.42, k * 1.5, k * 2.5); g.fillRect(x + s * 0.55, y + s * 0.42, k * 1.5, k * 2.5);
+      g.fillStyle = '#d9deef';
+      for (let i = 0; i < 3; i++) {
+        const cx = x + o + b * (0.12 + i * 0.32);
+        g.fillRect(cx, y + o - k * 2, k * 2, k * 2); g.fillRect(cx, y + o + b, k * 2, k * 2);
+        g.fillRect(cx + k * 0.5, y + o - k * 4, k, k * 2); g.fillRect(cx + k * 0.5, y + o + b + k * 2, k, k * 2);
+      }
     } else if (ch === 'S') {
       // Spike square: purple block, light top lip, eyes, and blocky metal spikes on both sides.
       const b = s * 0.7, o = (s - b) / 2, k = Math.max(1, s / 16);

@@ -8,10 +8,11 @@ extends Node2D
 ##   R  rubber       W  rubber wall   P  player start  G  goal
 ##   1  red teleport     2  yellow teleport     3  blue teleport   (each color links its pair)
 ##   H  extra heart      S  spike square (paces left and right; spiky sides, safe top)
+##   V  vertical spike square (rises 3 tiles and back; spikes on top and bottom)
 
 signal goal_reached
 signal heart_collected
-signal player_hurt(direction: float)
+signal player_hurt(push: Vector2)
 
 const T := 32
 const ATLAS_GROUND_TOP := Vector2i(0, 0)
@@ -68,6 +69,7 @@ func load_map_text(text: String) -> void:
 	var pads := {}   # color name -> Array of cells, in reading order
 	var hearts: Array[Vector2i] = []
 	var spikes: Array[Vector2i] = []
+	var vspikes: Array[Vector2i] = []
 	var lines := text.replace("\r", "").split("\n")
 	for y in lines.size():
 		var line: String = lines[y]
@@ -84,6 +86,8 @@ func load_map_text(text: String) -> void:
 					hearts.append(Vector2i(x, y))
 				"S":
 					spikes.append(Vector2i(x, y))
+				"V":
+					vspikes.append(Vector2i(x, y))
 				"1", "2", "3":
 					var color_name: String = TELEPORT_COLORS[ch]
 					if not pads.has(color_name):
@@ -103,7 +107,7 @@ func load_map_text(text: String) -> void:
 		goal.set_deferred("monitoring", false)
 	_place_teleporters(pads)
 	_place_hearts(hearts)
-	_place_spikes(spikes)
+	_place_spikes(spikes, vspikes)
 	_update_walls()
 	queue_redraw()
 
@@ -140,14 +144,15 @@ func _place_hearts(cells: Array[Vector2i]) -> void:
 		_pickups.add_child(h)
 
 
-func _place_spikes(cells: Array[Vector2i]) -> void:
+func _place_spikes(cells: Array[Vector2i], vertical_cells: Array[Vector2i]) -> void:
 	for child in _obstacles.get_children():
 		_obstacles.remove_child(child)
 		child.queue_free()
-	for cell in cells:
+	for cell in cells + vertical_cells:
 		var s := SpikeSquare.new()
+		s.vertical = cell in vertical_cells
 		s.position = Vector2(cell.x * T + T / 2.0, cell.y * T + T / 2.0)
-		s.hurt_player.connect(func(d: float) -> void: player_hurt.emit(d))
+		s.hurt_player.connect(func(push: Vector2) -> void: player_hurt.emit(push))
 		_obstacles.add_child(s)
 
 

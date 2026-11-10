@@ -89,9 +89,10 @@ func reset_to(pos: Vector2) -> void:
 	camera.reset_smoothing()
 
 
-## Knocked back by a hazard (direction -1 = left, 1 = right), then a moment of safety.
-func knock_back(direction: float) -> void:
-	velocity = Vector2(direction * 320.0, -420.0)
+## Knocked back by a hazard (push.x: -1 left, 1 right; push.y: -1 up, 1 down), then a
+## moment of safety.
+func knock_back(push: Vector2) -> void:
+	velocity = Vector2(push.x * 320.0, 420.0 if push.y > 0.0 else -420.0)
 	_stun = 0.3
 	_bouncing = true
 	invincible = 1.2
