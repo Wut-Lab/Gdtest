@@ -302,10 +302,18 @@ func _hud_scene() -> Node:
 	seed_label.visible = false
 	root.add_child(seed_label)
 
+	var cards_label := Label.new()
+	cards_label.name = "CardsLabel"
+	cards_label.unique_name_in_owner = true
+	cards_label.theme_type_variation = "SmallLabel"
+	cards_label.position = Vector2(14, 118)
+	cards_label.visible = false
+	root.add_child(cards_label)
+
 	var start := _menu(root, "StartMenu", "Reach the goal",
 		"Run, jump and bounce to the green goal. Hold jump to go higher.\n"
-		+ "You have 3 hearts: falls and spikes cost one. Grab floating hearts for more.\n"
-		+ "Keys: arrows or A/D move, Space jumps, Shift dashes, Down pounds, R restarts.",
+		+ "Falls and spikes cost a heart. Grab hearts and ability cards.\n"
+		+ "Keys: arrows or A/D move, Space jumps, Shift dashes, Down pounds.",
 		"StartBody", "PlayButton", "Play")
 	_level_row(start.get_node("Panel/Box"))
 	_color_row(start.get_node("Panel/Box"))

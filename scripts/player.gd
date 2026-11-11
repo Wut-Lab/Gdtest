@@ -54,6 +54,7 @@ const SIZE := 24.0
 @export var wall_stun := 0.25
 
 @export_group("Dash and pound")
+## These need their ability cards.
 ## Dash: a quick straight burst the way you face (Shift, X or K). One per jump in the air.
 @export var dash_speed := 620.0
 @export var dash_time := 0.16
@@ -68,6 +69,8 @@ const SIZE := 24.0
 @export var squash_recovery := 12.0
 
 var active := false
+## Abilities from collected cards: "dash", "pound", "double_jump".
+var abilities: Array[String] = []
 var fall_limit_y := INF
 ## Seconds of blinking after being hurt, when nothing can hurt you again.
 var invincible := 0.0
@@ -83,6 +86,7 @@ var _dash := 0.0          # time left in the current dash
 var _dash_cd := 0.0
 var _air_dash_used := false
 var _pounding := false
+var _air_jump := true      # double jump still available this time in the air
 
 @onready var camera: Camera2D = $Camera2D
 @onready var dust: CPUParticles2D = $Dust
@@ -124,6 +128,7 @@ func reset_to(pos: Vector2) -> void:
 	_dash_cd = 0.0
 	_air_dash_used = false
 	_pounding = false
+	_air_jump = true
 	invincible = 0.0
 	camera.reset_smoothing()
 
@@ -200,6 +205,18 @@ func _physics_process(delta: float) -> void:
 		_squash = Vector2(0.7, 1.35)
 		_puff()
 		_play(_jump_sfx)
+	elif _jump_buffer > 0.0 and not on_floor and _air_jump and "double_jump" in abilities \
+			and not _pounding and _stun == 0.0 and Input.is_action_just_pressed("jump"):
+		# Double jump card: one extra jump in the air, a little weaker than a normal one.
+		velocity.y = -jump_velocity * 0.9
+		_air_jump = false
+		_jump_buffer = 0.0
+		_bouncing = false
+		_squash = Vector2(0.7, 1.35)
+		_puff()
+		_play(_jump_sfx, 1.25)
+	if on_floor:
+		_air_jump = true
 
 	_update_dash_and_pound(delta, on_floor)
 
@@ -248,7 +265,7 @@ func _update_dash_and_pound(delta: float, on_floor: bool) -> void:
 		return
 	if _stun > 0.0:
 		return
-	if Input.is_action_just_pressed("dash") and _dash_cd == 0.0 and not _pounding \
+	if Input.is_action_just_pressed("dash") and "dash" in abilities and _dash_cd == 0.0 and not _pounding \
 			and (on_floor or not _air_dash_used):
 		var dir := Input.get_axis("move_left", "move_right")
 		if dir != 0.0:
@@ -260,7 +277,7 @@ func _update_dash_and_pound(delta: float, on_floor: bool) -> void:
 		_squash = Vector2(1.4, 0.7)
 		_puff()
 		_play(_jump_sfx, 1.4)
-	elif Input.is_action_just_pressed("pound") and not on_floor and not _pounding:
+	elif Input.is_action_just_pressed("pound") and "pound" in abilities and not on_floor and not _pounding:
 		_pounding = true
 		velocity = Vector2(0.0, pound_speed)
 		_squash = Vector2(0.7, 1.4)

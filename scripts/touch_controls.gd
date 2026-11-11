@@ -16,8 +16,15 @@ const GAP := 12.0
 
 func _ready() -> void:
 	pad.visible = DisplayServer.is_touchscreen_available()
+	set_abilities([])
 	get_viewport().size_changed.connect(_layout)
 	_layout()
+
+
+## Dash and Pound buttons show only once their cards are collected.
+func set_abilities(abilities: Array[String]) -> void:
+	dash.visible = "dash" in abilities
+	pound.visible = "pound" in abilities
 
 
 func _layout() -> void:

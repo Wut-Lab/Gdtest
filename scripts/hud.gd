@@ -21,6 +21,7 @@ signal player_color_changed(color: Color)
 @onready var seed_edit: LineEdit = %SeedEdit
 @onready var new_level_button: Button = %NewLevelButton
 @onready var seed_label: Label = %SeedLabel
+@onready var cards_label: Label = %CardsLabel
 @onready var out_menu: Control = %OutMenu
 @onready var out_label: Label = %OutLabel
 @onready var retry_button: Button = %RetryButton
@@ -92,6 +93,15 @@ func show_out(time: float, falls: int) -> void:
 	start_menu.hide()
 	out_menu.show()
 	retry_button.grab_focus()
+
+
+## Lists the ability cards collected this run.
+func set_cards(abilities: Array[String]) -> void:
+	var names := PackedStringArray()
+	for a in abilities:
+		names.append(AbilityCard.NAMES[a])
+	cards_label.text = "Cards: " + ", ".join(names)
+	cards_label.visible = not abilities.is_empty()
 
 
 ## Shows the random level's seed in the corner (hidden for the hand-made level).

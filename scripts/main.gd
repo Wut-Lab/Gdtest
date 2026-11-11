@@ -40,6 +40,7 @@ func _ready() -> void:
 	player.fell.connect(_on_player_fell)
 	level.goal_reached.connect(_on_goal_reached)
 	level.heart_collected.connect(_on_heart_collected)
+	level.card_collected.connect(_on_card_collected)
 	level.player_hurt.connect(_on_player_hurt)
 	hud.play_requested.connect(new_run)
 	hud.main_level_requested.connect(play_main_level)
@@ -136,6 +137,8 @@ func new_run() -> void:
 	falls = 0
 	hits = 0
 	hearts = START_HEARTS
+	player.abilities.clear()   # cards last for one run, for now
+	_show_abilities()
 	hud.set_hearts(hearts, START_HEARTS)
 	level.reset_pickups()
 	state = State.PLAY
@@ -238,6 +241,17 @@ func _lose_heart() -> void:
 func _on_heart_collected() -> void:
 	hearts = mini(hearts + 1, MAX_HEARTS)
 	hud.set_hearts(hearts, START_HEARTS)
+
+
+func _on_card_collected(ability: String) -> void:
+	if ability not in player.abilities:
+		player.abilities.append(ability)
+	_show_abilities()
+
+
+func _show_abilities() -> void:
+	hud.set_cards(player.abilities)
+	$TouchControls.set_abilities(player.abilities)
 
 
 func _on_goal_reached() -> void:

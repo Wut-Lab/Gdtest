@@ -11,6 +11,8 @@ extends RefCounted
 ##   - Wide pits get a floating platform, a moving platform or a spike square to ride across,
 ##     or a teleporter pair to warp over them.
 ##   - At most 2 extra hearts per level.
+##   - An ability card (Dash, Ground Pound or Double Jump) right by the start, and half the
+##     time a second, different one later on.
 ##
 ## Required groups (every level has them, in a random order between the plain features):
 ##   Obstacles: 1–4 of spike square (S), up-down spikes (V), spiked-top platform (T) and
@@ -37,8 +39,15 @@ static func generate(seed_value: int) -> String:
 
 	_flat(cols, TOP_MAX, 6)
 	cols[2][TOP_MAX - 1] = "P"
+	var cards := ["D", "Q", "J"]
+	var first: String = cards[rng.randi_range(0, 2)]
+	cols[4][TOP_MAX - 1] = first
+	cards.erase(first)
+	var pieces := _required_pieces(rng)
+	if rng.randf() < 0.5:
+		pieces.insert(rng.randi_range(0, pieces.size()), "card" + cards[rng.randi_range(0, 1)])
 
-	for piece in _required_pieces(rng):
+	for piece in pieces:
 		for i in rng.randi_range(0, 1):
 			_plain_feature(cols, st, rng)
 		_piece(cols, st, rng, piece)
@@ -158,6 +167,9 @@ static func _piece(cols: Array, st: Dictionary, rng: RandomNumberGenerator, piec
 			_pit(cols, 9)
 			_flat(cols, h, 2)
 			cols[x + 12][h - 1] = pad
+		"cardD", "cardQ", "cardJ":
+			_flat(cols, h, 3)
+			cols[x + 1][h - 1] = piece.substr(4)
 		"rubber_pad":
 			_flat(cols, h, 3)
 			cols[x + 1][h] = "R"

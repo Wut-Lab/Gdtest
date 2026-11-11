@@ -10,11 +10,13 @@ extends Node2D
 ##   H  extra heart      S  spike square (paces left and right; spiky sides, safe top)
 ##   V  vertical spike square (rises 3 tiles and back; spikes on top and bottom)
 ##   ^  one-way block (jump up through it from below, then stand on it)
+##   D  Dash card    Q  Ground Pound card    J  Double Jump card
 ##   T  wide moving platform with spikes on top (3 tiles wide, centered on its cell)
 ##   B  wide moving platform with spikes underneath (ride on top)
 
 signal goal_reached
 signal heart_collected
+signal card_collected(ability: String)
 signal player_hurt(push: Vector2)
 
 const T := 32
@@ -72,6 +74,7 @@ func load_map_text(text: String) -> void:
 	var goal_cell := Vector2i(-1, -1)
 	var pads := {}   # color name -> Array of cells, in reading order
 	var hearts: Array[Vector2i] = []
+	var cards := {}   # cell -> ability
 	var spikes: Array[Vector2i] = []
 	var vspikes: Array[Vector2i] = []
 	var platforms := {}   # cell -> spikes on top?
@@ -89,6 +92,8 @@ func load_map_text(text: String) -> void:
 					goal_cell = Vector2i(x, y)
 				"H":
 					hearts.append(Vector2i(x, y))
+				"D", "Q", "J":
+					cards[Vector2i(x, y)] = AbilityCard.LETTERS[ch]
 				"S":
 					spikes.append(Vector2i(x, y))
 				"V":
@@ -113,7 +118,7 @@ func load_map_text(text: String) -> void:
 		goal.hide()
 		goal.set_deferred("monitoring", false)
 	_place_teleporters(pads)
-	_place_hearts(hearts)
+	_place_hearts(hearts, cards)
 	_place_spikes(spikes, vspikes, platforms)
 	_update_walls()
 	queue_redraw()
@@ -140,7 +145,7 @@ func _place_teleporters(pads: Dictionary) -> void:
 				group[i].partner = group[(i + 1) % group.size()]
 
 
-func _place_hearts(cells: Array[Vector2i]) -> void:
+func _place_hearts(cells: Array[Vector2i], cards: Dictionary) -> void:
 	for child in _pickups.get_children():
 		_pickups.remove_child(child)
 		child.queue_free()
@@ -149,6 +154,12 @@ func _place_hearts(cells: Array[Vector2i]) -> void:
 		h.position = Vector2(cell.x * T + T / 2.0, cell.y * T + T / 2.0)
 		h.collected.connect(func() -> void: heart_collected.emit())
 		_pickups.add_child(h)
+	for cell in cards:
+		var c := AbilityCard.new()
+		c.ability = cards[cell]
+		c.position = Vector2(cell.x * T + T / 2.0, cell.y * T + T / 2.0)
+		c.collected.connect(func(a: String) -> void: card_collected.emit(a))
+		_pickups.add_child(c)
 
 
 func _place_spikes(cells: Array[Vector2i], vertical_cells: Array[Vector2i], platforms: Dictionary) -> void:
@@ -174,7 +185,7 @@ func _place_spikes(cells: Array[Vector2i], vertical_cells: Array[Vector2i], plat
 ## Bring back every heart pickup and send obstacles to their starting spots, for a new run.
 func reset_pickups() -> void:
 	for h in _pickups.get_children():
-		(h as HeartPickup).reset()
+		h.reset()
 	for s in _obstacles.get_children():
 		s.reset()
 
