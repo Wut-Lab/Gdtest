@@ -155,7 +155,17 @@ func teleport_to(pos: Vector2) -> void:
 	camera.reset_smoothing()
 	_squash = Vector2(0.6, 1.4)
 	_puff()
+	if "tele_hop" in abilities:
+		# Tele-hop card: pop straight up, half as high as a full jump (sqrt(0.5) of the speed).
+		velocity = Vector2(0.0, -jump_velocity * 0.707)
+		_bouncing = true   # keeps its full height even if jump isn't held
+		_play(_jump_sfx, 1.15)
 	teleported.emit()
+
+
+## Running speed, 25% faster with the Quick card.
+func _run_speed() -> float:
+	return run_speed * (1.25 if "quick" in abilities else 1.0)
 
 
 func is_dashing() -> bool:
@@ -186,7 +196,7 @@ func _physics_process(delta: float) -> void:
 	elif dir != 0.0:
 		_face = signf(dir)
 		var acc := ground_accel if on_floor else air_accel
-		velocity.x = move_toward(velocity.x, dir * run_speed, acc * delta)
+		velocity.x = move_toward(velocity.x, dir * _run_speed(), acc * delta)
 	else:
 		var dec := ground_decel if on_floor else air_decel
 		velocity.x = move_toward(velocity.x, 0.0, dec * delta)

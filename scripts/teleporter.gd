@@ -1,8 +1,8 @@
 class_name Teleporter
 extends Area2D
 ## A teleport pad. Touching it sends the player to its partner pad of the same color,
-## keeping their speed and direction. The pad you arrive on stays inactive until you step off,
-## so you don't bounce straight back.
+## keeping their speed and direction. The pad you arrive on stays inactive until you've left it
+## and landed on the ground, so you don't bounce straight back (even after a Tele-hop).
 
 signal used
 
@@ -21,6 +21,7 @@ var armed := true
 
 var _t := 0.0
 var _flash := 0.0
+var _left_by: Player   # the player who stepped off; re-arm once they're grounded
 
 
 func _ready() -> void:
@@ -41,7 +42,13 @@ func _on_body_entered(body: Node2D) -> void:
 
 func _on_body_exited(body: Node2D) -> void:
 	if body is Player:
+		_left_by = body
+
+
+func _physics_process(_delta: float) -> void:
+	if _left_by != null and _left_by.is_on_floor() and not overlaps_body(_left_by):
 		armed = true
+		_left_by = null
 
 
 func flash() -> void:

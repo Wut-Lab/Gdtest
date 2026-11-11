@@ -1,16 +1,19 @@
 class_name AbilityCard
 extends Area2D
 ## An ability card floating in the level. Touch it to gain its ability for this run.
-##   D = Dash, Q = Ground Pound, J = Double Jump, L = Glide (in a text map)
+##   D = Dash, Q = Ground Pound, J = Double Jump, L = Glide, K = Quick, E = Tele-hop (in a text map)
 
 signal collected(ability: String)
 
-const LETTERS := {"D": "dash", "Q": "pound", "J": "double_jump", "L": "glide"}
-const NAMES := {"dash": "Dash", "pound": "Ground Pound", "double_jump": "Double Jump", "glide": "Glide"}
-## Card types, color coded: attacks are red, jumps are blue.
-const TYPES := {"dash": "attack", "pound": "attack", "double_jump": "jump", "glide": "jump"}
-const TYPE_NAMES := {"attack": "Attack card", "jump": "Jump card"}
-const TYPE_COLORS := {"attack": Color("e5484d"), "jump": Color("3d7be0")}
+const LETTERS := {"D": "dash", "Q": "pound", "J": "double_jump", "L": "glide", "K": "quick",
+	"E": "tele_hop"}
+const NAMES := {"dash": "Dash", "pound": "Ground Pound", "double_jump": "Double Jump", "glide": "Glide",
+	"quick": "Quick", "tele_hop": "Tele-hop"}
+## Card types, color coded: attacks are red, jumps are blue, movement is yellow.
+const TYPES := {"dash": "attack", "pound": "attack", "double_jump": "jump", "glide": "jump",
+	"quick": "movement", "tele_hop": "movement"}
+const TYPE_NAMES := {"attack": "Attack card", "jump": "Jump card", "movement": "Movement card"}
+const TYPE_COLORS := {"attack": Color("e5484d"), "jump": Color("3d7be0"), "movement": Color("e0a400")}
 const DESCRIPTIONS := {
 	"dash": "Press Dash (Shift, X or K) for a quick, straight burst the way you're facing. "
 		+ "One dash per jump in the air. Dashing into an up-down spike square breaks it.",
@@ -20,11 +23,13 @@ const DESCRIPTIONS := {
 		+ "It recharges when you land.",
 	"glide": "Hold jump while falling to drift down slowly and steer farther across gaps. "
 		+ "Let go to drop normally.",
+	"quick": "Passive: you run 25% faster. Always on while equipped.",
+	"tele_hop": "Coming out of a teleporter, you hop straight up, half as high as a full jump.",
 }
 const PAPER := Color("eef1fa")
 const EDGE := Color("1b2440")
 
-@export_enum("dash", "pound", "double_jump", "glide") var ability := "dash"
+@export_enum("dash", "pound", "double_jump", "glide", "quick", "tele_hop") var ability := "dash"
 
 var _t := 0.0
 
@@ -124,3 +129,21 @@ static func _draw_symbol(ci: CanvasItem, ability_name: String, o: Vector2, c: Co
 				ci.draw_rect(Rect2(o + Vector2(-6 + i, 1 + i * b), Vector2(1, b)), c)
 				ci.draw_rect(Rect2(o + Vector2(5 - i, 1 + i * b), Vector2(1, b)), c)
 			ci.draw_rect(Rect2(o + Vector2(-2, 7), Vector2(4, 4)), c)
+		"quick":
+			# Speed lines trailing a running block.
+			ci.draw_rect(Rect2(o + Vector2(1, -2), Vector2(6, 6)), c)
+			ci.draw_rect(Rect2(o + Vector2(-7, -2), Vector2(6, b)), c)
+			ci.draw_rect(Rect2(o + Vector2(-5, 1), Vector2(4, b)), c)
+			ci.draw_rect(Rect2(o + Vector2(-8, 4), Vector2(7, b)), c)
+			ci.draw_rect(Rect2(o + Vector2(1, 6), Vector2(b, b)), c)
+			ci.draw_rect(Rect2(o + Vector2(5, 6), Vector2(b, b)), c)
+		"tele_hop":
+			# An up arrow rising out of a teleport pad.
+			ci.draw_rect(Rect2(o + Vector2(-1, -2), Vector2(b, 6)), c)
+			for i in 3:
+				var w := (1 + i * 2) * b
+				ci.draw_rect(Rect2(o + Vector2(-w / 2.0, -6 + i * b), Vector2(w, b)), c)
+			ci.draw_rect(Rect2(o + Vector2(-6, 5), Vector2(12, b)), c)
+			ci.draw_rect(Rect2(o + Vector2(-6, 9), Vector2(12, b)), c)
+			ci.draw_rect(Rect2(o + Vector2(-6, 5), Vector2(b, 6)), c)
+			ci.draw_rect(Rect2(o + Vector2(4, 5), Vector2(b, 6)), c)
