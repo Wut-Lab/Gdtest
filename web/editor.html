@@ -375,7 +375,7 @@ button:disabled { opacity: 0.4; }
   const ctx = canvas.getContext('2d');
   let cell = 28;
 
-  const CARD = { D: '#4da3ff', Q: '#ff9f43', J: '#b388ff', L: '#ff7eb6' };
+  const CARD = { D: '#e5484d', Q: '#e5484d', J: '#3d7be0', L: '#3d7be0' };   // red attacks, blue jumps
   function drawTile(g, ch, x, y, s, above) {
     if (ch === '#') {
       g.fillStyle = col.stone; g.fillRect(x, y, s, s);
@@ -421,13 +421,12 @@ button:disabled { opacity: 0.4; }
       g.globalAlpha = 1; g.fillRect(x + o, y + o, p, p);
       g.fillStyle = 'rgba(0,0,0,0.35)'; g.fillRect(x + s * 0.4, y + s * 0.4, s * 0.2, s * 0.2);
     } else if (CARD[ch]) {
-      // Ability card: dark edge, light paper, colored band and a letter.
-      const w = s * 0.62, h = s * 0.8, ox = x + (s - w) / 2, oy = y + (s - h) / 2;
-      g.fillStyle = '#1b2440'; g.fillRect(ox, oy, w, h);
-      g.fillStyle = '#eef1fa'; g.fillRect(ox + 2, oy + 2, w - 4, h - 4);
-      g.fillStyle = CARD[ch]; g.fillRect(ox + 2, oy + 2, w - 4, h * 0.2);
-      g.font = `bold ${Math.round(s * 0.36)}px system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
-      g.fillText(ch, x + s / 2, y + s * 0.56);
+      // Ability card: border and thick bottom bar in the card type's color, white field, letter.
+      const w = s * 0.62, h = s * 0.84, ox = x + (s - w) / 2, oy = y + (s - h) / 2;
+      g.fillStyle = CARD[ch]; g.fillRect(ox, oy, w, h);
+      g.fillStyle = '#eef1fa'; g.fillRect(ox + w * 0.1, oy + h * 0.07, w * 0.8, h * 0.62);
+      g.font = `bold ${Math.round(s * 0.3)}px system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillStyle = CARD[ch]; g.fillText(ch, x + s / 2, oy + h * 0.39);
     } else if (ch === '^') {
       // One-way block: teal with a light top lip and two up-chevrons.
       g.fillStyle = '#3f9e93'; g.fillRect(x, y, s, s);

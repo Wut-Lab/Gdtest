@@ -7,8 +7,20 @@ signal collected(ability: String)
 
 const LETTERS := {"D": "dash", "Q": "pound", "J": "double_jump", "L": "glide"}
 const NAMES := {"dash": "Dash", "pound": "Ground Pound", "double_jump": "Double Jump", "glide": "Glide"}
-const COLORS := {"dash": Color("4da3ff"), "pound": Color("ff9f43"), "double_jump": Color("b388ff"),
-	"glide": Color("ff7eb6")}
+## Card types, color coded: attacks are red, jumps are blue.
+const TYPES := {"dash": "attack", "pound": "attack", "double_jump": "jump", "glide": "jump"}
+const TYPE_NAMES := {"attack": "Attack card", "jump": "Jump card"}
+const TYPE_COLORS := {"attack": Color("e5484d"), "jump": Color("3d7be0")}
+const DESCRIPTIONS := {
+	"dash": "Press Dash (Shift, X or K) for a quick, straight burst the way you're facing. "
+		+ "One dash per jump in the air. Dashing into an up-down spike square breaks it.",
+	"pound": "In the air, press Ground Pound (Down, S or J) to slam straight down. "
+		+ "Pounding onto a spike square breaks it, and you hop off.",
+	"double_jump": "Press jump again in mid-air for one more jump, 75% as high as a full jump. "
+		+ "It recharges when you land.",
+	"glide": "Hold jump while falling to drift down slowly and steer farther across gaps. "
+		+ "Let go to drop normally.",
+}
 const PAPER := Color("eef1fa")
 const EDGE := Color("1b2440")
 
@@ -48,17 +60,40 @@ func _process(delta: float) -> void:
 func _draw() -> void:
 	var o := Vector2(0, sin(_t * 2.5) * 2.0)
 	var glow := 1.0 + sin(_t * 4.0) * 0.08
-	draw_rect(Rect2(o - Vector2(16, 19) * glow, Vector2(32, 38) * glow), Color(COLORS[ability], 0.22))
+	draw_rect(Rect2(o - Vector2(17, 21) * glow, Vector2(34, 42) * glow), Color(color_of(ability), 0.22))
 	draw_card(self, ability, o)
 
 
-## Draws a card (22×28) centered on o: dark edge, light paper, colored band and the
-## ability's symbol. Shared with the pause menu's Cards page.
-static func draw_card(ci: CanvasItem, ability_name: String, o: Vector2) -> void:
-	var c: Color = COLORS[ability_name]
-	ci.draw_rect(Rect2(o + Vector2(-11, -14), Vector2(22, 28)), EDGE)
-	ci.draw_rect(Rect2(o + Vector2(-9, -12), Vector2(18, 24)), PAPER)
-	ci.draw_rect(Rect2(o + Vector2(-9, -12), Vector2(18, 5)), c)
+static func color_of(ability_name: String) -> Color:
+	return TYPE_COLORS[TYPES[ability_name]]
+
+
+## Draws a card centered on o, 24×32 times scale: a border and thick bottom bar in the card
+## type's color, a white field with the ability's picture, and (big cards) the name in the bar.
+## Shared by the pickups in the level and the pause menu's Cards page.
+static func draw_card(ci: CanvasItem, ability_name: String, o: Vector2, scale := 1.0,
+		show_name := false) -> void:
+	var c := color_of(ability_name)
+	ci.draw_set_transform(o, 0.0, Vector2(scale, scale))
+	ci.draw_rect(Rect2(-12, -16, 24, 32), c)
+	ci.draw_rect(Rect2(-10, -14, 20, 21), PAPER)
+	ci.draw_rect(Rect2(-12, 8, 24, 8), c.darkened(0.15))
+	ci.draw_rect(Rect2(-12, 8, 24, 1), c.darkened(0.35))
+	_draw_symbol(ci, ability_name, Vector2(0, -6), c)
+	ci.draw_set_transform(Vector2.ZERO)
+	if show_name:
+		var font := ThemeDB.fallback_font
+		var text: String = NAMES[ability_name]
+		var fs := int(5.0 * scale)
+		while fs > 6 and font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > 21.0 * scale:
+			fs -= 1
+		var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		var base := o + Vector2(-w / 2.0, 12.0 * scale + fs * 0.35)
+		ci.draw_string(font, base, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, PAPER)
+
+
+## The ability's picture, built from 2×2 blocks, centered on o.
+static func _draw_symbol(ci: CanvasItem, ability_name: String, o: Vector2, c: Color) -> void:
 	var b := 2.0   # symbol block size
 	match ability_name:
 		"dash":

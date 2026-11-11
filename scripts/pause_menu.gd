@@ -1,8 +1,9 @@
 class_name PauseMenu
 extends Control
-## The pause menu: one panel with four pages.
+## The pause menu: one panel with five pages.
 ##   Paused:  Continue, Cards, Options, Back (to the main menu)
-##   Cards:   the player and their 0–3 equipped ability cards, Back
+##   Cards:   the player and their 0–3 equipped ability cards (tap one to see it), Back
+##   Card:    one card, large, with what it does, Back
 ##   Options: Sound, Back
 ## The main menu opens the same Options page on its own; Back then closes the menu.
 ##   Sound:   Music Volume, Sound Volume, Sound: On/Off, Back
@@ -28,6 +29,11 @@ var _from_main := false
 var _preview_square: PlayerPreview
 var _slots: Array[CardIcon] = []
 var _slot_names: Array[Label] = []
+var _slot_buttons: Array[Button] = []
+var _abilities: Array[String] = []
+var _big_card: CardIcon
+var _card_type: Label
+var _card_text: Label
 var _cards_count: Label
 
 
@@ -61,19 +67,44 @@ func _ready() -> void:
 	_cards_count.add_theme_color_override("font_color", Color("a9b3d1"))
 	cards.add_child(_cards_count)
 	for i in 3:
+		# Each slot is a flat button: tap it to see the card up close.
+		var slot := Button.new()
+		slot.flat = true
+		slot.custom_minimum_size = Vector2(BUTTON_SIZE.x, 44)
+		slot.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		slot.pressed.connect(_open_card.bind(i))
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 12)
-		row.custom_minimum_size = Vector2(BUTTON_SIZE.x, 0)
-		row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		row.offset_left = 8
+		slot.add_child(row)
 		var icon := CardIcon.new()
 		row.add_child(icon)
 		var name_label := Label.new()
 		name_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row.add_child(name_label)
-		cards.add_child(row)
+		cards.add_child(slot)
 		_slots.append(icon)
 		_slot_names.append(name_label)
+		_slot_buttons.append(slot)
 	_button(cards, "Back", func() -> void: _show("Paused"))
+
+	var card := _page_box("Card")
+	_big_card = CardIcon.new()
+	_big_card.card_scale = 4.0
+	_big_card.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	card.add_child(_big_card)
+	_card_type = Label.new()
+	_card_type.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	card.add_child(_card_type)
+	_card_text = Label.new()
+	_card_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_card_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_card_text.custom_minimum_size = Vector2(280, 0)
+	_card_text.add_theme_color_override("font_color", Color("a9b3d1"))
+	card.add_child(_card_text)
+	_button(card, "Back", func() -> void: _show("Cards"))
 
 	var options := _page_box("Options")
 	_button(options, "Sound", func() -> void: _show("Sound"))
@@ -89,7 +120,7 @@ func _ready() -> void:
 	_sound_toggle = _button(sound, "Sound: On", _toggle_sound)
 	_button(sound, "Back", func() -> void: _show("Options"))
 
-	for page in [paused, cards, options, sound]:
+	for page in [paused, cards, card, options, sound]:
 		panel.add_child(page)   # only the open page is visible, and the panel fits it
 
 	_music_slider.value_changed.connect(func(v: float) -> void:
@@ -132,6 +163,20 @@ func set_cards(abilities: Array[String], player_color: Color) -> void:
 		_slots[i].ability = a
 		_slot_names[i].text = AbilityCard.NAMES[a] if a != "" else "Empty slot"
 		_slot_names[i].modulate.a = 1.0 if a != "" else 0.5
+		_slot_buttons[i].disabled = a == ""
+	_abilities = abilities.duplicate()
+
+
+func _open_card(i: int) -> void:
+	if i >= _abilities.size():
+		return
+	var a := _abilities[i]
+	_big_card.ability = a
+	var type_name: String = AbilityCard.TYPES[a]
+	_card_type.text = AbilityCard.TYPE_NAMES[type_name]
+	_card_type.add_theme_color_override("font_color", AbilityCard.TYPE_COLORS[type_name].lightened(0.25))
+	_card_text.text = AbilityCard.DESCRIPTIONS[a]
+	_show("Card")
 
 
 func _options_back() -> void:
@@ -151,6 +196,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			"Sound": _show("Options")
 			"Options": _options_back()
 			"Cards": _show("Paused")
+			"Card": _show("Cards")
 			_: continue_pressed.emit()
 
 
