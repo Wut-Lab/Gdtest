@@ -66,6 +66,8 @@ func _ready() -> void:
 	get_viewport().size_changed.connect(_on_screen_changed)
 	_on_screen_changed()
 	_start_music()
+	$TouchControls.bar_changed.connect(_fit_to_bar)
+	add_child(ScreenBorder.new())
 	hud.set_pixels(CardCollection.pixels)
 	_setup_web_bridge()
 
@@ -100,6 +102,7 @@ func _on_screen_changed() -> void:
 	var visible := get_viewport().get_visible_rect().size
 	var z := maxf(1.0, visible.y / 760.0)
 	player.camera.zoom = Vector2(z, z)
+	_fit_to_bar()
 
 
 ## Keep the camera inside the level, and treat falling below it as a fall.
@@ -111,10 +114,21 @@ func _fit_to_level() -> void:
 	player.camera.limit_right = int(b.end.x)
 	player.camera.limit_top = -100000
 	player.camera.limit_bottom = int(b.end.y)
+	_fit_to_bar()
 	player.fall_limit_y = b.end.y + 80.0
 
 
 ## Replace the current level with a text map and start playing it.
+## On touchscreens the controls sit in a black bar along the bottom. Shift the camera so the
+## player is centered in the space above it, and let it show the bar's height below the
+## level's floor so the ground ends right at the bar's top edge.
+func _fit_to_bar() -> void:
+	var bar: float = $TouchControls.bar_height() / player.camera.zoom.y
+	player.camera.offset.y = bar / 2.0
+	# The offset is added after the limit, so the limit only needs the other half.
+	player.camera.limit_bottom = int(level.get_bounds().end.y + bar / 2.0)
+
+
 func load_level_text(text: String) -> void:
 	level.load_map_text(text)
 	_sync_chests()
