@@ -18,6 +18,7 @@ func _initialize() -> void:
 	_setup_project()
 	_check(ResourceSaver.save(_make_tileset(), "res://art/tileset.tres"), "tileset")
 	_check(ResourceSaver.save(_make_theme(), "res://art/ui_theme.tres"), "theme")
+	_check(ResourceSaver.save(_make_bus_layout(), "res://default_bus_layout.tres"), "bus layout")
 	_save_scene(_player_scene(), "res://scenes/player.tscn")
 	_save_scene(_goal_scene(), "res://scenes/goal.tscn")
 	_save_scene(_teleporter_scene(), "res://scenes/teleporter.tscn")
@@ -27,6 +28,18 @@ func _initialize() -> void:
 	_save_scene(_main_scene(), "res://scenes/main.tscn")
 	print("BUILD FAILED" if failed else "BUILD OK")
 	quit(1 if failed else 0)
+
+
+## Music and Sounds buses, saved as the project's default layout so they exist from the start.
+## Buses added while the game runs stay silent in the web build.
+func _make_bus_layout() -> AudioBusLayout:
+	for bus_name in ["Music", "Sounds"]:
+		if AudioServer.get_bus_index(bus_name) == -1:
+			AudioServer.add_bus()
+			var i := AudioServer.bus_count - 1
+			AudioServer.set_bus_name(i, bus_name)
+			AudioServer.set_bus_send(i, "Master")
+	return AudioServer.generate_bus_layout()
 
 
 func _check(err: int, what: String) -> void:

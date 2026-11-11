@@ -8,18 +8,18 @@ size = Vector2(24, 24)
 [sub_resource type="Gradient" id="Gradient_qhqgy"]
 colors = PackedColorArray(0.93333334, 0.94509804, 0.98039216, 0.9, 0.93333334, 0.94509804, 0.98039216, 0)
 
-[node name="Player" type="CharacterBody2D" unique_id=1612412879]
+[node name="Player" type="CharacterBody2D" unique_id=22642957]
 floor_snap_length = 4.0
 script = ExtResource("1_3vyb7")
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=341698121]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1911397142]
 shape = SubResource("RectangleShape2D_g2els")
 
-[node name="Camera2D" type="Camera2D" parent="." unique_id=207034104]
+[node name="Camera2D" type="Camera2D" parent="." unique_id=2023163463]
 position_smoothing_enabled = true
 position_smoothing_speed = 8.0
 
-[node name="Dust" type="CPUParticles2D" parent="." unique_id=1072404963]
+[node name="Dust" type="CPUParticles2D" parent="." unique_id=90735422]
 position = Vector2(0, 12)
 emitting = false
 lifetime = 0.4
