@@ -61,6 +61,7 @@ func _ready() -> void:
 	hud.set_stats(0.0, 0)
 	hud.set_hearts(hearts, _start_hearts())
 	hud.show_main_menu(player.color)
+	$TouchControls.hide()   # touch controls only while playing, so menus get the whole screen
 	hud.main_menu.play_pressed.connect(hud.show_start)
 	hud.main_menu.options_pressed.connect(hud.pause_menu.open_options)
 	get_viewport().size_changed.connect(_on_screen_changed)
@@ -170,6 +171,7 @@ func new_run() -> void:
 	hud.set_pixels(CardCollection.pixels)
 	state = State.PLAY
 	hud.hide_menus()
+	$TouchControls.show()
 	hud.pause_button.show()
 
 
@@ -202,6 +204,7 @@ func go_to_start() -> void:
 	player.reset_to(level.start.position)
 	hud.pause_button.hide()
 	hud.show_main_menu(player.color)
+	$TouchControls.hide()   # touch controls only while playing, so menus get the whole screen
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -269,6 +272,7 @@ func _lose_heart() -> void:
 		player.active = false
 		player.velocity = Vector2.ZERO
 		hud.show_out(run_time, falls)
+		$TouchControls.hide()
 
 
 func _on_heart_collected() -> void:
@@ -322,6 +326,7 @@ func _on_goal_reached() -> void:
 	player.active = false
 	player.velocity = Vector2.ZERO
 	hud.show_win(run_time, falls, hearts, seed_value)
+	$TouchControls.hide()
 
 
 # ---------- Web page bridge ----------
