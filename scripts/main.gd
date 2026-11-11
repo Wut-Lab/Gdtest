@@ -9,8 +9,6 @@ const SETTINGS_PATH := "user://settings.cfg"
 const START_HEARTS := 3
 ## Heart pickups can take you above the starting amount, up to this.
 const MAX_HEARTS := 5
-## Ability cards equipped at once.
-const MAX_CARDS := 3
 
 @export var level_scene: PackedScene
 @export var player_scene: PackedScene
@@ -72,6 +70,7 @@ func _ready() -> void:
 ## or key press.
 func _start_music() -> void:
 	AudioSettings.setup()
+	CardCollection.setup()
 	var music := AudioStreamPlayer.new()
 	music.bus = AudioSettings.MUSIC_BUS
 	music.process_mode = Node.PROCESS_MODE_ALWAYS   # keeps playing in the pause menu
@@ -141,7 +140,7 @@ func new_run() -> void:
 	falls = 0
 	hits = 0
 	hearts = START_HEARTS
-	player.abilities.clear()   # cards last for one run, for now
+	player.abilities.assign(CardCollection.equipped)   # equipped from the collection
 	_show_abilities()
 	hud.set_hearts(hearts, START_HEARTS)
 	level.reset_pickups()
@@ -249,10 +248,14 @@ func _on_heart_collected() -> void:
 
 
 func _on_card_collected(ability: String) -> void:
-	if ability not in player.abilities:
-		player.abilities.append(ability)
-		if player.abilities.size() > MAX_CARDS:
-			player.abilities.remove_at(0)   # only 3 equipped: the oldest card drops off
+	# Found cards join the collection for good. A new one is equipped now if a slot is free.
+	if CardCollection.add(ability):
+		var card_name: String = AbilityCard.NAMES[ability]
+		if CardCollection.is_equipped(ability):
+			player.abilities.assign(CardCollection.equipped)
+			hud.toast("New card: %s! Equipped." % card_name)
+		else:
+			hud.toast("New card: %s! Added to your collection." % card_name)
 	_show_abilities()
 
 

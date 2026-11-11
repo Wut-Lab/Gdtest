@@ -1,7 +1,9 @@
 class_name MainMenu
 extends Control
 ## The title screen, shown when the game starts and after leaving a run.
-##   Main:    the player, the game's name, Play, Options, Credits
+##   Main:    the player, the game's name, Play, Cards, Options, Credits
+##   Cards:   the card collection: every card by type, locked ones as silhouettes
+##   Card:    one card up close, with what it does and Equip / Unequip
 ##   Credits: who and what made the game, and the engine's license
 ## Options opens the same Options page as the pause menu.
 
@@ -13,6 +15,13 @@ const DIM := Color("a9b3d1")
 
 var _pages := {}
 var _square: PlayerPreview
+var _count: Label
+var _icons := {}          # ability -> CardIcon in the collection grid
+var _big: CardIcon
+var _big_type: Label
+var _big_text: Label
+var _equip: Button
+var _shown := ""
 
 
 func _ready() -> void:
@@ -45,6 +54,7 @@ func _ready() -> void:
 	tagline.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	main.add_child(tagline)
 	_button(main, "Play", func() -> void: play_pressed.emit())
+	_button(main, "Cards", func() -> void: _open_collection())
 	_button(main, "Options", func() -> void: options_pressed.emit())
 	_button(main, "Credits", func() -> void: _show("Credits"))
 
@@ -75,7 +85,59 @@ func _ready() -> void:
 		+ "libraries; see godotengine.org/license.")
 	_button(credits, "Back", func() -> void: _show("Main"))
 
+	var cards := _page("Cards")
+	cards.add_child(_title("Cards"))
+	_count = Label.new()
+	_count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_count.add_theme_color_override("font_color", DIM)
+	cards.add_child(_count)
+	for type_name in ["attack", "jump", "movement"]:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 12)
+		row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		var label := Label.new()
+		label.text = String(type_name).capitalize()
+		label.custom_minimum_size = Vector2(96, 0)
+		label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		label.add_theme_color_override("font_color", AbilityCard.TYPE_COLORS[type_name].lightened(0.25))
+		row.add_child(label)
+		for a in CardCollection.ALL:
+			if AbilityCard.TYPES[a] != type_name:
+				continue
+			var b := Button.new()
+			b.flat = true
+			b.custom_minimum_size = Vector2(60, 64)
+			b.pressed.connect(_open_card.bind(a))
+			var icon := CardIcon.new()
+			icon.card_scale = 1.6
+			icon.ability = a
+			icon.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+			b.add_child(icon)
+			row.add_child(b)
+			_icons[a] = icon
+		cards.add_child(row)
+	_button(cards, "Back", func() -> void: _show("Main"))
+
+	var card := _page("Card")
+	_big = CardIcon.new()
+	_big.card_scale = 4.0
+	_big.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	card.add_child(_big)
+	_big_type = Label.new()
+	_big_type.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	card.add_child(_big_type)
+	_big_text = Label.new()
+	_big_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_big_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_big_text.custom_minimum_size = Vector2(280, 0)
+	_big_text.add_theme_color_override("font_color", DIM)
+	card.add_child(_big_text)
+	_equip = _button(card, "Equip", _toggle_equip)
+	_button(card, "Back", func() -> void: _open_collection())
+
 	panel.add_child(main)
+	panel.add_child(cards)
+	panel.add_child(card)
 	panel.add_child(credits)
 	open()
 
@@ -87,9 +149,64 @@ func open(player_color := Color("ff6b5e")) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if visible and event.is_action_pressed("ui_cancel") and _pages["Credits"].visible:
+	if not visible or not event.is_action_pressed("ui_cancel"):
+		return
+	if _pages["Card"].visible:
+		get_viewport().set_input_as_handled()
+		_open_collection()
+	elif _pages["Credits"].visible or _pages["Cards"].visible:
 		get_viewport().set_input_as_handled()
 		_show("Main")
+
+
+func _open_collection() -> void:
+	CardCollection.setup()
+	_count.text = "Found %d of %d  ·  Equipped %d of %d" % [CardCollection.owned.size(),
+		CardCollection.ALL.size(), CardCollection.equipped.size(), CardCollection.MAX_EQUIPPED]
+	for a in _icons:
+		_icons[a].locked = not CardCollection.owns(a)
+		_icons[a].equipped = CardCollection.is_equipped(a)
+	_show("Cards")
+	# Focus the card you were just looking at, or the first one.
+	_icons[_shown if _icons.has(_shown) else CardCollection.ALL[0]].get_parent().grab_focus()
+
+
+func _open_card(a: String) -> void:
+	_shown = a
+	var found := CardCollection.owns(a)
+	_big.ability = a
+	_big.locked = not found
+	var type_name: String = AbilityCard.TYPES[a]
+	_big_type.text = AbilityCard.TYPE_NAMES[type_name] if found else "Locked card"
+	_big_type.add_theme_color_override("font_color",
+		AbilityCard.TYPE_COLORS[type_name].lightened(0.25) if found else DIM)
+	_big_text.text = AbilityCard.DESCRIPTIONS[a] if found else "Not found yet. Keep playing to find it."
+	_equip.visible = found
+	_update_equip()
+	_show("Card")
+	if found:
+		_equip.grab_focus()
+
+
+func _update_equip() -> void:
+	var on := CardCollection.is_equipped(_shown)
+	var full := CardCollection.equipped.size() >= CardCollection.MAX_EQUIPPED
+	_big.equipped = on
+	_equip.text = "Unequip" if on else ("All 3 slots are full" if full else "Equip")
+	_equip.disabled = not on and full
+
+
+func _toggle_equip() -> void:
+	CardCollection.toggle_equip(_shown)
+	_update_equip()
+
+
+func _title(text: String) -> Label:
+	var l := Label.new()
+	l.text = text
+	l.theme_type_variation = "TitleLabel"
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	return l
 
 
 func _show(page_name: String) -> void:

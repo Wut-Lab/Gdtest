@@ -31,6 +31,7 @@ func _is_rubber(ground: TileMapLayer, c: int, r: int) -> bool:
 func _physics_process(_d: float) -> bool:
 	frame += 1
 	if frame == 5:
+		CardCollection.equipped.clear()   # the bot plays with no ability cards (not saved)
 		main.new_run()
 		main.player.bounced.connect(func() -> void: bounces += 1)
 		main.player.wall_bounced.connect(func() -> void: wall_bounces += 1)

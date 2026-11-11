@@ -107,7 +107,26 @@ func show_out(time: float, falls: int) -> void:
 	retry_button.grab_focus()
 
 
-## Lists the ability cards collected this run.
+## A short message that floats in near the top of the screen and fades away.
+func toast(text: String) -> void:
+	var l := Label.new()
+	l.text = text
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	l.offset_left = -240
+	l.offset_right = 240
+	l.offset_top = 70
+	l.add_theme_font_size_override("font_size", 20)
+	l.add_theme_color_override("font_outline_color", Color("1b2440"))
+	l.add_theme_constant_override("outline_size", 6)
+	add_child(l)
+	var tw := create_tween()
+	tw.tween_interval(2.2)
+	tw.tween_property(l, "modulate:a", 0.0, 0.6)
+	tw.tween_callback(l.queue_free)
+
+
+## Lists the ability cards equipped for this run.
 func set_cards(abilities: Array[String]) -> void:
 	var names := PackedStringArray()
 	for a in abilities:
