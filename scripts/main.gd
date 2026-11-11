@@ -7,8 +7,6 @@ enum State { READY, PLAY, WON, OUT }
 
 const SETTINGS_PATH := "user://settings.cfg"
 const START_HEARTS := 2
-## Heart pickups can take you above the starting amount, up to this.
-const MAX_HEARTS := 5
 
 @export var level_scene: PackedScene
 @export var player_scene: PackedScene
@@ -42,6 +40,7 @@ func _ready() -> void:
 	player.fell.connect(_on_player_fell)
 	level.goal_reached.connect(_on_goal_reached)
 	level.heart_collected.connect(_on_heart_collected)
+	level.heart_check = func() -> bool: return hearts < _start_hearts()   # no pickups at full health
 	level.card_collected.connect(_on_card_collected)
 	level.chest_opened.connect(_on_chest_opened)
 	level.player_hurt.connect(_on_player_hurt)
@@ -276,7 +275,7 @@ func _lose_heart() -> void:
 
 
 func _on_heart_collected() -> void:
-	hearts = mini(hearts + 1, MAX_HEARTS)
+	hearts = mini(hearts + 1, _start_hearts())
 	hud.set_hearts(hearts, _start_hearts())
 
 

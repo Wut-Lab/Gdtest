@@ -40,6 +40,8 @@ var _teleporters: Node2D
 var _pickups: Node2D
 var _obstacles: Node2D
 var _chests: Node2D
+## Main sets this: whether a heart can be picked up right now (false at full health).
+var heart_check := Callable()
 
 @onready var ground: TileMapLayer = $Ground
 @onready var start: Marker2D = $Start
@@ -164,6 +166,7 @@ func _place_hearts(cells: Array[Vector2i], cards: Dictionary) -> void:
 		var h := HeartPickup.new()
 		h.position = Vector2(cell.x * T + T / 2.0, cell.y * T + T / 2.0)
 		h.collected.connect(func() -> void: heart_collected.emit())
+		h.can_collect = func() -> bool: return not heart_check.is_valid() or heart_check.call()
 		_pickups.add_child(h)
 	for cell in cards:
 		var c := AbilityCard.new()

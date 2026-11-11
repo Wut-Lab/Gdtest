@@ -1,12 +1,15 @@
 class_name HeartPickup
 extends Area2D
 ## An extra heart floating in the level (H in a text map). Touch it to gain a heart.
+## At full health it isn't picked up, so it stays for later.
 
 signal collected
 
 const BLOCK := 3.0
 
 var _t := 0.0
+## Asked before picking up; the level sets it to check the player isn't at full health.
+var can_collect := func() -> bool: return true
 
 
 func _ready() -> void:
@@ -19,7 +22,7 @@ func _ready() -> void:
 
 
 func _on_body_entered(body: Node2D) -> void:
-	if body is Player and visible:
+	if body is Player and visible and can_collect.call():
 		hide()
 		set_deferred("monitoring", false)
 		collected.emit()
