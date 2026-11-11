@@ -3,6 +3,7 @@ extends RefCounted
 ## The player's ability card collection, kept for good in one of 3 save files on this device.
 ## owned: every card found so far in the current file. equipped: up to 3 of them, used on every run.
 ## A new file starts with one free card (Heart Box) so the collection isn't empty.
+## Each file also keeps its pixels (the currency) and which treasure chests it has opened.
 ## Sound and the player's color are shared settings, not part of a save file.
 
 const SETTINGS := "user://settings.cfg"
@@ -16,6 +17,9 @@ const ALL := ["dash", "pound", "double_jump", "glide", "quick", "tele_hop", "hea
 static var file := 1
 static var owned: Array[String] = []
 static var equipped: Array[String] = []
+static var pixels := 0
+## Chests already opened, as "level key:chest number", so each pays out once.
+static var opened_chests: Array[String] = []
 static var _loaded := false
 
 
@@ -42,10 +46,14 @@ static func use_file(n: int) -> void:
 		equipped.assign(cfg.get_value("cards", "equipped", []))
 		owned = owned.filter(func(a: String) -> bool: return a in ALL)
 		equipped = equipped.filter(func(a: String) -> bool: return a in owned)
+		pixels = int(cfg.get_value("progress", "pixels", 0))
+		opened_chests.assign(cfg.get_value("progress", "opened_chests", []))
 	else:
 		# A fresh file: written to disk the first time something changes.
 		owned.assign([STARTER])
 		equipped.assign([STARTER])
+		pixels = 0
+		opened_chests.clear()
 	var settings := ConfigFile.new()
 	settings.load(SETTINGS)
 	settings.set_value("game", "last_file", n)
@@ -57,7 +65,38 @@ static func save() -> void:
 	cfg.load(path(file))
 	cfg.set_value("cards", "owned", owned)
 	cfg.set_value("cards", "equipped", equipped)
+	cfg.set_value("progress", "pixels", pixels)
+	cfg.set_value("progress", "opened_chests", opened_chests)
 	cfg.save(path(file))
+
+
+static func add_pixels(n: int) -> void:
+	pixels += n
+	save()
+
+
+static func chest_opened(key: String) -> bool:
+	return key in opened_chests
+
+
+static func mark_chest(key: String) -> void:
+	if key not in opened_chests:
+		opened_chests.append(key)
+		save()
+
+
+## A random card this file hasn't found yet, or "" if it has them all.
+static func random_unowned() -> String:
+	var left := ALL.filter(func(a: String) -> bool: return a not in owned)
+	return "" if left.is_empty() else left[randi() % left.size()]
+
+
+## How many pixels save file n has.
+static func file_pixels(n: int) -> int:
+	var cfg := ConfigFile.new()
+	if cfg.load(path(n)) != OK:
+		return 0
+	return int(cfg.get_value("progress", "pixels", 0))
 
 
 ## Whether save file n has been started.

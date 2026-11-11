@@ -21,6 +21,8 @@ var hits := 0
 var level: Level
 ## Seed of the random level being played, or 0 for the hand-made level.
 var seed_value := 0
+## Names the level for the save file's opened-chest list: "main", "seed123" or "custom".
+var _level_key := "main"
 var player: Player
 
 var _js_load_level: JavaScriptObject
@@ -41,6 +43,7 @@ func _ready() -> void:
 	level.goal_reached.connect(_on_goal_reached)
 	level.heart_collected.connect(_on_heart_collected)
 	level.card_collected.connect(_on_card_collected)
+	level.chest_opened.connect(_on_chest_opened)
 	level.player_hurt.connect(_on_player_hurt)
 	hud.play_requested.connect(new_run)
 	hud.main_level_requested.connect(play_main_level)
@@ -63,6 +66,7 @@ func _ready() -> void:
 	get_viewport().size_changed.connect(_on_screen_changed)
 	_on_screen_changed()
 	_start_music()
+	hud.set_pixels(CardCollection.pixels)
 	_setup_web_bridge()
 
 
@@ -113,6 +117,7 @@ func _fit_to_level() -> void:
 ## Replace the current level with a text map and start playing it.
 func load_level_text(text: String) -> void:
 	level.load_map_text(text)
+	_sync_chests()
 	_fit_to_level()
 	get_tree().paused = false
 	hud.tuning_panel.hide()
@@ -122,6 +127,7 @@ func load_level_text(text: String) -> void:
 ## The hand-made level (levels/level_01.txt).
 func play_main_level() -> void:
 	seed_value = 0
+	_level_key = "main"
 	hud.set_seed(0)
 	load_level_text(FileAccess.get_file_as_string(level.map_file))
 
@@ -129,6 +135,7 @@ func play_main_level() -> void:
 ## A random level from a seed; a seed below 1 picks a new one.
 func play_random_level(s: int) -> void:
 	seed_value = s if s > 0 else LevelGen.random_seed()
+	_level_key = "seed%d" % seed_value
 	hud.set_seed(seed_value)
 	load_level_text(LevelGen.generate(seed_value))
 
@@ -144,6 +151,9 @@ func new_run() -> void:
 	_show_abilities()
 	hud.set_hearts(hearts, _start_hearts())
 	level.reset_pickups()
+	if _level_key == "custom":
+		_sync_chests()   # editor test levels refill their chests every run
+	hud.set_pixels(CardCollection.pixels)
 	state = State.PLAY
 	hud.hide_menus()
 	hud.pause_button.show()
@@ -252,6 +262,27 @@ func _on_heart_collected() -> void:
 	hud.set_hearts(hearts, _start_hearts())
 
 
+## Chests this save file already opened stay open (and empty).
+func _sync_chests() -> void:
+	var chests := level.get_chests()
+	for i in chests.size():
+		chests[i].set_open(_level_key != "custom" and CardCollection.chest_opened("%s:%d" % [_level_key, i]))
+
+
+## A chest holds a card 20% of the time (one this file hasn't found), otherwise 2–10 pixels.
+func _on_chest_opened(index: int) -> void:
+	if _level_key != "custom":
+		CardCollection.mark_chest("%s:%d" % [_level_key, index])
+	var card := CardCollection.random_unowned() if randf() < 0.2 else ""
+	if card != "":
+		_on_card_collected(card)
+	else:
+		var n := randi_range(2, 10)
+		CardCollection.add_pixels(n)
+		hud.set_pixels(CardCollection.pixels)
+		hud.toast("Chest: +%d pixels!" % n)
+
+
 func _on_card_collected(ability: String) -> void:
 	# Found cards join the collection for good. A new one is equipped now if a slot is free.
 	if CardCollection.add(ability):
@@ -295,4 +326,5 @@ func _setup_web_bridge() -> void:
 
 func _on_js_load_level(args: Array) -> void:
 	if args.size() > 0:
+		_level_key = "custom"
 		load_level_text(str(args[0]))

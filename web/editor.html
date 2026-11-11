@@ -298,6 +298,7 @@ button:disabled { opacity: 0.4; }
     { ch: 'P', label: 'Start' },
     { ch: 'G', label: 'Goal' },
     { ch: 'H', label: 'Heart' },
+    { ch: 'C', label: 'Chest' },
     { ch: 'D', label: 'Dash card' },
     { ch: 'Q', label: 'Pound card' },
     { ch: 'J', label: 'Double jump card' },
@@ -341,7 +342,7 @@ button:disabled { opacity: 0.4; }
     while (src.length < ROWS) src.unshift('');
     for (const line of src) {
       const row = [];
-      for (let x = 0; x < width; x++) row.push(line[x] && '.#=RWPGHSV123^TBDQJLKEX'.includes(line[x]) ? line[x] : '.');
+      for (let x = 0; x < width; x++) row.push(line[x] && '.#=RWPGHSV123^TBDQJLKEXC'.includes(line[x]) ? line[x] : '.');
       rows.push(row);
     }
     return rows;
@@ -423,6 +424,15 @@ button:disabled { opacity: 0.4; }
       }
       g.globalAlpha = 1; g.fillRect(x + o, y + o, p, p);
       g.fillStyle = 'rgba(0,0,0,0.35)'; g.fillRect(x + s * 0.4, y + s * 0.4, s * 0.2, s * 0.2);
+    } else if (ch === 'C') {
+      // Treasure chest: dark outline, wood lid and body, metal bands, gold lock.
+      const w = s * 0.82, h = s * 0.7, ox = x + (s - w) / 2, oy = y + s - h;
+      g.fillStyle = '#3b2716'; g.fillRect(ox, oy, w, h);
+      g.fillStyle = '#9c6b3f'; g.fillRect(ox + 1, oy + 1, w - 2, h - 2);
+      g.fillStyle = '#c48a52'; g.fillRect(ox + 1, oy + 1, w - 2, h * 0.12);
+      g.fillStyle = '#3b2716'; g.fillRect(ox, oy + h * 0.45, w, Math.max(1, h * 0.05));
+      g.fillStyle = '#d9deef'; g.fillRect(ox + w * 0.12, oy, w * 0.1, h); g.fillRect(ox + w * 0.78, oy, w * 0.1, h);
+      g.fillStyle = '#f2c230'; g.fillRect(x + s / 2 - w * 0.12, oy + h * 0.3, w * 0.24, h * 0.3);
     } else if (CARD[ch]) {
       // Ability card: border and thick bottom bar in the card type's color, white field, letter.
       const w = s * 0.62, h = s * 0.84, ox = x + (s - w) / 2, oy = y + (s - h) / 2;

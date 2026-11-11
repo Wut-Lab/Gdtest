@@ -23,6 +23,8 @@ const ROWS := 17
 const TOP_MIN := 9        # highest ground row
 const TOP_MAX := 15       # lowest ground row (row 16 is always fill)
 const MAX_HEARTS := 2
+## Chance a level has a treasure chest, up on a floating platform off the main path.
+const CHEST_CHANCE := 0.2
 
 
 static func random_seed() -> int:
@@ -38,6 +40,8 @@ static func generate(seed_value: int) -> String:
 	_flat(cols, TOP_MAX, 6)
 	cols[2][TOP_MAX - 1] = "P"
 	var pieces := _required_pieces(rng)
+	if rng.randf() < CHEST_CHANCE:
+		pieces.insert(rng.randi_range(0, pieces.size()), "chest")
 
 	for piece in pieces:
 		for i in rng.randi_range(0, 1):
@@ -159,6 +163,12 @@ static func _piece(cols: Array, st: Dictionary, rng: RandomNumberGenerator, piec
 			_pit(cols, 9)
 			_flat(cols, h, 2)
 			cols[x + 12][h - 1] = pad
+		"chest":
+			# A floating platform 3 rows up with a chest on it: jump up through it to reach.
+			_flat(cols, h, 7)
+			for i in range(2, 5):
+				cols[x + i][h - 3] = "="
+			cols[x + 3][h - 4] = "C"
 		"rubber_pad":
 			_flat(cols, h, 3)
 			cols[x + 1][h] = "R"

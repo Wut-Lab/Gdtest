@@ -12,12 +12,14 @@ extends Node2D
 ##   ^  one-way block (jump up through it from below, then stand on it)
 ##   D  Dash card    Q  Ground Pound card    J  Double Jump card    L  Glide card
 ##   K  Quick card       E  Tele-hop card       X  Heart Box card
+##   C  treasure chest (a card or some pixels, once per save file)
 ##   T  wide moving platform with spikes on top (3 tiles wide, centered on its cell)
 ##   B  wide moving platform with spikes underneath (ride on top)
 
 signal goal_reached
 signal heart_collected
 signal card_collected(ability: String)
+signal chest_opened(index: int)
 signal player_hurt(push: Vector2)
 
 const T := 32
@@ -37,6 +39,7 @@ var _walls: Array[CollisionShape2D] = []
 var _teleporters: Node2D
 var _pickups: Node2D
 var _obstacles: Node2D
+var _chests: Node2D
 
 @onready var ground: TileMapLayer = $Ground
 @onready var start: Marker2D = $Start
@@ -61,6 +64,9 @@ func _ready() -> void:
 	_obstacles = Node2D.new()
 	_obstacles.name = "Obstacles"
 	add_child(_obstacles)
+	_chests = Node2D.new()
+	_chests.name = "Chests"
+	add_child(_chests)
 	if map_file != "":
 		load_map_text(FileAccess.get_file_as_string(map_file))
 	else:
@@ -75,6 +81,7 @@ func load_map_text(text: String) -> void:
 	var goal_cell := Vector2i(-1, -1)
 	var pads := {}   # color name -> Array of cells, in reading order
 	var hearts: Array[Vector2i] = []
+	var chests: Array[Vector2i] = []
 	var cards := {}   # cell -> ability
 	var spikes: Array[Vector2i] = []
 	var vspikes: Array[Vector2i] = []
@@ -97,6 +104,8 @@ func load_map_text(text: String) -> void:
 					cards[Vector2i(x, y)] = AbilityCard.LETTERS[ch]
 				"S":
 					spikes.append(Vector2i(x, y))
+				"C":
+					chests.append(Vector2i(x, y))
 				"V":
 					vspikes.append(Vector2i(x, y))
 				"T", "B":
@@ -119,6 +128,7 @@ func load_map_text(text: String) -> void:
 		goal.hide()
 		goal.set_deferred("monitoring", false)
 	_place_teleporters(pads)
+	_place_chests(chests)
 	_place_hearts(hearts, cards)
 	_place_spikes(spikes, vspikes, platforms)
 	_update_walls()
@@ -189,6 +199,22 @@ func reset_pickups() -> void:
 		h.reset()
 	for s in _obstacles.get_children():
 		s.reset()
+
+
+## Chests sit on the floor of their cell. Numbered in reading order, for the save file.
+func _place_chests(cells: Array[Vector2i]) -> void:
+	for child in _chests.get_children():
+		_chests.remove_child(child)
+		child.queue_free()
+	for i in cells.size():
+		var c := Chest.new()
+		c.position = Vector2(cells[i].x * T + T / 2.0, (cells[i].y + 1) * T)
+		c.opened.connect(func(_c: Chest) -> void: chest_opened.emit(i))
+		_chests.add_child(c)
+
+
+func get_chests() -> Array[Node]:
+	return _chests.get_children()
 
 
 func get_teleporters() -> Array[Node]:

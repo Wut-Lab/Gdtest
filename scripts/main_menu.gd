@@ -151,7 +151,7 @@ func _ready() -> void:
 		row.add_theme_constant_override("separation", 8)
 		row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		var pick := Button.new()
-		pick.custom_minimum_size = Vector2(220, 56)
+		pick.custom_minimum_size = Vector2(250, 56)
 		pick.pressed.connect(_pick_file.bind(n))
 		row.add_child(pick)
 		var erase := Button.new()
@@ -204,7 +204,8 @@ func _update_file_row(n: int) -> void:
 	var used := CardCollection.file_exists(n)
 	var mark := "  ·  Current" if n == CardCollection.file else ""
 	if used:
-		pick.text = "File %d%s\n%d of %d cards" % [n, mark, CardCollection.file_card_count(n), CardCollection.ALL.size()]
+		pick.text = "File %d%s\n%d of %d cards  ·  %d pixels" % [n, mark, CardCollection.file_card_count(n),
+			CardCollection.ALL.size(), CardCollection.file_pixels(n)]
 	else:
 		pick.text = "File %d%s\nNew game" % [n, mark]
 	erase.text = "Erase"

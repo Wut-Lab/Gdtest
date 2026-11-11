@@ -22,6 +22,7 @@ signal player_color_changed(color: Color)
 @onready var new_level_button: Button = %NewLevelButton
 @onready var seed_label: Label = %SeedLabel
 @onready var cards_label: Label = %CardsLabel
+var pixel_counter: PixelCounter
 @onready var out_menu: Control = %OutMenu
 @onready var out_label: Label = %OutLabel
 @onready var retry_button: Button = %RetryButton
@@ -41,6 +42,17 @@ var default_color := Color("ff6b5e")
 
 
 func _ready() -> void:
+	# Pixel count in the top-right corner, under the Pause and Tune buttons.
+	pixel_counter = PixelCounter.new()
+	pixel_counter.anchor_left = 1.0
+	pixel_counter.anchor_right = 1.0
+	pixel_counter.offset_left = -160.0
+	pixel_counter.offset_right = -16.0
+	pixel_counter.offset_top = 62.0
+	pixel_counter.offset_bottom = 88.0
+	pixel_counter.alignment = BoxContainer.ALIGNMENT_END
+	add_child(pixel_counter)
+	move_child(pixel_counter, 0)   # under the menus
 	play_button.pressed.connect(main_level_requested.emit)
 	random_button.pressed.connect(func() -> void:
 		random_level_requested.emit(seed_edit.text.strip_edges().to_int()))
@@ -124,6 +136,10 @@ func toast(text: String) -> void:
 	tw.tween_interval(2.2)
 	tw.tween_property(l, "modulate:a", 0.0, 0.6)
 	tw.tween_callback(l.queue_free)
+
+
+func set_pixels(n: int) -> void:
+	pixel_counter.set_pixels(n)
 
 
 ## Lists the ability cards equipped for this run.
