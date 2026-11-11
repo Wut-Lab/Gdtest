@@ -40,6 +40,11 @@ func _ready() -> void:
 	level.heart_collected.connect(_on_heart_collected)
 	level.player_hurt.connect(_on_player_hurt)
 	hud.play_requested.connect(new_run)
+	hud.pause_requested.connect(pause)
+	hud.pause_menu.continue_pressed.connect(resume)
+	hud.pause_menu.quit_pressed.connect(go_to_start)
+	hud.tuning_panel.closed.connect(func() -> void: hud.pause_button.visible = state == State.PLAY)
+	hud.tune_button.pressed.connect(func() -> void: hud.pause_button.hide())
 	hud.tuning_panel.player = player
 	hud.default_color = player.color
 	player.color = _load_player_color(player.color)
@@ -57,7 +62,10 @@ func _ready() -> void:
 ## Soft background music, looping for the whole session. Browsers start it on the first tap
 ## or key press.
 func _start_music() -> void:
+	AudioSettings.setup()
 	var music := AudioStreamPlayer.new()
+	music.bus = AudioSettings.MUSIC_BUS
+	music.process_mode = Node.PROCESS_MODE_ALWAYS   # keeps playing in the pause menu
 	var stream: AudioStreamOggVorbis = load("res://audio/music.ogg")
 	stream.loop = true
 	music.stream = stream
@@ -114,10 +122,43 @@ func new_run() -> void:
 	level.reset_pickups()
 	state = State.PLAY
 	hud.hide_menus()
+	hud.pause_button.show()
+
+
+## Pause the game and open the pause menu (Pause button, Esc or P).
+func pause() -> void:
+	if state != State.PLAY or get_tree().paused:
+		return
+	get_tree().paused = true
+	hud.pause_button.hide()
+	hud.tune_button.hide()
+	$TouchControls.hide()
+	hud.pause_menu.open()
+
+
+func resume() -> void:
+	hud.pause_menu.hide()
+	get_tree().paused = false
+	hud.pause_button.show()
+	hud.tune_button.show()
+	$TouchControls.show()
+	get_viewport().gui_release_focus()
+
+
+## Leave the run and go back to the start screen.
+func go_to_start() -> void:
+	resume()
+	state = State.READY
+	player.active = false
+	player.reset_to(level.start.position)
+	hud.pause_button.hide()
+	hud.show_start()
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("restart"):
+	if event.is_action_pressed("pause") and state == State.PLAY and not get_tree().paused:
+		pause()
+	elif event.is_action_pressed("restart") and not get_tree().paused:
 		new_run()
 	elif state == State.READY and (event.is_action_pressed("move_left")
 			or event.is_action_pressed("move_right") or event.is_action_pressed("jump")):
@@ -170,6 +211,7 @@ func _lose_heart() -> void:
 	hud.hearts_display.flash()
 	if hearts <= 0:
 		state = State.OUT
+		hud.pause_button.hide()
 		player.active = false
 		player.velocity = Vector2.ZERO
 		hud.show_out(run_time, falls)
@@ -184,6 +226,7 @@ func _on_goal_reached() -> void:
 	if state != State.PLAY:
 		return
 	state = State.WON
+	hud.pause_button.hide()
 	player.active = false
 	player.velocity = Vector2.ZERO
 	hud.show_win(run_time, falls, hearts)

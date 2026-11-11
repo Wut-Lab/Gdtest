@@ -3,6 +3,7 @@ extends CanvasLayer
 ## Timer, fall counter, hearts, the start and win menus, and the Tune button.
 
 signal play_requested
+signal pause_requested
 signal player_color_changed(color: Color)
 
 @onready var time_label: Label = %TimeLabel
@@ -16,6 +17,8 @@ signal player_color_changed(color: Color)
 @onready var out_label: Label = %OutLabel
 @onready var retry_button: Button = %RetryButton
 @onready var hearts_display: HeartsDisplay = %HeartsDisplay
+@onready var pause_button: Button = %PauseButton
+@onready var pause_menu: PauseMenu = %PauseMenu
 @onready var tune_button: Button = %TuneButton
 @onready var tuning_panel: TuningPanel = %TuningPanel
 @onready var color_wheel: ColorWheel = %ColorWheel
@@ -32,6 +35,7 @@ func _ready() -> void:
 	again_button.pressed.connect(play_requested.emit)
 	retry_button.pressed.connect(play_requested.emit)
 	tune_button.pressed.connect(tuning_panel.open)
+	pause_button.pressed.connect(pause_requested.emit)
 	tuning_panel.closed.connect(func() -> void: get_viewport().gui_release_focus())
 	color_wheel.changed.connect(_on_color_input)
 	brightness.value_changed.connect(func(_v: float) -> void: _on_color_input())

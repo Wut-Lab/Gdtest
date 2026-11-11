@@ -89,6 +89,7 @@ func _make_sfx(path: String, volume_db: float) -> AudioStreamPlayer:
 	var p := AudioStreamPlayer.new()
 	p.stream = load(path)
 	p.volume_db = volume_db
+	p.bus = AudioSettings.SOUNDS_BUS
 	return p
 
 

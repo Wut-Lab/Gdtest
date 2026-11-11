@@ -65,11 +65,13 @@ func _setup_project() -> void:
 		"move_right": [KEY_RIGHT, KEY_D],
 		"jump": [KEY_SPACE, KEY_UP, KEY_W, KEY_Z],
 		"restart": [KEY_R],
+		"pause": [KEY_ESCAPE, KEY_P],
 	}
 	var joy_buttons := {
 		"move_left": JOY_BUTTON_DPAD_LEFT,
 		"move_right": JOY_BUTTON_DPAD_RIGHT,
 		"jump": JOY_BUTTON_A,
+		"pause": JOY_BUTTON_START,
 	}
 	var joy_axis := {"move_left": -1.0, "move_right": 1.0}
 	for action in keys:
@@ -299,6 +301,27 @@ func _hud_scene() -> Node:
 	tune.offset_bottom = 54.0
 	tune.focus_mode = Control.FOCUS_NONE
 	root.add_child(tune)
+
+	var pause := Button.new()
+	pause.name = "PauseButton"
+	pause.unique_name_in_owner = true
+	pause.text = "Pause"
+	pause.anchor_left = 1.0
+	pause.anchor_right = 1.0
+	pause.offset_left = -198.0
+	pause.offset_right = -110.0
+	pause.offset_top = 10.0
+	pause.offset_bottom = 54.0
+	pause.focus_mode = Control.FOCUS_NONE
+	pause.visible = false   # shown only while playing
+	root.add_child(pause)
+
+	var pause_menu := Control.new()
+	pause_menu.name = "PauseMenu"
+	pause_menu.unique_name_in_owner = true
+	pause_menu.set_script(load("res://scripts/pause_menu.gd"))
+	_full_rect(pause_menu)
+	root.add_child(pause_menu)
 
 	var panel := Control.new()
 	panel.name = "TuningPanel"
