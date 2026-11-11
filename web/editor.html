@@ -294,11 +294,14 @@ button:disabled { opacity: 0.4; }
     { ch: '=', label: 'Platform' },
     { ch: 'R', label: 'Rubber' },
     { ch: 'W', label: 'Rubber wall' },
+    { ch: '^', label: 'One-way block' },
     { ch: 'P', label: 'Start' },
     { ch: 'G', label: 'Goal' },
     { ch: 'H', label: 'Heart' },
     { ch: 'S', label: 'Spike square' },
     { ch: 'V', label: 'Up-down spikes' },
+    { ch: 'T', label: 'Spiked-top platform' },
+    { ch: 'B', label: 'Spiked-bottom platform' },
     { ch: '1', label: 'Red warp' },
     { ch: '2', label: 'Yellow warp' },
     { ch: '3', label: 'Blue warp' },
@@ -331,7 +334,7 @@ button:disabled { opacity: 0.4; }
     while (src.length < ROWS) src.unshift('');
     for (const line of src) {
       const row = [];
-      for (let x = 0; x < width; x++) row.push(line[x] && '.#=RWPGHSV123'.includes(line[x]) ? line[x] : '.');
+      for (let x = 0; x < width; x++) row.push(line[x] && '.#=RWPGHSV123^TB'.includes(line[x]) ? line[x] : '.');
       rows.push(row);
     }
     return rows;
@@ -412,6 +415,27 @@ button:disabled { opacity: 0.4; }
       }
       g.globalAlpha = 1; g.fillRect(x + o, y + o, p, p);
       g.fillStyle = 'rgba(0,0,0,0.35)'; g.fillRect(x + s * 0.4, y + s * 0.4, s * 0.2, s * 0.2);
+    } else if (ch === '^') {
+      // One-way block: teal with a light top lip and two up-chevrons.
+      g.fillStyle = '#3f9e93'; g.fillRect(x, y, s, s);
+      g.fillStyle = '#79e2c2'; g.fillRect(x, y, s, Math.max(2, s * 0.16));
+      g.lineWidth = Math.max(1, s / 14); g.strokeStyle = '#79e2c2';
+      for (const fy of [0.45, 0.7]) {
+        g.beginPath(); g.moveTo(x + s * 0.3, y + s * (fy + 0.08)); g.lineTo(x + s * 0.5, y + s * (fy - 0.08));
+        g.lineTo(x + s * 0.7, y + s * (fy + 0.08)); g.stroke();
+      }
+    } else if (ch === 'T' || ch === 'B') {
+      // Wide spiked platform (3 tiles wide in the game, centered on this cell).
+      const top = ch === 'T', t = s * 0.4, k = Math.max(1, s / 16);
+      const by = top ? y + s - t : y;
+      g.fillStyle = '#5b4b8a'; g.fillRect(x - s * 0.15, by, s * 1.3, t);
+      g.fillStyle = '#7d6bb3'; g.fillRect(x - s * 0.15, by, s * 1.3, t * 0.25);
+      g.fillStyle = '#d9deef';
+      for (let i = 0; i < 4; i++) {
+        const cx = x - s * 0.1 + i * s * 0.32;
+        const sy = top ? by - k * 3 : by + t;
+        g.fillRect(cx, top ? sy + k : sy, k * 3, k * 2); g.fillRect(cx + k, top ? sy - k : sy + k * 2, k, k * 2);
+      }
     } else if (ch === 'V') {
       // Up-down spike square: same block, spikes on top and bottom.
       const b = s * 0.62, o = (s - b) / 2, k = Math.max(1, s / 16);

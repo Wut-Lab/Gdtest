@@ -79,12 +79,16 @@ func _setup_project() -> void:
 		"jump": [KEY_SPACE, KEY_UP, KEY_W, KEY_Z],
 		"restart": [KEY_R],
 		"pause": [KEY_ESCAPE, KEY_P],
+		"dash": [KEY_SHIFT, KEY_X, KEY_K],
+		"pound": [KEY_DOWN, KEY_S, KEY_J],
 	}
 	var joy_buttons := {
 		"move_left": JOY_BUTTON_DPAD_LEFT,
 		"move_right": JOY_BUTTON_DPAD_RIGHT,
 		"jump": JOY_BUTTON_A,
 		"pause": JOY_BUTTON_START,
+		"dash": JOY_BUTTON_X,
+		"pound": JOY_BUTTON_B,
 	}
 	var joy_axis := {"move_left": -1.0, "move_right": 1.0}
 	for action in keys:
@@ -128,16 +132,16 @@ func _make_tileset() -> TileSet:
 	var src := TileSetAtlasSource.new()
 	src.texture = load("res://art/tiles.png")
 	src.texture_region_size = Vector2i(T, T)
-	for i in 5:
+	for i in 6:
 		src.create_tile(Vector2i(i, 0))
 	ts.add_source(src, 0)
 	var square := PackedVector2Array([Vector2(-16, -16), Vector2(16, -16), Vector2(16, 16), Vector2(-16, 16)])
-	for i in 5:
+	for i in 6:
 		var td := src.get_tile_data(Vector2i(i, 0), 0)
 		td.add_collision_polygon(0)
 		td.set_collision_polygon_points(0, 0, square)
-		if i == 2:
-			td.set_collision_polygon_one_way(0, 0, true)   # jump up through floating platforms
+		if i == 2 or i == 5:
+			td.set_collision_polygon_one_way(0, 0, true)   # jump up through platforms and one-way blocks
 		if i == 3 or i == 4:
 			td.set_custom_data("rubber", true)             # the player bounces off it
 		if i == 4:
@@ -301,7 +305,7 @@ func _hud_scene() -> Node:
 	var start := _menu(root, "StartMenu", "Reach the goal",
 		"Run, jump and bounce to the green goal. Hold jump to go higher.\n"
 		+ "You have 3 hearts: falls and spikes cost one. Grab floating hearts for more.\n"
-		+ "Keys: arrows or A/D move, Space jumps, R restarts.",
+		+ "Keys: arrows or A/D move, Space jumps, Shift dashes, Down pounds, R restarts.",
 		"StartBody", "PlayButton", "Play")
 	_level_row(start.get_node("Panel/Box"))
 	_color_row(start.get_node("Panel/Box"))
@@ -516,16 +520,24 @@ func _touch_scene() -> Node:
 	var right := _touch_button(pad, "Right", "move_right", 76, false, Vector2(margin + 88, H - margin - 76))
 	_arrow(right, 76, 1.0)
 	var jump := _touch_button(pad, "Jump", "jump", 92, true, Vector2(W - margin - 92, H - margin - 92))
+	_button_label(jump, "JUMP", 92, 18)
+	var dash := _touch_button(pad, "Dash", "dash", 76, false, Vector2(W - margin - 180, H - margin - 76))
+	_button_label(dash, "DASH", 76, 15)
+	var pound := _touch_button(pad, "Pound", "pound", 76, false, Vector2(W - margin - 84, H - margin - 180))
+	_button_label(pound, "POUND", 76, 15)
+	return layer
+
+
+func _button_label(button: Node2D, text: String, diameter: int, font_size: int) -> void:
 	var label := Label.new()
 	label.name = "Label"
-	label.text = "JUMP"
-	label.size = Vector2(92, 92)
+	label.text = text
+	label.size = Vector2(diameter, diameter)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", 18)
+	label.add_theme_font_size_override("font_size", font_size)
 	label.add_theme_color_override("font_color", INK)
-	jump.add_child(label)
-	return layer
+	button.add_child(label)
 
 
 func _touch_button(parent: Node, node_name: String, action: String, diameter: int, big: bool,

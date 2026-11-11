@@ -21,9 +21,9 @@ func _initialize() -> void:
 
 
 func _tiles() -> Image:
-	# Five 32×32 tiles: 0 = ground surface, 1 = ground fill, 2 = floating platform, 3 = rubber,
-	# 4 = rubber wall.
-	var img := Image.create_empty(160, 32, false, Image.FORMAT_RGBA8)
+	# Six 32×32 tiles: 0 = ground surface, 1 = ground fill, 2 = floating platform, 3 = rubber,
+	# 4 = rubber wall, 5 = one-way block.
+	var img := Image.create_empty(192, 32, false, Image.FORMAT_RGBA8)
 	img.fill_rect(Rect2i(0, 0, 32, 32), STONE)
 	img.fill_rect(Rect2i(0, 0, 32, 6), STONE_TOP)
 	img.fill_rect(Rect2i(0, 6, 1, 26), STONE_SIDE)
@@ -37,7 +37,26 @@ func _tiles() -> Image:
 	img.fill_rect(Rect2i(64, 6, 1, 20), STONE_SIDE)
 	_rubber(img, 96)
 	_rubber_wall(img, 128)
+	_one_way(img, 160)
 	return img
+
+
+func _one_way(img: Image, ox: int) -> void:
+	# One-way block: teal glass with two light up-chevrons, a solid top lip and a dashed
+	# bottom edge, so it reads as "jump up through me, then stand on me".
+	var body := Color("3f9e93")
+	var light := Color("79e2c2")
+	var shade := Color("2b6f68")
+	img.fill_rect(Rect2i(ox, 0, 32, 32), body)
+	img.fill_rect(Rect2i(ox, 0, 32, 5), light)
+	img.fill_rect(Rect2i(ox, 5, 1, 27), shade)
+	img.fill_rect(Rect2i(ox + 31, 5, 1, 27), shade)
+	for x in range(0, 32, 8):
+		img.fill_rect(Rect2i(ox + x, 29, 5, 3), shade)
+	# Two chevrons pointing up, built from 2×2 blocks.
+	for cy in [10, 18]:
+		for i in 6:
+			img.fill_rect(Rect2i(ox + 10 + i * 2, cy + absi(2 * i - 5), 2, 2), light)
 
 
 func _rubber_wall(img: Image, ox: int) -> void:

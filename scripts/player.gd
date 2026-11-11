@@ -53,6 +53,14 @@ const SIZE := 24.0
 ## For this long after a wall bounce your own steering is ignored, so the kick is felt.
 @export var wall_stun := 0.25
 
+@export_group("Dash and pound")
+## Dash: a quick straight burst the way you face (Shift, X or K). One per jump in the air.
+@export var dash_speed := 620.0
+@export var dash_time := 0.16
+@export var dash_cooldown := 0.45
+## Ground pound: in the air, slam straight down (Down, S or J).
+@export var pound_speed := 1000.0
+
 @export_group("Look")
 @export var color := Color("ff6b5e")
 @export var eye_color := Color("1b2440")
@@ -71,6 +79,10 @@ var _squash := Vector2.ONE
 var _was_on_floor := true
 var _bouncing := false
 var _stun := 0.0
+var _dash := 0.0          # time left in the current dash
+var _dash_cd := 0.0
+var _air_dash_used := false
+var _pounding := false
 
 @onready var camera: Camera2D = $Camera2D
 @onready var dust: CPUParticles2D = $Dust
@@ -108,6 +120,10 @@ func reset_to(pos: Vector2) -> void:
 	_was_on_floor = true
 	_bouncing = false
 	_stun = 0.0
+	_dash = 0.0
+	_dash_cd = 0.0
+	_air_dash_used = false
+	_pounding = false
 	invincible = 0.0
 	camera.reset_smoothing()
 
@@ -133,6 +149,14 @@ func teleport_to(pos: Vector2) -> void:
 	_squash = Vector2(0.6, 1.4)
 	_puff()
 	teleported.emit()
+
+
+func is_dashing() -> bool:
+	return _dash > 0.0
+
+
+func is_pounding() -> bool:
+	return _pounding
 
 
 ## Current squash/stretch scale, for tests.
@@ -177,16 +201,28 @@ func _physics_process(delta: float) -> void:
 		_puff()
 		_play(_jump_sfx)
 
+	_update_dash_and_pound(delta, on_floor)
+
 	var g := gravity
-	if velocity.y < 0.0 and not Input.is_action_pressed("jump") and not _bouncing:
+	if _dash > 0.0:
+		g = 0.0                                  # dashes fly straight
+	elif _pounding:
+		velocity.y = pound_speed
+		g = 0.0
+	elif velocity.y < 0.0 and not Input.is_action_pressed("jump") and not _bouncing:
 		g *= short_hop_gravity
-	velocity.y = minf(velocity.y + g * delta, max_fall_speed)
+	velocity.y = minf(velocity.y + g * delta, pound_speed if _pounding else max_fall_speed)
 	if velocity.y >= 0.0:
 		_bouncing = false
 
 	var before := velocity
 	move_and_slide()
 	var bounced_now := _apply_rubber(before, on_floor)
+	_hit_obstacles()
+	if _pounding and (bounced_now or is_on_floor()):
+		_pounding = false
+		if not bounced_now:
+			_squash = Vector2(1.6, 0.5)
 
 	if not bounced_now and is_on_floor() and not _was_on_floor and before.y > 250.0:
 		var amount := clampf((before.y - 200.0) / 700.0, 0.0, 1.0)
@@ -198,6 +234,53 @@ func _physics_process(delta: float) -> void:
 
 	if position.y > fall_limit_y:
 		fell.emit()
+
+
+func _update_dash_and_pound(delta: float, on_floor: bool) -> void:
+	_dash_cd = maxf(_dash_cd - delta, 0.0)
+	if on_floor:
+		_air_dash_used = false
+	if _dash > 0.0:
+		_dash = maxf(_dash - delta, 0.0)
+		velocity = Vector2(_face * dash_speed, 0.0)
+		if _dash == 0.0:
+			velocity.x = _face * run_speed      # come out of it at running speed
+		return
+	if _stun > 0.0:
+		return
+	if Input.is_action_just_pressed("dash") and _dash_cd == 0.0 and not _pounding \
+			and (on_floor or not _air_dash_used):
+		var dir := Input.get_axis("move_left", "move_right")
+		if dir != 0.0:
+			_face = signf(dir)
+		_dash = dash_time
+		_dash_cd = dash_cooldown
+		_air_dash_used = not on_floor
+		velocity = Vector2(_face * dash_speed, 0.0)
+		_squash = Vector2(1.4, 0.7)
+		_puff()
+		_play(_jump_sfx, 1.4)
+	elif Input.is_action_just_pressed("pound") and not on_floor and not _pounding:
+		_pounding = true
+		velocity = Vector2(0.0, pound_speed)
+		_squash = Vector2(0.7, 1.4)
+		_play(_jump_sfx, 0.7)
+
+
+## Dashing into an obstacle, or pounding onto one, deals it 1 damage (if it can take that kind).
+func _hit_obstacles() -> void:
+	if _dash <= 0.0 and not _pounding:
+		return
+	for i in get_slide_collision_count():
+		var col := get_slide_collision(i)
+		var other := col.get_collider()
+		if other == null or not other.has_method("take_hit"):
+			continue
+		if _dash > 0.0 and absf(col.get_normal().x) > 0.7:
+			other.take_hit("dash")
+		elif _pounding and col.get_normal().y < -0.7:
+			if other.take_hit("pound"):
+				velocity.y = -jump_velocity * 0.6   # a little hop off the smashed obstacle
 
 
 ## Bounce off any rubber tile touched this frame. The surface reflects the velocity

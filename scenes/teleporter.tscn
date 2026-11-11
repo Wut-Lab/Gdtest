@@ -5,8 +5,8 @@
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_pce0k"]
 size = Vector2(24, 24)
 
-[node name="Teleporter" type="Area2D" unique_id=1650529909]
+[node name="Teleporter" type="Area2D" unique_id=178050169]
 script = ExtResource("1_vurns")
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=24168802]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=796689805]
 shape = SubResource("RectangleShape2D_pce0k")

@@ -10,6 +10,8 @@ const GAP := 12.0
 @onready var left: TouchScreenButton = $Pad/Left
 @onready var right: TouchScreenButton = $Pad/Right
 @onready var jump: TouchScreenButton = $Pad/Jump
+@onready var dash: TouchScreenButton = $Pad/Dash
+@onready var pound: TouchScreenButton = $Pad/Pound
 
 
 func _ready() -> void:
@@ -25,6 +27,9 @@ func _layout() -> void:
 	left.position = Vector2(MARGIN, size.y - MARGIN - small.y)
 	right.position = Vector2(MARGIN + small.x + GAP, size.y - MARGIN - small.y)
 	jump.position = Vector2(size.x - MARGIN - big.x, size.y - MARGIN - big.y)
+	# Dash to the left of Jump, Pound above it.
+	dash.position = Vector2(jump.position.x - GAP - small.x, size.y - MARGIN - small.y)
+	pound.position = Vector2(jump.position.x + (big.x - small.x) / 2.0, jump.position.y - GAP - small.y)
 
 
 func _input(event: InputEvent) -> void:

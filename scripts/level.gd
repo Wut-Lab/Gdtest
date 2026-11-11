@@ -9,6 +9,9 @@ extends Node2D
 ##   1  red teleport     2  yellow teleport     3  blue teleport   (each color links its pair)
 ##   H  extra heart      S  spike square (paces left and right; spiky sides, safe top)
 ##   V  vertical spike square (rises 3 tiles and back; spikes on top and bottom)
+##   ^  one-way block (jump up through it from below, then stand on it)
+##   T  wide moving platform with spikes on top (3 tiles wide, centered on its cell)
+##   B  wide moving platform with spikes underneath (ride on top)
 
 signal goal_reached
 signal heart_collected
@@ -20,6 +23,7 @@ const ATLAS_GROUND_FILL := Vector2i(1, 0)
 const ATLAS_PLATFORM := Vector2i(2, 0)
 const ATLAS_RUBBER := Vector2i(3, 0)
 const ATLAS_RUBBER_WALL := Vector2i(4, 0)
+const ATLAS_ONE_WAY := Vector2i(5, 0)
 const TELEPORT_COLORS := {"1": "red", "2": "yellow", "3": "blue"}
 
 @export_file("*.txt") var map_file := ""
@@ -70,13 +74,14 @@ func load_map_text(text: String) -> void:
 	var hearts: Array[Vector2i] = []
 	var spikes: Array[Vector2i] = []
 	var vspikes: Array[Vector2i] = []
+	var platforms := {}   # cell -> spikes on top?
 	var lines := text.replace("\r", "").split("\n")
 	for y in lines.size():
 		var line: String = lines[y]
 		for x in line.length():
 			var ch := line[x]
 			match ch:
-				"#", "=", "R", "W":
+				"#", "=", "R", "W", "^":
 					cells[Vector2i(x, y)] = ch
 				"P":
 					start_cell = Vector2i(x, y)
@@ -88,6 +93,8 @@ func load_map_text(text: String) -> void:
 					spikes.append(Vector2i(x, y))
 				"V":
 					vspikes.append(Vector2i(x, y))
+				"T", "B":
+					platforms[Vector2i(x, y)] = ch == "T"
 				"1", "2", "3":
 					var color_name: String = TELEPORT_COLORS[ch]
 					if not pads.has(color_name):
@@ -107,7 +114,7 @@ func load_map_text(text: String) -> void:
 		goal.set_deferred("monitoring", false)
 	_place_teleporters(pads)
 	_place_hearts(hearts)
-	_place_spikes(spikes, vspikes)
+	_place_spikes(spikes, vspikes, platforms)
 	_update_walls()
 	queue_redraw()
 
@@ -144,7 +151,7 @@ func _place_hearts(cells: Array[Vector2i]) -> void:
 		_pickups.add_child(h)
 
 
-func _place_spikes(cells: Array[Vector2i], vertical_cells: Array[Vector2i]) -> void:
+func _place_spikes(cells: Array[Vector2i], vertical_cells: Array[Vector2i], platforms: Dictionary) -> void:
 	for child in _obstacles.get_children():
 		_obstacles.remove_child(child)
 		child.queue_free()
@@ -154,6 +161,14 @@ func _place_spikes(cells: Array[Vector2i], vertical_cells: Array[Vector2i]) -> v
 		s.position = Vector2(cell.x * T + T / 2.0, cell.y * T + T / 2.0)
 		s.hurt_player.connect(func(push: Vector2) -> void: player_hurt.emit(push))
 		_obstacles.add_child(s)
+	for cell in platforms:
+		var p := SpikePlatform.new()
+		p.spikes_top = platforms[cell]
+		# Hurdles sit on the floor of their cell; bridges sit near the top of theirs.
+		var y: float = (cell.y + 1) * T - SpikePlatform.THICK / 2.0 if p.spikes_top else cell.y * T + SpikePlatform.THICK / 2.0
+		p.position = Vector2(cell.x * T + T / 2.0, y)
+		p.hurt_player.connect(func(push: Vector2) -> void: player_hurt.emit(push))
+		_obstacles.add_child(p)
 
 
 ## Bring back every heart pickup and send obstacles to their starting spots, for a new run.
@@ -161,7 +176,7 @@ func reset_pickups() -> void:
 	for h in _pickups.get_children():
 		(h as HeartPickup).reset()
 	for s in _obstacles.get_children():
-		(s as SpikeSquare).reset()
+		s.reset()
 
 
 func get_teleporters() -> Array[Node]:
@@ -176,6 +191,8 @@ func _atlas_for(cells: Dictionary, cell: Vector2i) -> Vector2i:
 			return ATLAS_RUBBER
 		"W":
 			return ATLAS_RUBBER_WALL
+		"^":
+			return ATLAS_ONE_WAY
 	var above: String = cells.get(cell + Vector2i.UP, "")
 	return ATLAS_GROUND_FILL if above in ["#", "R", "W"] else ATLAS_GROUND_TOP
 

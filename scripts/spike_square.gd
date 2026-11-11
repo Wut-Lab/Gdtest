@@ -4,7 +4,7 @@ extends AnimatableBody2D
 ##   S (horizontal): moves 2 tiles left and right of its cell; spikes on its left and right,
 ##     and a safe top you can ride.
 ##   V (vertical): rises 3 tiles above its cell and back down; spikes on its top and bottom.
-## Touching a spiky side costs a heart.
+## Touching a spiky side costs a heart. Each has 1 health: dash into a V, or ground pound an S.
 
 ## push.x: which way to knock the player (-1 left, 1 right); push.y: -1 up, 1 down.
 signal hurt_player(push: Vector2)
@@ -22,6 +22,9 @@ const EYES := Color("eef1fa")
 @export var vertical := false
 ## Pixels per second.
 @export var speed := 70.0
+@export var max_health := 1
+
+var health := 1
 
 var _origin := Vector2.ZERO
 var _t := 0.0
@@ -32,6 +35,7 @@ var _hit_areas: Array[Area2D] = []
 func _ready() -> void:
 	sync_to_physics = true
 	_origin = position
+	health = max_health
 	var col := CollisionShape2D.new()
 	var shape := RectangleShape2D.new()
 	shape.size = Vector2(T, T)
@@ -59,6 +63,21 @@ func _ready() -> void:
 func reset() -> void:
 	_t = 0.0
 	position = _origin
+	health = max_health
+	show()
+	process_mode = Node.PROCESS_MODE_INHERIT
+
+
+## A dash or ground pound landed on it. V only takes dashes, S only ground pounds.
+## Returns true if it took damage.
+func take_hit(kind: String) -> bool:
+	if kind != ("dash" if vertical else "pound"):
+		return false
+	health -= 1
+	if health <= 0:
+		hide()
+		process_mode = Node.PROCESS_MODE_DISABLED
+	return true
 
 
 func _physics_process(delta: float) -> void:
@@ -79,6 +98,9 @@ func _physics_process(delta: float) -> void:
 	for area in _hit_areas:
 		for b in area.get_overlapping_bodies():
 			if b is Player:
+				if vertical and b.is_dashing():
+					take_hit("dash")   # dashing through a V breaks it instead of hurting
+					return
 				# Knock the player away sideways, toward whichever side they're on; down if
 				# they hit the bottom spikes from below.
 				var dx: float = b.global_position.x - global_position.x
