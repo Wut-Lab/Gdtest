@@ -75,6 +75,28 @@ body {
   };
 })();
 </script>
+<script>
+// Phones only allow sound after a tap, and inside this page Godot's own unlock can miss it.
+// Remember every audio context the engine makes and resume them on each tap or key press.
+// audioSession 'playback' also lets iPhones play sound with the silent switch on.
+(() => {
+  const contexts = [];
+  for (const name of ['AudioContext', 'webkitAudioContext']) {
+    const Real = window[name];
+    if (!Real) continue;
+    const Wrapped = function (...args) { const ctx = new Real(...args); contexts.push(ctx); return ctx; };
+    Wrapped.prototype = Real.prototype;
+    window[name] = Wrapped;
+  }
+  const unlock = () => {
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+    for (const ctx of contexts) if (ctx.state !== 'running') ctx.resume().catch(() => {});
+  };
+  for (const ev of ['pointerdown', 'touchend', 'mousedown', 'keydown', 'click']) {
+    window.addEventListener(ev, unlock, { capture: true, passive: true });
+  }
+})();
+</script>
 <script src="index.js"></script>
 <script>
 (() => {
