@@ -61,6 +61,8 @@ const SIZE := 24.0
 @export var dash_cooldown := 0.45
 ## Ground pound: in the air, slam straight down (Down, S or J).
 @export var pound_speed := 1000.0
+## Glide: hold jump while falling to drift down at this speed.
+@export var glide_fall_speed := 110.0
 
 @export_group("Look")
 @export var color := Color("ff6b5e")
@@ -229,6 +231,10 @@ func _physics_process(delta: float) -> void:
 	elif velocity.y < 0.0 and not Input.is_action_pressed("jump") and not _bouncing:
 		g *= short_hop_gravity
 	velocity.y = minf(velocity.y + g * delta, pound_speed if _pounding else max_fall_speed)
+	if "glide" in abilities and velocity.y > glide_fall_speed and Input.is_action_pressed("jump") \
+			and not _pounding and _dash == 0.0 and not on_floor:
+		velocity.y = glide_fall_speed   # Glide card: float down while jump is held
+		_squash = _squash.lerp(Vector2(1.25, 0.85), 0.3)
 	if velocity.y >= 0.0:
 		_bouncing = false
 

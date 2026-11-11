@@ -28,6 +28,7 @@ signal player_color_changed(color: Color)
 @onready var hearts_display: HeartsDisplay = %HeartsDisplay
 @onready var pause_button: Button = %PauseButton
 @onready var pause_menu: PauseMenu = %PauseMenu
+@onready var main_menu: MainMenu = %MainMenu
 @onready var tune_button: Button = %TuneButton
 @onready var tuning_panel: TuningPanel = %TuningPanel
 @onready var color_wheel: ColorWheel = %ColorWheel
@@ -71,7 +72,18 @@ func _on_color_input() -> void:
 	player_color_changed.emit(c)
 
 
+## The title screen, with the player's square in their color.
+func show_main_menu(player_color: Color) -> void:
+	start_menu.hide()
+	win_menu.hide()
+	out_menu.hide()
+	tune_button.hide()
+	main_menu.open(player_color)
+
+
 func show_start() -> void:
+	main_menu.hide()
+	tune_button.show()
 	start_menu.show()
 	win_menu.hide()
 	out_menu.hide()
@@ -116,6 +128,8 @@ func set_hearts(hearts: int, slots: int) -> void:
 
 
 func hide_menus() -> void:
+	main_menu.hide()
+	tune_button.show()
 	start_menu.hide()
 	win_menu.hide()
 	out_menu.hide()

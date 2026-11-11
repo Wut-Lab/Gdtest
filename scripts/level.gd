@@ -10,7 +10,7 @@ extends Node2D
 ##   H  extra heart      S  spike square (paces left and right; spiky sides, safe top)
 ##   V  vertical spike square (rises 3 tiles and back; spikes on top and bottom)
 ##   ^  one-way block (jump up through it from below, then stand on it)
-##   D  Dash card    Q  Ground Pound card    J  Double Jump card
+##   D  Dash card    Q  Ground Pound card    J  Double Jump card    L  Glide card
 ##   T  wide moving platform with spikes on top (3 tiles wide, centered on its cell)
 ##   B  wide moving platform with spikes underneath (ride on top)
 
@@ -92,7 +92,7 @@ func load_map_text(text: String) -> void:
 					goal_cell = Vector2i(x, y)
 				"H":
 					hearts.append(Vector2i(x, y))
-				"D", "Q", "J":
+				"D", "Q", "J", "L":
 					cards[Vector2i(x, y)] = AbilityCard.LETTERS[ch]
 				"S":
 					spikes.append(Vector2i(x, y))

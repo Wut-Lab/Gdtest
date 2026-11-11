@@ -6,17 +6,17 @@
 [ext_resource type="PackedScene" path="res://scenes/goal.tscn" id="4_j0sdw"]
 [ext_resource type="Script" path="res://scripts/goal.gd" id="5_jy02f"]
 
-[node name="Level01" type="Node2D" unique_id=824489220]
+[node name="Level01" type="Node2D" unique_id=1579771666]
 script = ExtResource("1_mllcm")
 map_file = "res://levels/level_01.txt"
 teleporter_scene = ExtResource("2_q7ibo")
 
-[node name="Ground" type="TileMapLayer" parent="." unique_id=485248958]
+[node name="Ground" type="TileMapLayer" parent="." unique_id=1819888789]
 tile_set = ExtResource("3_cg8v6")
 
-[node name="Start" type="Marker2D" parent="." unique_id=703180714]
+[node name="Start" type="Marker2D" parent="." unique_id=1478249855]
 position = Vector2(80, 468)
 
-[node name="Goal" type="Area2D" parent="." unique_id=1320115063 instance=ExtResource("4_j0sdw")]
+[node name="Goal" type="Area2D" parent="." unique_id=1204330668 instance=ExtResource("4_j0sdw")]
 position = Vector2(2832, 334)
 script = ExtResource("5_jy02f")

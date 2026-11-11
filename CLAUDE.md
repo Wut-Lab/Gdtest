@@ -18,8 +18,8 @@ them headless, publish the web build, and commit/push to `main`.
    `tools/make_art.gd`, music and sounds by `tools/make_audio.py`). Edit those tools and rerun them rather than hand-editing `.tscn` files.
    Copy a tool into the project root to run it: `godot --headless --path . --script res://build_scenes.gd`,
    then delete the copy and run `godot --headless --path . --import`.
-3. Levels are text maps in `levels/*.txt` (`. # = R W ^ P G H D Q J S V T B 1 2 3`; W = rubber wall, ^ = one-way block, H = extra
-   heart, D/Q/J = Dash/Ground Pound/Double Jump ability cards, S = spike square obstacle, V = up-down spike square, T/B = wide platform with spikes on top/bottom, digits are red/yellow/blue teleport pairs), loaded by `scripts/level.gd`. Keep arrival pads off the main route.
+3. Levels are text maps in `levels/*.txt` (`. # = R W ^ P G H D Q J L S V T B 1 2 3`; W = rubber wall, ^ = one-way block, H = extra
+   heart, D/Q/J/L = Dash/Ground Pound/Double Jump/Glide ability cards, S = spike square obstacle, V = up-down spike square, T/B = wide platform with spikes on top/bottom, digits are red/yellow/blue teleport pairs), loaded by `scripts/level.gd`. Keep arrival pads off the main route.
    Random levels come from `scripts/level_gen.gd` (seeded; its header lists the guidelines that keep them beatable).
    The game fills any screen (stretch aspect expand; portrait swaps to a 544×960 base and
    zooms the camera) — check both orientations when changing layout.

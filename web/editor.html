@@ -301,6 +301,7 @@ button:disabled { opacity: 0.4; }
     { ch: 'D', label: 'Dash card' },
     { ch: 'Q', label: 'Pound card' },
     { ch: 'J', label: 'Double jump card' },
+    { ch: 'L', label: 'Glide card' },
     { ch: 'S', label: 'Spike square' },
     { ch: 'V', label: 'Up-down spikes' },
     { ch: 'T', label: 'Spiked-top platform' },
@@ -337,7 +338,7 @@ button:disabled { opacity: 0.4; }
     while (src.length < ROWS) src.unshift('');
     for (const line of src) {
       const row = [];
-      for (let x = 0; x < width; x++) row.push(line[x] && '.#=RWPGHSV123^TBDQJ'.includes(line[x]) ? line[x] : '.');
+      for (let x = 0; x < width; x++) row.push(line[x] && '.#=RWPGHSV123^TBDQJL'.includes(line[x]) ? line[x] : '.');
       rows.push(row);
     }
     return rows;
@@ -374,7 +375,7 @@ button:disabled { opacity: 0.4; }
   const ctx = canvas.getContext('2d');
   let cell = 28;
 
-  const CARD = { D: '#4da3ff', Q: '#ff9f43', J: '#b388ff' };
+  const CARD = { D: '#4da3ff', Q: '#ff9f43', J: '#b388ff', L: '#ff7eb6' };
   function drawTile(g, ch, x, y, s, above) {
     if (ch === '#') {
       g.fillStyle = col.stone; g.fillRect(x, y, s, s);

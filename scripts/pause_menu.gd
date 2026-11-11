@@ -1,13 +1,17 @@
 class_name PauseMenu
 extends Control
-## The pause menu: one panel with three pages.
-##   Paused:  Continue, Options, Back (to the start screen)
+## The pause menu: one panel with four pages.
+##   Paused:  Continue, Cards, Options, Back (to the main menu)
+##   Cards:   the player and their 0–3 equipped ability cards, Back
 ##   Options: Sound, Back
+## The main menu opens the same Options page on its own; Back then closes the menu.
 ##   Sound:   Music Volume, Sound Volume, Sound: On/Off, Back
 ## Esc goes back one page (or continues from the first page).
 
 signal continue_pressed
 signal quit_pressed
+## Options opened from the main menu was closed.
+signal closed
 
 const BUTTON_SIZE := Vector2(240, 44)
 
@@ -20,6 +24,11 @@ var _sounds_value: Label
 var _sound_toggle: Button
 var _preview: AudioStreamPlayer
 var _last_preview := 0
+var _from_main := false
+var _preview_square: PlayerPreview
+var _slots: Array[CardIcon] = []
+var _slot_names: Array[Label] = []
+var _cards_count: Label
 
 
 func _ready() -> void:
@@ -39,12 +48,36 @@ func _ready() -> void:
 
 	var paused := _page_box("Paused")
 	_button(paused, "Continue", func() -> void: continue_pressed.emit())
+	_button(paused, "Cards", func() -> void: _show("Cards"))
 	_button(paused, "Options", func() -> void: _show("Options"))
 	_button(paused, "Back", func() -> void: quit_pressed.emit())
 
+	var cards := _page_box("Cards")
+	_preview_square = PlayerPreview.new()
+	_preview_square.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	cards.add_child(_preview_square)
+	_cards_count = Label.new()
+	_cards_count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_cards_count.add_theme_color_override("font_color", Color("a9b3d1"))
+	cards.add_child(_cards_count)
+	for i in 3:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 12)
+		row.custom_minimum_size = Vector2(BUTTON_SIZE.x, 0)
+		row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		var icon := CardIcon.new()
+		row.add_child(icon)
+		var name_label := Label.new()
+		name_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		row.add_child(name_label)
+		cards.add_child(row)
+		_slots.append(icon)
+		_slot_names.append(name_label)
+	_button(cards, "Back", func() -> void: _show("Paused"))
+
 	var options := _page_box("Options")
 	_button(options, "Sound", func() -> void: _show("Sound"))
-	_button(options, "Back", func() -> void: _show("Paused"))
+	_button(options, "Back", _options_back)
 
 	var sound := _page_box("Sound")
 	var m := _slider_row(sound, "Music Volume")
@@ -56,7 +89,7 @@ func _ready() -> void:
 	_sound_toggle = _button(sound, "Sound: On", _toggle_sound)
 	_button(sound, "Back", func() -> void: _show("Options"))
 
-	for page in [paused, options, sound]:
+	for page in [paused, cards, options, sound]:
 		panel.add_child(page)   # only the open page is visible, and the panel fits it
 
 	_music_slider.value_changed.connect(func(v: float) -> void:
@@ -76,9 +109,37 @@ func _ready() -> void:
 
 
 func open() -> void:
+	_from_main = false
 	_sync()
 	show()
 	_show("Paused")
+
+
+## Opened from the main menu: just Options (and Sound); Back closes it.
+func open_options() -> void:
+	_from_main = true
+	_sync()
+	show()
+	_show("Options")
+
+
+## Fill the Cards page with the player's color and equipped cards.
+func set_cards(abilities: Array[String], player_color: Color) -> void:
+	_preview_square.color = player_color
+	_cards_count.text = "Equipped %d of 3" % abilities.size()
+	for i in 3:
+		var a := abilities[i] if i < abilities.size() else ""
+		_slots[i].ability = a
+		_slot_names[i].text = AbilityCard.NAMES[a] if a != "" else "Empty slot"
+		_slot_names[i].modulate.a = 1.0 if a != "" else 0.5
+
+
+func _options_back() -> void:
+	if _from_main:
+		hide()
+		closed.emit()
+	else:
+		_show("Paused")
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -88,7 +149,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		match _page:
 			"Sound": _show("Options")
-			"Options": _show("Paused")
+			"Options": _options_back()
+			"Cards": _show("Paused")
 			_: continue_pressed.emit()
 
 

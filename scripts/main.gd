@@ -9,6 +9,8 @@ const SETTINGS_PATH := "user://settings.cfg"
 const START_HEARTS := 3
 ## Heart pickups can take you above the starting amount, up to this.
 const MAX_HEARTS := 5
+## Ability cards equipped at once.
+const MAX_CARDS := 3
 
 @export var level_scene: PackedScene
 @export var player_scene: PackedScene
@@ -57,7 +59,9 @@ func _ready() -> void:
 	hud.player_color_changed.connect(_on_player_color_changed)
 	hud.set_stats(0.0, 0)
 	hud.set_hearts(hearts, START_HEARTS)
-	hud.show_start()
+	hud.show_main_menu(player.color)
+	hud.main_menu.play_pressed.connect(hud.show_start)
+	hud.main_menu.options_pressed.connect(hud.pause_menu.open_options)
 	get_viewport().size_changed.connect(_on_screen_changed)
 	_on_screen_changed()
 	_start_music()
@@ -154,6 +158,7 @@ func pause() -> void:
 	hud.pause_button.hide()
 	hud.tune_button.hide()
 	$TouchControls.hide()
+	hud.pause_menu.set_cards(player.abilities, player.color)
 	hud.pause_menu.open()
 
 
@@ -173,7 +178,7 @@ func go_to_start() -> void:
 	player.active = false
 	player.reset_to(level.start.position)
 	hud.pause_button.hide()
-	hud.show_start()
+	hud.show_main_menu(player.color)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -246,6 +251,8 @@ func _on_heart_collected() -> void:
 func _on_card_collected(ability: String) -> void:
 	if ability not in player.abilities:
 		player.abilities.append(ability)
+		if player.abilities.size() > MAX_CARDS:
+			player.abilities.remove_at(0)   # only 3 equipped: the oldest card drops off
 	_show_abilities()
 
 

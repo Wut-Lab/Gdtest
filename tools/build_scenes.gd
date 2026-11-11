@@ -359,6 +359,13 @@ func _hud_scene() -> Node:
 	pause.visible = false   # shown only while playing
 	root.add_child(pause)
 
+	var main_menu := Control.new()
+	main_menu.name = "MainMenu"
+	main_menu.unique_name_in_owner = true
+	main_menu.set_script(load("res://scripts/main_menu.gd"))
+	_full_rect(main_menu)
+	root.add_child(main_menu)   # under the pause menu, so Options opens on top of it
+
 	var pause_menu := Control.new()
 	pause_menu.name = "PauseMenu"
 	pause_menu.unique_name_in_owner = true
