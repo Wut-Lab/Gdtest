@@ -378,7 +378,7 @@ button:disabled { opacity: 0.4; }
   const ctx = canvas.getContext('2d');
   let cell = 28;
 
-  const CARD = { D: '#e5484d', Q: '#e5484d', J: '#3d7be0', L: '#3d7be0', K: '#e0a400', E: '#e0a400', X: '#3fae6a' };   // red attacks, blue jumps, yellow movement, green misc
+  const CARD = { D: '#e5484d', Q: '#e5484d', J: '#3d7be0', L: '#3d7be0', K: '#e0a400', E: '#e0a400', X: '#7d8597' };   // red attacks, blue jumps, yellow movement, gray misc
   function drawTile(g, ch, x, y, s, above) {
     if (ch === '#') {
       g.fillStyle = col.stone; g.fillRect(x, y, s, s);

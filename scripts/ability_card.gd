@@ -10,24 +10,26 @@ const LETTERS := {"D": "dash", "Q": "pound", "J": "double_jump", "L": "glide", "
 	"E": "tele_hop", "X": "heart_box"}
 const NAMES := {"dash": "Dash", "pound": "Ground Pound", "double_jump": "Double Jump", "glide": "Glide",
 	"quick": "Quick", "tele_hop": "Tele-hop", "heart_box": "Heart Box"}
-## Card types, color coded: attacks are red, jumps are blue, movement is yellow, misc is green.
+## Card types, color coded: attacks are red, jumps are blue, movement is yellow, misc is gray.
 const TYPES := {"dash": "attack", "pound": "attack", "double_jump": "jump", "glide": "jump",
 	"quick": "movement", "tele_hop": "movement", "heart_box": "misc"}
 const TYPE_NAMES := {"attack": "Attack card", "jump": "Jump card", "movement": "Movement card", "misc": "Misc card"}
 const TYPE_COLORS := {"attack": Color("e5484d"), "jump": Color("3d7be0"), "movement": Color("e0a400"),
-	"misc": Color("3fae6a")}
+	"misc": Color("7d8597")}
+## How each card reads in the menus: active cards say how to use them, passives start "Passive:".
 const DESCRIPTIONS := {
-	"dash": "Press Dash (Shift, X or K) for a quick, straight burst the way you're facing. "
-		+ "One dash per jump in the air. Dashing into an up-down spike square breaks it.",
-	"pound": "In the air, press Ground Pound (Down, S or J) to slam straight down. "
-		+ "Pounding onto a spike square breaks it, and you hop off.",
-	"double_jump": "Press jump again in mid-air for one more jump, 75% as high as a full jump. "
+	"dash": "Press Dash (Shift, X or K) to burst forward the way you're facing. You get one dash "
+		+ "per jump in the air. Dashing into an up-down spike square breaks it.",
+	"pound": "Press Ground Pound (Down, S or J) in the air to slam straight down. Pounding onto "
+		+ "a spike square breaks it, and you bounce off.",
+	"double_jump": "Press jump again in the air for one extra jump, 75% as high as a full jump. "
 		+ "It recharges when you land.",
 	"glide": "Hold jump while falling to drift down slowly and steer farther across gaps. "
-		+ "Let go to drop normally.",
-	"quick": "Passive: you run 25% faster. Always on while equipped.",
-	"tele_hop": "Coming out of a teleporter, you hop straight up, half as high as a full jump.",
-	"heart_box": "Passive: start every run with one extra heart (3 instead of 2).",
+		+ "Let go to fall normally.",
+	"quick": "Passive: you run 25% faster while this card is equipped.",
+	"tele_hop": "Passive: when you come out of a teleporter, you hop straight up, half as high "
+		+ "as a full jump.",
+	"heart_box": "Passive: you start every run with one extra heart (3 instead of 2).",
 }
 const PAPER := Color("eef1fa")
 const EDGE := Color("1b2440")
