@@ -7,11 +7,11 @@
 [ext_resource type="Script" path="res://scripts/pause_menu.gd" id="5_mphia"]
 [ext_resource type="Script" path="res://scripts/tuning_panel.gd" id="6_0m4u7"]
 
-[node name="HUD" type="CanvasLayer" unique_id=484211474]
+[node name="HUD" type="CanvasLayer" unique_id=164497671]
 process_mode = 3
 script = ExtResource("1_047uy")
 
-[node name="Root" type="Control" parent="." unique_id=1492381999]
+[node name="Root" type="Control" parent="." unique_id=1591151143]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -19,7 +19,7 @@ anchor_bottom = 1.0
 mouse_filter = 2
 theme = ExtResource("2_5pdws")
 
-[node name="TimeLabel" type="Label" parent="Root" unique_id=73786215]
+[node name="TimeLabel" type="Label" parent="Root" unique_id=852069910]
 unique_name_in_owner = true
 layout_mode = 0
 offset_left = 14.0
@@ -29,7 +29,7 @@ offset_bottom = 8.0
 theme_type_variation = &"StatLabel"
 text = "0.00s"
 
-[node name="FallsLabel" type="Label" parent="Root" unique_id=1441327916]
+[node name="FallsLabel" type="Label" parent="Root" unique_id=1839666068]
 unique_name_in_owner = true
 layout_mode = 0
 offset_left = 14.0
@@ -39,7 +39,7 @@ offset_bottom = 36.0
 theme_type_variation = &"SmallLabel"
 text = "Falls 0"
 
-[node name="HeartsDisplay" type="Control" parent="Root" unique_id=56626712]
+[node name="HeartsDisplay" type="Control" parent="Root" unique_id=2122092671]
 unique_name_in_owner = true
 anchors_preset = 0
 offset_left = 16.0
@@ -48,26 +48,37 @@ offset_right = 16.0
 offset_bottom = 64.0
 script = ExtResource("3_hd3ao")
 
-[node name="StartMenu" type="CenterContainer" parent="Root" unique_id=776694578]
+[node name="SeedLabel" type="Label" parent="Root" unique_id=596712731]
+unique_name_in_owner = true
+visible = false
+layout_mode = 0
+offset_left = 14.0
+offset_top = 96.0
+offset_right = 14.0
+offset_bottom = 96.0
+theme_type_variation = &"SmallLabel"
+text = "Seed 0"
+
+[node name="StartMenu" type="CenterContainer" parent="Root" unique_id=599308865]
 unique_name_in_owner = true
 layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 
-[node name="Panel" type="PanelContainer" parent="Root/StartMenu" unique_id=1252657467]
+[node name="Panel" type="PanelContainer" parent="Root/StartMenu" unique_id=25682439]
 layout_mode = 2
 
-[node name="Box" type="VBoxContainer" parent="Root/StartMenu/Panel" unique_id=1980670642]
+[node name="Box" type="VBoxContainer" parent="Root/StartMenu/Panel" unique_id=1377856141]
 layout_mode = 2
 theme_override_constants/separation = 14
 
-[node name="Title" type="Label" parent="Root/StartMenu/Panel/Box" unique_id=188693561]
+[node name="Title" type="Label" parent="Root/StartMenu/Panel/Box" unique_id=468015798]
 layout_mode = 2
 theme_type_variation = &"TitleLabel"
 text = "Reach the goal"
 horizontal_alignment = 1
 
-[node name="StartBody" type="Label" parent="Root/StartMenu/Panel/Box" unique_id=1470484583]
+[node name="StartBody" type="Label" parent="Root/StartMenu/Panel/Box" unique_id=481085614]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(320, 0)
 layout_mode = 2
@@ -78,39 +89,39 @@ Keys: arrows or A/D move, Space jumps, R restarts."
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="ColorRow" type="HBoxContainer" parent="Root/StartMenu/Panel/Box" unique_id=1970974922]
+[node name="ColorRow" type="HBoxContainer" parent="Root/StartMenu/Panel/Box" unique_id=1260854727]
 layout_mode = 2
 theme_override_constants/separation = 18
 alignment = 1
 
-[node name="ColorWheel" type="Control" parent="Root/StartMenu/Panel/Box/ColorRow" unique_id=196132040]
+[node name="ColorWheel" type="Control" parent="Root/StartMenu/Panel/Box/ColorRow" unique_id=1376072860]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(136, 136)
 layout_mode = 2
 script = ExtResource("4_0i1j5")
 
-[node name="ColorSide" type="VBoxContainer" parent="Root/StartMenu/Panel/Box/ColorRow" unique_id=167688095]
+[node name="ColorSide" type="VBoxContainer" parent="Root/StartMenu/Panel/Box/ColorRow" unique_id=1495559571]
 layout_mode = 2
 theme_override_constants/separation = 8
 alignment = 1
 
-[node name="Heading" type="Label" parent="Root/StartMenu/Panel/Box/ColorRow/ColorSide" unique_id=1503051694]
+[node name="Heading" type="Label" parent="Root/StartMenu/Panel/Box/ColorRow/ColorSide" unique_id=145252697]
 layout_mode = 2
 text = "Your color"
 
-[node name="ColorPreview" type="ColorRect" parent="Root/StartMenu/Panel/Box/ColorRow/ColorSide" unique_id=926340195]
+[node name="ColorPreview" type="ColorRect" parent="Root/StartMenu/Panel/Box/ColorRow/ColorSide" unique_id=806796126]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(36, 36)
 layout_mode = 2
 size_flags_horizontal = 0
 color = Color(1, 0.41960785, 0.36862746, 1)
 
-[node name="BrightnessLabel" type="Label" parent="Root/StartMenu/Panel/Box/ColorRow/ColorSide" unique_id=449072473]
+[node name="BrightnessLabel" type="Label" parent="Root/StartMenu/Panel/Box/ColorRow/ColorSide" unique_id=303367142]
 layout_mode = 2
 theme_type_variation = &"SmallLabel"
 text = "Brightness"
 
-[node name="Brightness" type="HSlider" parent="Root/StartMenu/Panel/Box/ColorRow/ColorSide" unique_id=1895514889]
+[node name="Brightness" type="HSlider" parent="Root/StartMenu/Panel/Box/ColorRow/ColorSide" unique_id=1234721273]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(150, 30)
 layout_mode = 2
@@ -119,7 +130,7 @@ max_value = 1.0
 step = 0.01
 value = 1.0
 
-[node name="ColorReset" type="Button" parent="Root/StartMenu/Panel/Box/ColorRow/ColorSide" unique_id=1325881689]
+[node name="ColorReset" type="Button" parent="Root/StartMenu/Panel/Box/ColorRow/ColorSide" unique_id=879685314]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 36)
 layout_mode = 2
@@ -131,34 +142,53 @@ theme_override_font_sizes/font_size = 14
 text = "Reset color"
 flat = true
 
-[node name="PlayButton" type="Button" parent="Root/StartMenu/Panel/Box" unique_id=383504097]
+[node name="LevelRow" type="HBoxContainer" parent="Root/StartMenu/Panel/Box" unique_id=2112254896]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="PlayButton" type="Button" parent="Root/StartMenu/Panel/Box/LevelRow" unique_id=306666332]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(160, 44)
+custom_minimum_size = Vector2(110, 44)
 layout_mode = 2
 size_flags_horizontal = 4
 text = "Play"
 
-[node name="WinMenu" type="CenterContainer" parent="Root" unique_id=256645874]
+[node name="RandomButton" type="Button" parent="Root/StartMenu/Panel/Box/LevelRow" unique_id=48887282]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 44)
+layout_mode = 2
+text = "Random level"
+
+[node name="SeedEdit" type="LineEdit" parent="Root/StartMenu/Panel/Box/LevelRow" unique_id=1281322860]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(90, 44)
+layout_mode = 2
+placeholder_text = "Seed"
+max_length = 5
+virtual_keyboard_type = 2
+
+[node name="WinMenu" type="CenterContainer" parent="Root" unique_id=1646712185]
 unique_name_in_owner = true
 visible = false
 layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 
-[node name="Panel" type="PanelContainer" parent="Root/WinMenu" unique_id=1430624370]
+[node name="Panel" type="PanelContainer" parent="Root/WinMenu" unique_id=530412055]
 layout_mode = 2
 
-[node name="Box" type="VBoxContainer" parent="Root/WinMenu/Panel" unique_id=1958631281]
+[node name="Box" type="VBoxContainer" parent="Root/WinMenu/Panel" unique_id=777197532]
 layout_mode = 2
 theme_override_constants/separation = 14
 
-[node name="Title" type="Label" parent="Root/WinMenu/Panel/Box" unique_id=1581023535]
+[node name="Title" type="Label" parent="Root/WinMenu/Panel/Box" unique_id=662616865]
 layout_mode = 2
 theme_type_variation = &"TitleLabel"
 text = "Goal reached"
 horizontal_alignment = 1
 
-[node name="ResultLabel" type="Label" parent="Root/WinMenu/Panel/Box" unique_id=298424845]
+[node name="ResultLabel" type="Label" parent="Root/WinMenu/Panel/Box" unique_id=1764654591]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(320, 0)
 layout_mode = 2
@@ -167,34 +197,42 @@ text = "Time 0.00s  ·  Falls 0"
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="AgainButton" type="Button" parent="Root/WinMenu/Panel/Box" unique_id=842106894]
+[node name="AgainButton" type="Button" parent="Root/WinMenu/Panel/Box" unique_id=36503003]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(160, 44)
 layout_mode = 2
 size_flags_horizontal = 4
 text = "Play again"
 
-[node name="OutMenu" type="CenterContainer" parent="Root" unique_id=1958402368]
+[node name="NewLevelButton" type="Button" parent="Root/WinMenu/Panel/Box" unique_id=521136348]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(160, 44)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "New level"
+
+[node name="OutMenu" type="CenterContainer" parent="Root" unique_id=1884349250]
 unique_name_in_owner = true
 visible = false
 layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 
-[node name="Panel" type="PanelContainer" parent="Root/OutMenu" unique_id=815532853]
+[node name="Panel" type="PanelContainer" parent="Root/OutMenu" unique_id=1593587548]
 layout_mode = 2
 
-[node name="Box" type="VBoxContainer" parent="Root/OutMenu/Panel" unique_id=1623979193]
+[node name="Box" type="VBoxContainer" parent="Root/OutMenu/Panel" unique_id=166318155]
 layout_mode = 2
 theme_override_constants/separation = 14
 
-[node name="Title" type="Label" parent="Root/OutMenu/Panel/Box" unique_id=2047182797]
+[node name="Title" type="Label" parent="Root/OutMenu/Panel/Box" unique_id=491860319]
 layout_mode = 2
 theme_type_variation = &"TitleLabel"
 text = "Out of hearts"
 horizontal_alignment = 1
 
-[node name="OutLabel" type="Label" parent="Root/OutMenu/Panel/Box" unique_id=555447667]
+[node name="OutLabel" type="Label" parent="Root/OutMenu/Panel/Box" unique_id=605767007]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(320, 0)
 layout_mode = 2
@@ -203,14 +241,14 @@ text = "Out of hearts. Try again?"
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="RetryButton" type="Button" parent="Root/OutMenu/Panel/Box" unique_id=508577134]
+[node name="RetryButton" type="Button" parent="Root/OutMenu/Panel/Box" unique_id=489645958]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(160, 44)
 layout_mode = 2
 size_flags_horizontal = 4
 text = "Try again"
 
-[node name="TuneButton" type="Button" parent="Root" unique_id=1758069652]
+[node name="TuneButton" type="Button" parent="Root" unique_id=424778181]
 unique_name_in_owner = true
 layout_mode = 0
 anchor_left = 1.0
@@ -222,7 +260,7 @@ offset_bottom = 54.0
 focus_mode = 0
 text = "Tune"
 
-[node name="PauseButton" type="Button" parent="Root" unique_id=2053638684]
+[node name="PauseButton" type="Button" parent="Root" unique_id=120007066]
 unique_name_in_owner = true
 visible = false
 layout_mode = 0
@@ -235,14 +273,14 @@ offset_bottom = 54.0
 focus_mode = 0
 text = "Pause"
 
-[node name="PauseMenu" type="Control" parent="Root" unique_id=1755469488]
+[node name="PauseMenu" type="Control" parent="Root" unique_id=1331680157]
 unique_name_in_owner = true
 anchors_preset = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 script = ExtResource("5_mphia")
 
-[node name="TuningPanel" type="Control" parent="Root" unique_id=41635048]
+[node name="TuningPanel" type="Control" parent="Root" unique_id=1128768597]
 unique_name_in_owner = true
 anchors_preset = 0
 anchor_right = 1.0

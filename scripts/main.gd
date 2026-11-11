@@ -19,6 +19,8 @@ var falls := 0
 var hearts := START_HEARTS
 var hits := 0
 var level: Level
+## Seed of the random level being played, or 0 for the hand-made level.
+var seed_value := 0
 var player: Player
 
 var _js_load_level: JavaScriptObject
@@ -40,6 +42,8 @@ func _ready() -> void:
 	level.heart_collected.connect(_on_heart_collected)
 	level.player_hurt.connect(_on_player_hurt)
 	hud.play_requested.connect(new_run)
+	hud.main_level_requested.connect(play_main_level)
+	hud.random_level_requested.connect(play_random_level)
 	hud.pause_requested.connect(pause)
 	hud.pause_menu.continue_pressed.connect(resume)
 	hud.pause_menu.quit_pressed.connect(go_to_start)
@@ -109,6 +113,20 @@ func load_level_text(text: String) -> void:
 	get_tree().paused = false
 	hud.tuning_panel.hide()
 	new_run()
+
+
+## The hand-made level (levels/level_01.txt).
+func play_main_level() -> void:
+	seed_value = 0
+	hud.set_seed(0)
+	load_level_text(FileAccess.get_file_as_string(level.map_file))
+
+
+## A random level from a seed; a seed below 1 picks a new one.
+func play_random_level(s: int) -> void:
+	seed_value = s if s > 0 else LevelGen.random_seed()
+	hud.set_seed(seed_value)
+	load_level_text(LevelGen.generate(seed_value))
 
 
 func new_run() -> void:
@@ -229,7 +247,7 @@ func _on_goal_reached() -> void:
 	hud.pause_button.hide()
 	player.active = false
 	player.velocity = Vector2.ZERO
-	hud.show_win(run_time, falls, hearts)
+	hud.show_win(run_time, falls, hearts, seed_value)
 
 
 # ---------- Web page bridge ----------

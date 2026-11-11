@@ -289,15 +289,33 @@ func _hud_scene() -> Node:
 	hearts.position = Vector2(16, 64)
 	root.add_child(hearts)
 
+	var seed_label := Label.new()
+	seed_label.name = "SeedLabel"
+	seed_label.unique_name_in_owner = true
+	seed_label.theme_type_variation = "SmallLabel"
+	seed_label.position = Vector2(14, 96)
+	seed_label.text = "Seed 0"
+	seed_label.visible = false
+	root.add_child(seed_label)
+
 	var start := _menu(root, "StartMenu", "Reach the goal",
 		"Run, jump and bounce to the green goal. Hold jump to go higher.\n"
 		+ "You have 3 hearts: falls and spikes cost one. Grab floating hearts for more.\n"
 		+ "Keys: arrows or A/D move, Space jumps, R restarts.",
 		"StartBody", "PlayButton", "Play")
+	_level_row(start.get_node("Panel/Box"))
 	_color_row(start.get_node("Panel/Box"))
 	var win := _menu(root, "WinMenu", "Goal reached", "Time 0.00s  ·  Falls 0",
 		"ResultLabel", "AgainButton", "Play again")
 	win.visible = false
+	var new_level := Button.new()
+	new_level.name = "NewLevelButton"
+	new_level.unique_name_in_owner = true
+	new_level.text = "New level"
+	new_level.custom_minimum_size = Vector2(160, 44)
+	new_level.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	new_level.visible = false
+	win.get_node("Panel/Box").add_child(new_level)
 	var out := _menu(root, "OutMenu", "Out of hearts", "Out of hearts. Try again?",
 		"OutLabel", "RetryButton", "Try again")
 	out.visible = false
@@ -390,6 +408,36 @@ func _menu(parent: Control, menu_name: String, title: String, body: String,
 
 
 ## The start menu's color picker: a wheel, and beside it a preview, brightness and reset.
+## Play (the hand-made level) beside Random level and its seed box. A blank seed picks one.
+func _level_row(box: VBoxContainer) -> void:
+	var play: Button = box.get_node("PlayButton")
+	var row := HBoxContainer.new()
+	row.name = "LevelRow"
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 10)
+	box.add_child(row)
+	box.move_child(row, play.get_index())
+	box.remove_child(play)
+	play.custom_minimum_size = Vector2(110, 44)
+	row.add_child(play)
+
+	var random := Button.new()
+	random.name = "RandomButton"
+	random.unique_name_in_owner = true
+	random.text = "Random level"
+	random.custom_minimum_size = Vector2(150, 44)
+	row.add_child(random)
+
+	var seed_edit := LineEdit.new()
+	seed_edit.name = "SeedEdit"
+	seed_edit.unique_name_in_owner = true
+	seed_edit.placeholder_text = "Seed"
+	seed_edit.max_length = 5
+	seed_edit.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
+	seed_edit.custom_minimum_size = Vector2(90, 44)
+	row.add_child(seed_edit)
+
+
 func _color_row(box: VBoxContainer) -> void:
 	var row := HBoxContainer.new()
 	row.name = "ColorRow"

@@ -2,7 +2,11 @@ class_name Hud
 extends CanvasLayer
 ## Timer, fall counter, hearts, the start and win menus, and the Tune button.
 
+## Replay the current level.
 signal play_requested
+signal main_level_requested
+## seed_value below 1 means pick a new random seed.
+signal random_level_requested(seed_value: int)
 signal pause_requested
 signal player_color_changed(color: Color)
 
@@ -13,6 +17,10 @@ signal player_color_changed(color: Color)
 @onready var result_label: Label = %ResultLabel
 @onready var play_button: Button = %PlayButton
 @onready var again_button: Button = %AgainButton
+@onready var random_button: Button = %RandomButton
+@onready var seed_edit: LineEdit = %SeedEdit
+@onready var new_level_button: Button = %NewLevelButton
+@onready var seed_label: Label = %SeedLabel
 @onready var out_menu: Control = %OutMenu
 @onready var out_label: Label = %OutLabel
 @onready var retry_button: Button = %RetryButton
@@ -31,7 +39,11 @@ var default_color := Color("ff6b5e")
 
 
 func _ready() -> void:
-	play_button.pressed.connect(play_requested.emit)
+	play_button.pressed.connect(main_level_requested.emit)
+	random_button.pressed.connect(func() -> void:
+		random_level_requested.emit(seed_edit.text.strip_edges().to_int()))
+	seed_edit.text_submitted.connect(func(_t: String) -> void: random_button.pressed.emit())
+	new_level_button.pressed.connect(func() -> void: random_level_requested.emit(0))
 	again_button.pressed.connect(play_requested.emit)
 	retry_button.pressed.connect(play_requested.emit)
 	tune_button.pressed.connect(tuning_panel.open)
@@ -65,8 +77,11 @@ func show_start() -> void:
 	play_button.grab_focus()
 
 
-func show_win(time: float, falls: int, hearts: int) -> void:
+func show_win(time: float, falls: int, hearts: int, seed_value: int) -> void:
 	result_label.text = "Time %.2fs  ·  Falls %d  ·  Hearts %d" % [time, falls, hearts]
+	if seed_value > 0:
+		result_label.text += "\nSeed %d" % seed_value
+	new_level_button.visible = seed_value > 0
 	start_menu.hide()
 	win_menu.show()
 	again_button.grab_focus()
@@ -77,6 +92,12 @@ func show_out(time: float, falls: int) -> void:
 	start_menu.hide()
 	out_menu.show()
 	retry_button.grab_focus()
+
+
+## Shows the random level's seed in the corner (hidden for the hand-made level).
+func set_seed(seed_value: int) -> void:
+	seed_label.text = "Seed %d" % seed_value
+	seed_label.visible = seed_value > 0
 
 
 func set_hearts(hearts: int, slots: int) -> void:

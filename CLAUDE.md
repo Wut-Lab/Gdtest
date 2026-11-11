@@ -20,6 +20,7 @@ them headless, publish the web build, and commit/push to `main`.
    then delete the copy and run `godot --headless --path . --import`.
 3. Levels are text maps in `levels/*.txt` (`. # = R W P G H S V 1 2 3`; W = rubber wall, H = extra
    heart, S = spike square obstacle, V = up-down spike square, digits are red/yellow/blue teleport pairs), loaded by `scripts/level.gd`. Keep arrival pads off the main route.
+   Random levels come from `scripts/level_gen.gd` (seeded; its header lists the guidelines that keep them beatable).
    The game fills any screen (stretch aspect expand; portrait swaps to a 544×960 base and
    zooms the camera) — check both orientations when changing layout.
 4. Test with `tools/bot.gd` (copy to root, run headless); it must print `RESULT: WON`.
