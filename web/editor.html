@@ -299,6 +299,7 @@ button:disabled { opacity: 0.4; }
     { ch: 'G', label: 'Goal' },
     { ch: 'H', label: 'Heart' },
     { ch: 'C', label: 'Chest' },
+    { ch: '*', label: 'Pixel' },
     { ch: 'D', label: 'Dash card' },
     { ch: 'Q', label: 'Pound card' },
     { ch: 'J', label: 'Double jump card' },
@@ -342,7 +343,7 @@ button:disabled { opacity: 0.4; }
     while (src.length < ROWS) src.unshift('');
     for (const line of src) {
       const row = [];
-      for (let x = 0; x < width; x++) row.push(line[x] && '.#=RWPGHSV123^TBDQJLKEXC'.includes(line[x]) ? line[x] : '.');
+      for (let x = 0; x < width; x++) row.push(line[x] && '.#=RWPGHSV123^TBDQJLKEXC*'.includes(line[x]) ? line[x] : '.');
       rows.push(row);
     }
     return rows;
@@ -424,6 +425,13 @@ button:disabled { opacity: 0.4; }
       }
       g.globalAlpha = 1; g.fillRect(x + o, y + o, p, p);
       g.fillStyle = 'rgba(0,0,0,0.35)'; g.fillRect(x + s * 0.4, y + s * 0.4, s * 0.2, s * 0.2);
+    } else if (ch === '*') {
+      // Pixel: four colored blocks with a dark edge.
+      const b = s * 0.22, ox = x + s / 2 - b - 2, oy = y + s / 2 - b - 2;
+      g.fillStyle = '#1b2440'; g.fillRect(ox, oy, b * 2 + 4, b * 2 + 4);
+      [['#ff6b5e', 0, 0], ['#79e2c2', 1, 0], ['#4da3ff', 0, 1], ['#f2c230', 1, 1]].forEach(([c, i, j]) => {
+        g.fillStyle = c; g.fillRect(ox + 2 + i * b, oy + 2 + j * b, b, b);
+      });
     } else if (ch === 'C') {
       // Treasure chest: dark outline, wood lid and body, metal bands, gold lock.
       const w = s * 0.82, h = s * 0.7, ox = x + (s - w) / 2, oy = y + s - h;

@@ -12,6 +12,7 @@ extends Node2D
 ##   ^  one-way block (jump up through it from below, then stand on it)
 ##   D  Dash card    Q  Ground Pound card    J  Double Jump card    L  Glide card
 ##   K  Quick card       E  Tele-hop card       X  Heart Box card
+##   *  pixel (1 pixel of currency, once per save file)
 ##   C  treasure chest (a card or some pixels, once per save file)
 ##   T  wide moving platform with spikes on top (3 tiles wide, centered on its cell)
 ##   B  wide moving platform with spikes underneath (ride on top)
@@ -20,6 +21,7 @@ signal goal_reached
 signal heart_collected
 signal card_collected(ability: String)
 signal chest_opened(index: int)
+signal pixel_collected(index: int)
 signal player_hurt(push: Vector2)
 
 const T := 32
@@ -40,6 +42,7 @@ var _teleporters: Node2D
 var _pickups: Node2D
 var _obstacles: Node2D
 var _chests: Node2D
+var _pixels: Node2D
 ## Main sets this: whether a heart can be picked up right now (false at full health).
 var heart_check := Callable()
 
@@ -69,6 +72,9 @@ func _ready() -> void:
 	_chests = Node2D.new()
 	_chests.name = "Chests"
 	add_child(_chests)
+	_pixels = Node2D.new()
+	_pixels.name = "Pixels"
+	add_child(_pixels)
 	if map_file != "":
 		load_map_text(FileAccess.get_file_as_string(map_file))
 	else:
@@ -84,6 +90,7 @@ func load_map_text(text: String) -> void:
 	var pads := {}   # color name -> Array of cells, in reading order
 	var hearts: Array[Vector2i] = []
 	var chests: Array[Vector2i] = []
+	var pixel_cells: Array[Vector2i] = []
 	var cards := {}   # cell -> ability
 	var spikes: Array[Vector2i] = []
 	var vspikes: Array[Vector2i] = []
@@ -108,6 +115,8 @@ func load_map_text(text: String) -> void:
 					spikes.append(Vector2i(x, y))
 				"C":
 					chests.append(Vector2i(x, y))
+				"*":
+					pixel_cells.append(Vector2i(x, y))
 				"V":
 					vspikes.append(Vector2i(x, y))
 				"T", "B":
@@ -131,6 +140,7 @@ func load_map_text(text: String) -> void:
 		goal.set_deferred("monitoring", false)
 	_place_teleporters(pads)
 	_place_chests(chests)
+	_place_pixels(pixel_cells)
 	_place_hearts(hearts, cards)
 	_place_spikes(spikes, vspikes, platforms)
 	_update_walls()
@@ -214,6 +224,21 @@ func _place_chests(cells: Array[Vector2i]) -> void:
 		c.position = Vector2(cells[i].x * T + T / 2.0, (cells[i].y + 1) * T)
 		c.opened.connect(func(_c: Chest) -> void: chest_opened.emit(i))
 		_chests.add_child(c)
+
+
+func _place_pixels(cells: Array[Vector2i]) -> void:
+	for child in _pixels.get_children():
+		_pixels.remove_child(child)
+		child.queue_free()
+	for i in cells.size():
+		var p := PixelPickup.new()
+		p.position = Vector2(cells[i].x * T + T / 2.0, cells[i].y * T + T / 2.0)
+		p.collected.connect(func(_p: PixelPickup) -> void: pixel_collected.emit(i))
+		_pixels.add_child(p)
+
+
+func get_pixels() -> Array[Node]:
+	return _pixels.get_children()
 
 
 func get_chests() -> Array[Node]:

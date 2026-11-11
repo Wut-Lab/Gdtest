@@ -11,6 +11,8 @@ extends RefCounted
 ##   - Wide pits get a floating platform, a moving platform or a spike square to ride across,
 ##     or a teleporter pair to warp over them.
 ##   - At most 2 extra hearts per level.
+##   - 1–3 pixels float over gaps, 2 rows above the higher edge, in the jump's arc.
+##     Not over the teleporter pits, which are too wide to jump.
 ##
 ## Required groups (every level has them, in a random order between the plain features):
 ##   Obstacles: 1–4 of spike square (S), up-down spikes (V), spiked-top platform (T) and
@@ -56,6 +58,8 @@ static func generate(seed_value: int) -> String:
 	var gx := cols.size() + 3
 	_flat(cols, h, 7)
 	cols[gx][h - 1] = "G"
+
+	_add_pixels(cols, rng)
 
 	var lines := PackedStringArray()
 	for y in ROWS:
@@ -216,6 +220,48 @@ static func _piece(cols: Array, st: Dictionary, rng: RandomNumberGenerator, piec
 			cols[x + 5][h - 4] = "^"
 			st.h = h - 4
 			_flat(cols, st.h, 1)
+
+
+## Puts 1–3 pixels over gaps: in the middle of a pit, 2 rows above its higher edge.
+static func _add_pixels(cols: Array, rng: RandomNumberGenerator) -> void:
+	var pits := []   # [first column, width]
+	var x := 0
+	while x < cols.size():
+		if cols[x][ROWS - 1] == ".":
+			var start := x
+			while x < cols.size() and cols[x][ROWS - 1] == ".":
+				x += 1
+			var w := x - start
+			var has_bridge := false
+			for c in range(start, x):
+				if "B" in cols[c] or "=" in cols[c] or "^" in cols[c] or "S" in cols[c]:
+					has_bridge = true
+			if start > 0 and x < cols.size() and (w <= 5 or has_bridge):
+				pits.append([start, w])
+		else:
+			x += 1
+	for i in range(pits.size() - 1, 0, -1):
+		var j := rng.randi_range(0, i)
+		var tmp = pits[i]
+		pits[i] = pits[j]
+		pits[j] = tmp
+	for k in mini(rng.randi_range(1, 3), pits.size()):
+		var start: int = pits[k][0]
+		var w: int = pits[k][1]
+		var top := mini(_top(cols[start - 1]), _top(cols[start + w]))
+		var col: Array = cols[start + w / 2]
+		var row := top - 2
+		while row > 0 and col[row] != ".":
+			row -= 1
+		col[row] = "*"
+
+
+## The row of a column's highest solid tile.
+static func _top(col: Array) -> int:
+	for y in ROWS:
+		if col[y] in ["#", "R", "W", "^", "="]:
+			return y
+	return ROWS
 
 
 static func _flat(cols: Array, h: int, w: int) -> void:

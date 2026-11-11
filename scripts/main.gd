@@ -43,6 +43,7 @@ func _ready() -> void:
 	level.heart_check = func() -> bool: return hearts < _start_hearts()   # no pickups at full health
 	level.card_collected.connect(_on_card_collected)
 	level.chest_opened.connect(_on_chest_opened)
+	level.pixel_collected.connect(_on_pixel_collected)
 	level.player_hurt.connect(_on_player_hurt)
 	hud.play_requested.connect(new_run)
 	hud.main_level_requested.connect(play_main_level)
@@ -284,6 +285,17 @@ func _sync_chests() -> void:
 	var chests := level.get_chests()
 	for i in chests.size():
 		chests[i].set_open(_level_key != "custom" and CardCollection.chest_opened("%s:%d" % [_level_key, i]))
+	var pixels := level.get_pixels()
+	for i in pixels.size():
+		pixels[i].set_taken(_level_key != "custom" and CardCollection.chest_opened("%s:px%d" % [_level_key, i]))
+
+
+## A floating pixel: +1, remembered like chests so replaying a level doesn't pay out again.
+func _on_pixel_collected(index: int) -> void:
+	if _level_key != "custom":
+		CardCollection.mark_chest("%s:px%d" % [_level_key, index])
+	CardCollection.add_pixels(1)
+	hud.set_pixels(CardCollection.pixels)
 
 
 ## A chest holds a card 20% of the time (one this file hasn't found), otherwise 2–10 pixels.
