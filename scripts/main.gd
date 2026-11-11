@@ -50,7 +50,21 @@ func _ready() -> void:
 	hud.show_start()
 	get_viewport().size_changed.connect(_on_screen_changed)
 	_on_screen_changed()
+	_start_music()
 	_setup_web_bridge()
+
+
+## Soft background music, looping for the whole session. Browsers start it on the first tap
+## or key press.
+func _start_music() -> void:
+	var music := AudioStreamPlayer.new()
+	var stream: AudioStreamOggVorbis = load("res://audio/music.ogg")
+	stream.loop = true
+	music.stream = stream
+	music.volume_db = -12.0
+	music.name = "Music"
+	add_child(music)
+	music.play()
 
 
 ## Fill any screen. Landscape uses a 960×544 base; an upright phone switches to 544×960 so the

@@ -75,6 +75,28 @@ var _stun := 0.0
 @onready var camera: Camera2D = $Camera2D
 @onready var dust: CPUParticles2D = $Dust
 
+var _jump_sfx := _make_sfx("res://audio/jump.wav", -8.0)
+var _land_sfx := _make_sfx("res://audio/land.wav", -6.0)
+var _hurt_sfx := _make_sfx("res://audio/hurt.wav", -4.0)
+
+
+func _ready() -> void:
+	for p in [_jump_sfx, _land_sfx, _hurt_sfx]:
+		add_child(p)
+
+
+func _make_sfx(path: String, volume_db: float) -> AudioStreamPlayer:
+	var p := AudioStreamPlayer.new()
+	p.stream = load(path)
+	p.volume_db = volume_db
+	return p
+
+
+## Play a sound with a slight random pitch so repeats don't sound identical.
+func _play(p: AudioStreamPlayer, pitch := 1.0) -> void:
+	p.pitch_scale = pitch * randf_range(0.95, 1.05)
+	p.play()
+
 
 func reset_to(pos: Vector2) -> void:
 	position = pos
@@ -98,6 +120,7 @@ func knock_back(push: Vector2) -> void:
 	invincible = 1.2
 	_squash = Vector2(0.65, 1.3)
 	_puff()
+	_play(_hurt_sfx)
 
 
 ## Move to a teleport pad, keeping the current velocity.
@@ -151,6 +174,7 @@ func _physics_process(delta: float) -> void:
 		_bouncing = false
 		_squash = Vector2(0.7, 1.35)
 		_puff()
+		_play(_jump_sfx)
 
 	var g := gravity
 	if velocity.y < 0.0 and not Input.is_action_pressed("jump") and not _bouncing:
@@ -167,6 +191,8 @@ func _physics_process(delta: float) -> void:
 		var amount := clampf((before.y - 200.0) / 700.0, 0.0, 1.0)
 		_squash = Vector2(1.0 + 0.4 * amount, 1.0 - 0.35 * amount)
 		_puff()
+		_land_sfx.volume_db = lerpf(-14.0, -4.0, amount)   # harder landings are louder
+		_play(_land_sfx)
 	_was_on_floor = is_on_floor() and not bounced_now
 
 	if position.y > fall_limit_y:
