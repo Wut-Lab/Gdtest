@@ -207,8 +207,8 @@ func _physics_process(delta: float) -> void:
 		_play(_jump_sfx)
 	elif _jump_buffer > 0.0 and not on_floor and _air_jump and "double_jump" in abilities \
 			and not _pounding and _stun == 0.0 and Input.is_action_just_pressed("jump"):
-		# Double jump card: one extra jump in the air, a little weaker than a normal one.
-		velocity.y = -jump_velocity * 0.9
+		# Double jump card: one extra jump in the air, 75% as high as a full jump.
+		velocity.y = -jump_velocity * 0.866   # sqrt(0.75): 75% of a full jump's height
 		_air_jump = false
 		_jump_buffer = 0.0
 		_bouncing = false
