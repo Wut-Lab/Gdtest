@@ -1,19 +1,21 @@
 class_name AbilityCard
 extends Area2D
 ## An ability card floating in the level. Touch it to gain its ability for this run.
-##   D = Dash, Q = Ground Pound, J = Double Jump, L = Glide, K = Quick, E = Tele-hop (in a text map)
+##   D = Dash, Q = Ground Pound, J = Double Jump, L = Glide, K = Quick, E = Tele-hop,
+##   X = Heart Box (in a text map)
 
 signal collected(ability: String)
 
 const LETTERS := {"D": "dash", "Q": "pound", "J": "double_jump", "L": "glide", "K": "quick",
-	"E": "tele_hop"}
+	"E": "tele_hop", "X": "heart_box"}
 const NAMES := {"dash": "Dash", "pound": "Ground Pound", "double_jump": "Double Jump", "glide": "Glide",
-	"quick": "Quick", "tele_hop": "Tele-hop"}
-## Card types, color coded: attacks are red, jumps are blue, movement is yellow.
+	"quick": "Quick", "tele_hop": "Tele-hop", "heart_box": "Heart Box"}
+## Card types, color coded: attacks are red, jumps are blue, movement is yellow, misc is green.
 const TYPES := {"dash": "attack", "pound": "attack", "double_jump": "jump", "glide": "jump",
-	"quick": "movement", "tele_hop": "movement"}
-const TYPE_NAMES := {"attack": "Attack card", "jump": "Jump card", "movement": "Movement card"}
-const TYPE_COLORS := {"attack": Color("e5484d"), "jump": Color("3d7be0"), "movement": Color("e0a400")}
+	"quick": "movement", "tele_hop": "movement", "heart_box": "misc"}
+const TYPE_NAMES := {"attack": "Attack card", "jump": "Jump card", "movement": "Movement card", "misc": "Misc card"}
+const TYPE_COLORS := {"attack": Color("e5484d"), "jump": Color("3d7be0"), "movement": Color("e0a400"),
+	"misc": Color("3fae6a")}
 const DESCRIPTIONS := {
 	"dash": "Press Dash (Shift, X or K) for a quick, straight burst the way you're facing. "
 		+ "One dash per jump in the air. Dashing into an up-down spike square breaks it.",
@@ -25,11 +27,12 @@ const DESCRIPTIONS := {
 		+ "Let go to drop normally.",
 	"quick": "Passive: you run 25% faster. Always on while equipped.",
 	"tele_hop": "Coming out of a teleporter, you hop straight up, half as high as a full jump.",
+	"heart_box": "Passive: start every run with one extra heart (3 instead of 2).",
 }
 const PAPER := Color("eef1fa")
 const EDGE := Color("1b2440")
 
-@export_enum("dash", "pound", "double_jump", "glide", "quick", "tele_hop") var ability := "dash"
+@export_enum("dash", "pound", "double_jump", "glide", "quick", "tele_hop", "heart_box") var ability := "dash"
 
 var _t := 0.0
 
@@ -137,6 +140,13 @@ static func _draw_symbol(ci: CanvasItem, ability_name: String, o: Vector2, c: Co
 			ci.draw_rect(Rect2(o + Vector2(-8, 4), Vector2(7, b)), c)
 			ci.draw_rect(Rect2(o + Vector2(1, 6), Vector2(b, b)), c)
 			ci.draw_rect(Rect2(o + Vector2(5, 6), Vector2(b, b)), c)
+		"heart_box":
+			# A blocky heart inside a box.
+			ci.draw_rect(Rect2(o + Vector2(-9, -8), Vector2(18, b)), c)
+			ci.draw_rect(Rect2(o + Vector2(-9, 8), Vector2(18, b)), c)
+			ci.draw_rect(Rect2(o + Vector2(-9, -8), Vector2(b, 18)), c)
+			ci.draw_rect(Rect2(o + Vector2(7, -8), Vector2(b, 18)), c)
+			HeartArt.draw(ci, o - HeartArt.size(1.5) / 2.0 + Vector2(0, 1), 1.5)
 		"tele_hop":
 			# An up arrow rising out of a teleport pad.
 			ci.draw_rect(Rect2(o + Vector2(-1, -2), Vector2(b, 6)), c)

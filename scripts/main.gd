@@ -1,12 +1,12 @@
 extends Node
 ## Runs the game: loads the level, spawns the player, and tracks time, hearts, falls and winning.
-## You start with 3 hearts; each fall or spike hit costs one, and losing the last ends the run.
+## You start with 2 hearts (3 with the Heart Box card); each fall or spike hit costs one, and losing the last ends the run.
 ## In a web build it also lets the page send a level in (used by the level editor).
 
 enum State { READY, PLAY, WON, OUT }
 
 const SETTINGS_PATH := "user://settings.cfg"
-const START_HEARTS := 3
+const START_HEARTS := 2
 ## Heart pickups can take you above the starting amount, up to this.
 const MAX_HEARTS := 5
 
@@ -56,7 +56,7 @@ func _ready() -> void:
 	hud.set_player_color(player.color)
 	hud.player_color_changed.connect(_on_player_color_changed)
 	hud.set_stats(0.0, 0)
-	hud.set_hearts(hearts, START_HEARTS)
+	hud.set_hearts(hearts, _start_hearts())
 	hud.show_main_menu(player.color)
 	hud.main_menu.play_pressed.connect(hud.show_start)
 	hud.main_menu.options_pressed.connect(hud.pause_menu.open_options)
@@ -139,10 +139,10 @@ func new_run() -> void:
 	run_time = 0.0
 	falls = 0
 	hits = 0
-	hearts = START_HEARTS
 	player.abilities.assign(CardCollection.equipped)   # equipped from the collection
+	hearts = _start_hearts()
 	_show_abilities()
-	hud.set_hearts(hearts, START_HEARTS)
+	hud.set_hearts(hearts, _start_hearts())
 	level.reset_pickups()
 	state = State.PLAY
 	hud.hide_menus()
@@ -230,9 +230,14 @@ func _on_player_hurt(push: Vector2) -> void:
 	_lose_heart()
 
 
+## Hearts at the start of a run: 2, plus 1 for the Heart Box card.
+func _start_hearts() -> int:
+	return START_HEARTS + (1 if "heart_box" in player.abilities else 0)
+
+
 func _lose_heart() -> void:
 	hearts -= 1
-	hud.set_hearts(hearts, START_HEARTS)
+	hud.set_hearts(hearts, _start_hearts())
 	hud.hearts_display.flash()
 	if hearts <= 0:
 		state = State.OUT
@@ -244,7 +249,7 @@ func _lose_heart() -> void:
 
 func _on_heart_collected() -> void:
 	hearts = mini(hearts + 1, MAX_HEARTS)
-	hud.set_hearts(hearts, START_HEARTS)
+	hud.set_hearts(hearts, _start_hearts())
 
 
 func _on_card_collected(ability: String) -> void:

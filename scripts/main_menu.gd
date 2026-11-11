@@ -1,7 +1,8 @@
 class_name MainMenu
 extends Control
 ## The title screen, shown when the game starts and after leaving a run.
-##   Main:    the player, the game's name, Play, Cards, Options, Credits
+##   Main:    the player, the game's name, the save file in use, Play, Cards, Options, Credits
+##   Files:   3 save files to pick from (each has its own cards); Erase starts one over
 ##   Cards:   the card collection: every card by type, locked ones as silhouettes
 ##   Card:    one card up close, with what it does and Equip / Unequip
 ##   Credits: who and what made the game, and the engine's license
@@ -22,6 +23,9 @@ var _big_type: Label
 var _big_text: Label
 var _equip: Button
 var _shown := ""
+var _file_label: Label
+var _file_buttons: Array[Button] = []
+var _erase_buttons: Array[Button] = []
 
 
 func _ready() -> void:
@@ -53,7 +57,12 @@ func _ready() -> void:
 	tagline.add_theme_color_override("font_color", DIM)
 	tagline.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	main.add_child(tagline)
-	_button(main, "Play", func() -> void: play_pressed.emit())
+	_file_label = Label.new()
+	_file_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_file_label.theme_type_variation = "SmallLabel"
+	_file_label.add_theme_color_override("font_color", DIM)
+	main.add_child(_file_label)
+	_button(main, "Play", func() -> void: _open_files())
 	_button(main, "Cards", func() -> void: _open_collection())
 	_button(main, "Options", func() -> void: options_pressed.emit())
 	_button(main, "Credits", func() -> void: _show("Credits"))
@@ -91,7 +100,7 @@ func _ready() -> void:
 	_count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_count.add_theme_color_override("font_color", DIM)
 	cards.add_child(_count)
-	for type_name in ["attack", "jump", "movement"]:
+	for type_name in ["attack", "jump", "movement", "misc"]:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 12)
 		row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -106,10 +115,10 @@ func _ready() -> void:
 				continue
 			var b := Button.new()
 			b.flat = true
-			b.custom_minimum_size = Vector2(60, 64)
+			b.custom_minimum_size = Vector2(60, 58)
 			b.pressed.connect(_open_card.bind(a))
 			var icon := CardIcon.new()
-			icon.card_scale = 1.6
+			icon.card_scale = 1.5
 			icon.ability = a
 			icon.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 			b.add_child(icon)
@@ -135,7 +144,27 @@ func _ready() -> void:
 	_equip = _button(card, "Equip", _toggle_equip)
 	_button(card, "Back", func() -> void: _open_collection())
 
+	var files := _page("Files")
+	files.add_child(_title("Save Files"))
+	for n in range(1, CardCollection.FILES + 1):
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+		row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		var pick := Button.new()
+		pick.custom_minimum_size = Vector2(220, 56)
+		pick.pressed.connect(_pick_file.bind(n))
+		row.add_child(pick)
+		var erase := Button.new()
+		erase.custom_minimum_size = Vector2(92, 56)
+		erase.pressed.connect(_erase_file.bind(n))
+		row.add_child(erase)
+		files.add_child(row)
+		_file_buttons.append(pick)
+		_erase_buttons.append(erase)
+	_button(files, "Back", func() -> void: _show("Main"))
+
 	panel.add_child(main)
+	panel.add_child(files)
 	panel.add_child(cards)
 	panel.add_child(card)
 	panel.add_child(credits)
@@ -144,6 +173,8 @@ func _ready() -> void:
 
 func open(player_color := Color("ff6b5e")) -> void:
 	_square.color = player_color
+	CardCollection.setup()
+	_update_main_label()
 	show()
 	_show("Main")
 
@@ -154,9 +185,55 @@ func _unhandled_input(event: InputEvent) -> void:
 	if _pages["Card"].visible:
 		get_viewport().set_input_as_handled()
 		_open_collection()
-	elif _pages["Credits"].visible or _pages["Cards"].visible:
+	elif _pages["Credits"].visible or _pages["Cards"].visible or _pages["Files"].visible:
 		get_viewport().set_input_as_handled()
 		_show("Main")
+
+
+func _open_files() -> void:
+	CardCollection.setup()
+	for i in CardCollection.FILES:
+		_update_file_row(i + 1)
+	_show("Files")
+	_file_buttons[CardCollection.file - 1].grab_focus()
+
+
+func _update_file_row(n: int) -> void:
+	var pick := _file_buttons[n - 1]
+	var erase := _erase_buttons[n - 1]
+	var used := CardCollection.file_exists(n)
+	var mark := "  ·  Current" if n == CardCollection.file else ""
+	if used:
+		pick.text = "File %d%s\n%d of %d cards" % [n, mark, CardCollection.file_card_count(n), CardCollection.ALL.size()]
+	else:
+		pick.text = "File %d%s\nNew game" % [n, mark]
+	erase.text = "Erase"
+	erase.visible = used
+	erase.set_meta("armed", false)
+
+
+## Pick a save file and go on to the level screen.
+func _pick_file(n: int) -> void:
+	CardCollection.use_file(n)
+	_update_main_label()
+	play_pressed.emit()
+
+
+## Erase asks for a second tap before deleting a file's cards.
+func _erase_file(n: int) -> void:
+	var erase := _erase_buttons[n - 1]
+	if not erase.get_meta("armed", false):
+		erase.text = "Sure?"
+		erase.set_meta("armed", true)
+		return
+	CardCollection.erase_file(n)
+	_update_file_row(n)
+	_update_main_label()
+	_file_buttons[n - 1].grab_focus()
+
+
+func _update_main_label() -> void:
+	_file_label.text = "Save file %d" % CardCollection.file
 
 
 func _open_collection() -> void:
