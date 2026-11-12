@@ -11,7 +11,8 @@ extends RefCounted
 ##   - Wide pits get a floating platform, a moving platform or a spike square to ride across,
 ##     or a teleporter pair to warp over them.
 ##   - At most 2 extra hearts per level.
-##   - Bad Blocks (e) stand at the far end of some landing runs of 4+ tiles, at most 3 a level,
+##   - Bad Blocks (e): 1–3 a level, at the far end of landing runs of 4+ tiles (or, if none
+##     landed there, one on the flat run before the goal),
 ##     so there's room to see them coming and jump on them.
 ##   - 1–3 pixels float over gaps, 2 rows above the higher edge, in the jump's arc.
 ##     Not over the teleporter pits, which are too wide to jump.
@@ -61,6 +62,8 @@ static func generate(seed_value: int) -> String:
 	var gx := cols.size() + 3
 	_flat(cols, h, 7)
 	cols[gx][h - 1] = "G"
+	if st.get("bad", 0) == 0:
+		cols[gx - 2][h - 1] = "e"   # every level gets at least one Bad Block
 
 	_add_pixels(cols, rng)
 
