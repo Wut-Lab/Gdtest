@@ -109,7 +109,7 @@ func load_map_text(text: String) -> void:
 					goal_cell = Vector2i(x, y)
 				"H":
 					hearts.append(Vector2i(x, y))
-				"D", "Q", "J", "L", "K", "E", "I", "F", "Z", "U", "O", "Y", "A", "M", "X":
+				"D", "Q", "J", "L", "K", "E", "I", "F", "Z", "U", "O", "Y", "N", "A", "M", "X":
 					cards[Vector2i(x, y)] = AbilityCard.LETTERS[ch]
 				"S":
 					spikes.append(Vector2i(x, y))

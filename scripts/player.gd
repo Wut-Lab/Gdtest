@@ -82,6 +82,11 @@ const SIZE := 24.0
 @export var grip_max_distance := 192.0
 ## Lucky Charm: chance to shrug off a hit from an obstacle.
 @export var lucky_chance := 0.2
+## Bounce House: rubber bounces go this many times as high (speed scales by the square root),
+## and landing on normal ground faster than house_fall_speed bounces back at house_hop of it.
+@export var house_height := 1.25
+@export var house_fall_speed := 650.0
+@export var house_hop := 0.3
 
 @export_group("Look")
 @export var color := Color("ff6b5e")
@@ -347,6 +352,11 @@ func _physics_process(delta: float) -> void:
 		_play(_land_sfx)
 	if "stun_landing" in abilities and is_on_floor() and not _was_on_floor:
 		_stun_landing()
+	if "bounce_house" in abilities and is_on_floor() and not _was_on_floor and not bounced_now \
+			and before.y > house_fall_speed and not _pounding:
+		velocity.y = -before.y * house_hop   # Bounce House: a little spring off a big fall
+		_bouncing = true
+		_squash = Vector2(1.35, 0.7)
 	if "grip_and_go" in abilities and is_on_floor() and not _was_on_floor and not bounced_now:
 		_grip_and_go()
 	if _was_on_floor and not is_on_floor():
@@ -474,7 +484,8 @@ func _apply_rubber(before: Vector2, was_on_floor: bool) -> bool:
 			var speed := before.y * rubber_bounciness
 			if Input.is_action_pressed("jump"):
 				speed = maxf(before.y * rubber_pump, jump_velocity * rubber_boost)
-			velocity.y = -minf(speed, max_bounce_speed)
+			var lift := sqrt(house_height) if "bounce_house" in abilities else 1.0
+			velocity.y = -minf(speed * lift, max_bounce_speed * lift)   # Bounce House: 25% higher
 			velocity.x = before.x
 			_bouncing = true
 			_coyote = 0.0
