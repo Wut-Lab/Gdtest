@@ -13,6 +13,9 @@ const START_HEARTS := 2
 
 var state := State.READY
 var run_time := 0.0
+const WIN_REWARD := 3
+const FAST_REWARD := 4
+const PAR_SLACK := 1.5
 var falls := 0
 var hearts := START_HEARTS
 var hits := 0
@@ -298,11 +301,12 @@ func _on_pixel_collected(index: int) -> void:
 	hud.set_pixels(CardCollection.pixels)
 
 
-## A chest holds a card 20% of the time (one this file hasn't found), otherwise 2–10 pixels.
+## A chest holds a card 20% of the time, otherwise 2–10 pixels. A card this file already
+## owns turns into 1–2 pixels instead.
 func _on_chest_opened(index: int) -> void:
 	if _level_key != "custom":
 		CardCollection.mark_chest("%s:%d" % [_level_key, index])
-	var card := CardCollection.random_unowned() if randf() < 0.2 else ""
+	var card: String = CardCollection.ALL.pick_random() if randf() < 0.2 else ""
 	if card != "":
 		_on_card_collected(card)
 	else:
@@ -321,6 +325,11 @@ func _on_card_collected(ability: String) -> void:
 			hud.toast("New card: %s! Equipped." % card_name)
 		else:
 			hud.toast("New card: %s! Added to your collection." % card_name)
+	elif _level_key != "custom":
+		var n := randi_range(1, 2)
+		CardCollection.add_pixels(n)
+		hud.set_pixels(CardCollection.pixels)
+		hud.toast("Duplicate %s: +%d pixels" % [AbilityCard.NAMES[ability], n])
 	_show_abilities()
 
 
@@ -336,8 +345,24 @@ func _on_goal_reached() -> void:
 	hud.pause_button.hide()
 	player.active = false
 	player.velocity = Vector2.ZERO
-	hud.show_win(run_time, falls, hearts, seed_value)
+	var reward := win_reward()
+	if reward > 0:
+		CardCollection.add_pixels(reward)
+		hud.set_pixels(CardCollection.pixels)
+	hud.show_win(run_time, falls, hearts, seed_value, reward)
 	$TouchControls.hide()
+
+
+## Winning pays 3 pixels, or 4 for a fast run (editor test levels pay nothing).
+func win_reward() -> int:
+	if _level_key == "custom":
+		return 0
+	return FAST_REWARD if run_time <= par_time() else WIN_REWARD
+
+
+## A fast run: start to goal in under 1.5× the time it takes to just run that distance.
+func par_time() -> float:
+	return absf(level.goal.position.x - level.start.position.x) / player.run_speed * PAR_SLACK
 
 
 # ---------- Web page bridge ----------

@@ -102,8 +102,10 @@ func show_start() -> void:
 	play_button.grab_focus()
 
 
-func show_win(time: float, falls: int, hearts: int, seed_value: int) -> void:
+func show_win(time: float, falls: int, hearts: int, seed_value: int, reward := 0) -> void:
 	result_label.text = "Time %.2fs  ·  Falls %d  ·  Hearts %d" % [time, falls, hearts]
+	if reward > 0:
+		result_label.text += "\n+%d pixels%s" % [reward, "  ·  Fast run!" if reward > 3 else ""]
 	if seed_value > 0:
 		result_label.text += "\nSeed %d" % seed_value
 	new_level_button.visible = seed_value > 0
