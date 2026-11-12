@@ -168,6 +168,8 @@ func play_random_level(s: int) -> void:
 	load_level_text(LevelGen.generate(seed_value))
 	if LevelGen.is_vertical(seed_value):
 		hud.banner("Climb to the top!")
+	elif LevelGen.is_diagonal(seed_value):
+		hud.banner("Climb up and across!")
 
 
 ## Square Hub Town: walk around and go into its buildings. Coming back from the dungeon puts

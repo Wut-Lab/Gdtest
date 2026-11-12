@@ -33,6 +33,9 @@ const MAX_BAD_BLOCKS := 3
 const CHEST_CHANCE := 0.2
 ## Share of seeds that make a vertical level: a tall shaft you climb to the goal at the top.
 const VERTICAL_CHANCE := 0.4
+## Share of seeds that make a diagonal level: the same climb, but every step also heads right.
+const DIAGONAL_CHANCE := 0.2
+const D_MAX_WIDTH := 320
 const V_WIDTH := 30          # columns, including the stone wall on each side
 const V_MAX_ROWS := 220
 
@@ -49,9 +52,18 @@ static func is_vertical(seed_value: int) -> bool:
 	return t.randf() < VERTICAL_CHANCE
 
 
+## Whether a seed makes a diagonal level: climbing up and to the right at the same time.
+static func is_diagonal(seed_value: int) -> bool:
+	var t := RandomNumberGenerator.new()
+	t.seed = seed_value * 31 + 7
+	return t.randf() >= 1.0 - DIAGONAL_CHANCE
+
+
 static func generate(seed_value: int) -> String:
 	if is_vertical(seed_value):
 		return generate_vertical(seed_value)
+	if is_diagonal(seed_value):
+		return generate_vertical(seed_value, true)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value
 	var cols: Array = []   # each column is an Array of ROWS one-character strings
@@ -326,20 +338,25 @@ static func _pick(rng: RandomNumberGenerator, weights: Dictionary) -> String:
 ##   - Falling just drops you to a lower platform or the floor; you never fall out.
 ##   - Same required groups as horizontal levels: 1–4 obstacles, 1–2 teleporter pairs and 3–15
 ##     basic special blocks (rubber pads, rubber wall bumps, one-way block platforms).
-static func generate_vertical(seed_value: int) -> String:
+## Diagonal levels use the same rules in a wide space, with every step heading right.
+static func generate_vertical(seed_value: int, diagonal := false) -> String:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value
+	var gw := D_MAX_WIDTH if diagonal else V_WIDTH
 	var g: Array = []   # rows (top to bottom), each an Array of one-character strings
 	for y in V_MAX_ROWS:
 		var row := []
-		for x in V_WIDTH:
-			row.append("#" if x == 0 or x == V_WIDTH - 1 or y >= V_MAX_ROWS - 2 else ".")
+		for x in gw:
+			row.append("#" if x == 0 or x == gw - 1 or y >= V_MAX_ROWS - 2 else ".")
 		g.append(row)
 	var floor_y := V_MAX_ROWS - 2
 	g[floor_y - 1][3] = "P"
 	# cur: the platform you're standing on. exit: which end you leave from (-1 left, 1 right, 0 any).
 	var st := {"cur": {"x": 1, "w": V_WIDTH - 2, "y": floor_y, "exit": 0}, "hearts": 0, "bad": 0,
 		"pixel_spots": [], "wide": []}
+	if diagonal:
+		st.dir = 1
+		st.cur = {"x": 1, "w": 6, "y": floor_y, "exit": 1}
 
 	var pieces := []
 	for i in rng.randi_range(1, 4):
@@ -360,12 +377,13 @@ static func generate_vertical(seed_value: int) -> String:
 		pieces[i] = pieces[j]
 		pieces[j] = tmp
 
+	# Diagonal levels rise 1–3 rows a step, so they head across as much as up.
 	for piece in pieces:
 		for i in rng.randi_range(1, 2):
-			_v_step(g, st, rng, 3, rng.randi_range(3, 5), "=")
+			_v_step(g, st, rng, rng.randi_range(1, 3) if diagonal else 3, rng.randi_range(3, 5), "=")
 		_v_piece(g, st, rng, piece)
 	for i in rng.randi_range(2, 3):
-		_v_step(g, st, rng, 3, rng.randi_range(3, 5), "=")
+		_v_step(g, st, rng, rng.randi_range(1, 3) if diagonal else 3, rng.randi_range(3, 5), "=")
 	# The goal on a last, wider platform.
 	var top: Dictionary = _v_step(g, st, rng, 3, 6, "=")
 	g[top.y - 1][top.x + 3] = "G"
@@ -387,26 +405,33 @@ static func generate_vertical(seed_value: int) -> String:
 			g[p.y][p.x] = "*"
 			placed += 1
 
-	# Crop the empty sky above the goal, keeping 6 rows of headroom.
+	# Crop the empty sky above the goal, keeping 6 rows of headroom, and (diagonal) the empty
+	# space past it, closed off with a wall.
 	var first: int = maxi(top.y - 8, 0)
+	var last_x := gw
+	if diagonal:
+		last_x = mini(top.x + top.w + 6, gw)
+		for y in V_MAX_ROWS:
+			g[y][last_x - 1] = "#"
 	var lines := PackedStringArray()
 	for y in range(first, V_MAX_ROWS):
-		lines.append("".join(g[y]))
+		lines.append("".join(g[y].slice(0, last_x)))
 	return "\n".join(lines) + "\n"
 
 
 ## Puts a tile if the spot is inside the shaft.
 static func _v_put(g: Array, x: int, y: int, ch: String) -> void:
-	if x > 0 and x < V_WIDTH - 1 and y >= 0:
+	if x > 0 and x < g[0].size() - 1 and y >= 0:
 		g[y][x] = ch
 
 
 ## Whether a platform of width w at (x, y) has room: empty around it and 2 rows of air above.
 static func _v_free(g: Array, x: int, y: int, w: int) -> bool:
-	if x < 1 or x + w > V_WIDTH - 1 or y < 4:
+	var gw: int = g[0].size()
+	if x < 1 or x + w > gw - 1 or y < 4:
 		return false
 	for yy in range(y - 3, y + 2):
-		for xx in range(maxi(x - 1, 1), mini(x + w + 1, V_WIDTH - 1)):
+		for xx in range(maxi(x - 1, 1), mini(x + w + 1, gw - 1)):
 			if g[yy][xx] != ".":
 				return false
 	return true
@@ -421,17 +446,17 @@ static func _v_step(g: Array, st: Dictionary, rng: RandomNumberGenerator, rise: 
 	var best := -1
 	for attempt in 40:
 		var gap := rng.randi_range(min_gap, max_gap)   # tiles of air between the edges (negative = overlap)
-		var side: int = cur.exit if cur.exit != 0 else (1 if rng.randf() < 0.5 else -1)
-		if attempt > 20:
+		var side: int = cur.exit if cur.exit != 0 else st.get("dir", 1 if rng.randf() < 0.5 else -1)
+		if attempt > 20 and not st.has("dir"):
 			side = -side
 		var x: int = cur.x + cur.w + gap if side > 0 else cur.x - gap - w
 		if cur.w > 12:   # the floor: anywhere
-			x = rng.randi_range(2, V_WIDTH - 2 - w)
+			x = rng.randi_range(2, g[0].size() - 2 - w)
 		if _v_free(g, x, y, w):
 			best = x
 			break
 	if best < 0:   # no room sideways: go straight up through it (platforms are jump-through)
-		best = clampi(cur.x + cur.w / 2 - w / 2, 1, V_WIDTH - 1 - w)
+		best = clampi(cur.x + cur.w / 2 - w / 2, 1, g[0].size() - 1 - w)
 	for i in w:
 		g[y][best + i] = ch
 	# A pixel in the arc of this jump, between the two platforms.
@@ -488,7 +513,7 @@ static func _v_piece(g: Array, st: Dictionary, rng: RandomNumberGenerator, piece
 			var a := _v_step(g, st, rng, 3, 5, "=")
 			_v_put(g, a.x + 4, a.y - 1, pad)
 			var b := _v_step(g, st, rng, 9, 7, "=", 4)
-			var pad_left := rng.randf() < 0.5
+			var pad_left: bool = rng.randf() < 0.5 if not st.has("dir") else st.dir > 0
 			_v_put(g, b.x if pad_left else b.x + 6, b.y - 1, pad)
 			b.exit = 1 if pad_left else -1
 		"chest":

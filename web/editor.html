@@ -206,9 +206,16 @@ button:disabled { opacity: 0.4; }
       <button id="widthUp" type="button" aria-label="Add 10 columns">+10</button>
     </div>
     <div class="row">
+      <label for="heightDown">Height</label>
+      <button id="heightDown" type="button" aria-label="Remove 10 rows from the top">−10</button>
+      <span class="num" id="heightNum">17</span>
+      <button id="heightUp" type="button" aria-label="Add 10 rows at the top">+10</button>
+    </div>
+    <div class="row">
       <button id="copyBtn" type="button">Copy level text</button>
       <button id="level1Btn" type="button">Load Level 1</button>
       <button id="blankBtn" type="button">New blank level</button>
+      <button id="vblankBtn" type="button">New vertical level</button>
     </div>
     <p id="copyNote">Copy the level and paste it to Claude to add it to the game, or keep it to load again later.</p>
     <label for="levelText">Level text (paste one here to load it)</label>
@@ -218,7 +225,7 @@ button:disabled { opacity: 0.4; }
       <span class="spacer"></span>
       <button id="closeSheet" type="button" class="primary">Done</button>
     </div>
-    <p>Characters: <code>#</code> ground, <code>=</code> platform you can jump up through, <code>R</code> rubber, <code>W</code> rubber wall (kicks you back; hold jump against it mid-air to wall-jump), <code>P</code> start, <code>G</code> goal, <code>H</code> extra heart, <code>S</code> spike square (paces 2 tiles each way; spiky sides cost a heart, the top is safe to ride), <code>V</code> up-down spike square (rises 3 tiles from its cell and back; spikes on top and bottom), <code>1</code> <code>2</code> <code>3</code> red, yellow and blue warps (place two of a color to link them), <code>.</code> empty. Tip: put the pad you arrive at somewhere off the main path, or players walking past it get sent back. Your work is saved on this device as you go.</p>
+    <p>Characters: <code>#</code> ground, <code>=</code> platform you can jump up through, <code>R</code> rubber, <code>W</code> rubber wall (kicks you back; hold jump against it mid-air to wall-jump), <code>P</code> start, <code>G</code> goal, <code>H</code> extra heart, <code>S</code> spike square (paces 2 tiles each way; spiky sides cost a heart, the top is safe to ride), <code>V</code> up-down spike square (rises 3 tiles from its cell and back; spikes on top and bottom), <code>1</code> <code>2</code> <code>3</code> red, yellow and blue warps (place two of a color to link them), <code>.</code> empty. Height adds rows at the top for vertical climbs (scroll up and down to paint). Tip: put the pad you arrive at somewhere off the main path, or players walking past it get sent back. Your work is saved on this device as you go.</p>
   </div>
 </div>
 
@@ -286,7 +293,7 @@ button:disabled { opacity: 0.4; }
 <script src="index.js"></script>
 <script>
 (() => {
-  const ROWS = 17;
+  const MIN_ROWS = 17;   // levels are at least 17 rows; taller ones are vertical climbs
   const LEVEL_1 = /*LEVEL_01*/"";
   const TILES = [
     { ch: 'hand', label: 'Move' },
@@ -345,7 +352,8 @@ button:disabled { opacity: 0.4; }
   const WARP_NAME = { '1': 'red', '2': 'yellow', '3': 'blue' };
 
   // ---------- Level data ----------
-  let grid = [];        // ROWS arrays of characters
+  let grid = [];        // rows (top to bottom), each an array of characters
+  const ROWS_OF = () => grid.length;
   let tool = '#';
   const undoStack = [];
 
@@ -354,9 +362,9 @@ button:disabled { opacity: 0.4; }
     while (lines.length && lines[lines.length - 1] === '') lines.pop();
     const width = Math.max(20, ...lines.map(l => l.length));
     const rows = [];
-    // Keep the bottom 17 rows (the ground is at the bottom); pad short levels at the top.
-    const src = lines.slice(-ROWS);
-    while (src.length < ROWS) src.unshift('');
+    // Keep every row (tall levels are vertical climbs); pad short levels at the top to 17 rows.
+    const src = lines.slice(-400);
+    while (src.length < MIN_ROWS) src.unshift('');
     for (const line of src) {
       const row = [];
       for (let x = 0; x < width; x++) row.push(line[x] && '.#=RWPGHSV123^TBDQJLKEIFZUOYNhgwbspAMXC*e'.includes(line[x]) ? line[x] : '.');
@@ -368,9 +376,18 @@ button:disabled { opacity: 0.4; }
   const width = () => grid[0].length;
   function blank(w) {
     const rows = [];
-    for (let y = 0; y < ROWS; y++) rows.push(Array(w).fill(y >= 15 ? '#' : '.'));
+    for (let y = 0; y < MIN_ROWS; y++) rows.push(Array(w).fill(y >= 15 ? '#' : '.'));
     rows[14][2] = 'P';
     rows[14][w - 3] = 'G';
+    return rows;
+  }
+  // A vertical level: a 30-wide shaft between stone walls, floor at the bottom, goal up top.
+  function vblank(h) {
+    const w = 30, rows = [];
+    for (let y = 0; y < h; y++) rows.push(Array.from({ length: w }, (_, x) => (x === 0 || x === w - 1 || y >= h - 2) ? '#' : '.'));
+    rows[h - 3][3] = 'P';
+    for (let x = 12; x < 18; x++) rows[8][x] = '=';
+    rows[7][15] = 'G';
     return rows;
   }
   function save() {
@@ -386,7 +403,7 @@ button:disabled { opacity: 0.4; }
     undoBtn.disabled = false;
   }
   function find(ch) {
-    for (let y = 0; y < ROWS; y++) { const x = grid[y].indexOf(ch); if (x >= 0) return { x, y }; }
+    for (let y = 0; y < ROWS_OF(); y++) { const x = grid[y].indexOf(ch); if (x >= 0) return { x, y }; }
     return null;
   }
 
@@ -536,30 +553,31 @@ button:disabled { opacity: 0.4; }
 
   function resize() {
     const avail = wrap.clientHeight;
-    cell = Math.max(14, Math.min(44, Math.floor(avail / ROWS)));
+    // Size cells so 17 rows fill the view; taller levels scroll up and down.
+    cell = Math.max(14, Math.min(44, Math.floor(avail / Math.min(ROWS_OF(), MIN_ROWS))));
     const dpr = Math.min(window.devicePixelRatio || 1, 3);
     canvas.style.width = width() * cell + 'px';
-    canvas.style.height = ROWS * cell + 'px';
+    canvas.style.height = ROWS_OF() * cell + 'px';
     canvas.width = Math.floor(width() * cell * dpr);
-    canvas.height = Math.floor(ROWS * cell * dpr);
+    canvas.height = Math.floor(ROWS_OF() * cell * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     draw();
   }
 
   function draw() {
     const w = width();
-    ctx.clearRect(0, 0, w * cell, ROWS * cell);
+    ctx.clearRect(0, 0, w * cell, ROWS_OF() * cell);
     ctx.strokeStyle = 'rgba(238,241,250,0.08)';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    for (let x = 0; x <= w; x++) { ctx.moveTo(x * cell + 0.5, 0); ctx.lineTo(x * cell + 0.5, ROWS * cell); }
-    for (let y = 0; y <= ROWS; y++) { ctx.moveTo(0, y * cell + 0.5); ctx.lineTo(w * cell, y * cell + 0.5); }
+    for (let x = 0; x <= w; x++) { ctx.moveTo(x * cell + 0.5, 0); ctx.lineTo(x * cell + 0.5, ROWS_OF() * cell); }
+    for (let y = 0; y <= ROWS_OF(); y++) { ctx.moveTo(0, y * cell + 0.5); ctx.lineTo(w * cell, y * cell + 0.5); }
     ctx.stroke();
     // Column numbers every 10 tiles, to talk about places in the level.
     ctx.fillStyle = 'rgba(238,241,250,0.35)';
     ctx.font = '600 10px Inter, sans-serif';
     for (let x = 0; x < w; x += 10) ctx.fillText(String(x), x * cell + 3, 11);
-    for (let y = 0; y < ROWS; y++)
+    for (let y = 0; y < ROWS_OF(); y++)
       for (let x = 0; x < w; x++)
         if (grid[y][x] !== '.') drawTile(ctx, grid[y][x], x * cell, y * cell, cell, y > 0 ? grid[y - 1][x] : '.');
     updateStatus();
@@ -570,7 +588,7 @@ button:disabled { opacity: 0.4; }
   function cellAt(e) {
     const r = canvas.getBoundingClientRect();
     const x = Math.floor((e.clientX - r.left) / cell), y = Math.floor((e.clientY - r.top) / cell);
-    return (x >= 0 && y >= 0 && x < width() && y < ROWS) ? { x, y } : null;
+    return (x >= 0 && y >= 0 && x < width() && y < ROWS_OF()) ? { x, y } : null;
   }
   function paint(c) {
     if (!c || (lastCell && lastCell.x === c.x && lastCell.y === c.y)) return;
@@ -639,7 +657,7 @@ button:disabled { opacity: 0.4; }
     if (missing.length) msg = 'Add a ' + missing.join(' and a ');
     else if (unpaired.length) msg = unpaired.join(', ') + ' warp needs a second pad';
     else if (extra.length) msg = extra.join(', ') + ': more than 2 pads, they link in a loop';
-    status.textContent = msg || width() + ' tiles wide';
+    status.textContent = msg || width() + (ROWS_OF() > MIN_ROWS ? ' × ' + ROWS_OF() + ' tiles' : ' tiles wide');
     status.classList.toggle('ok', !msg);
   }
   undoBtn.addEventListener('click', () => {
@@ -652,9 +670,17 @@ button:disabled { opacity: 0.4; }
   const levelText = document.getElementById('levelText');
   const copyNote = document.getElementById('copyNote');
   const widthNum = document.getElementById('widthNum');
+  const heightNum = document.getElementById('heightNum');
+  // After loading a level, show its bottom (where the start usually is).
+  function showLevel() {
+    widthNum.textContent = width(); heightNum.textContent = ROWS_OF(); levelText.value = toText();
+    resize(); save();
+    wrap.scrollTop = wrap.scrollHeight; wrap.scrollLeft = 0;
+  }
   function openSheet() {
     levelText.value = toText();
     widthNum.textContent = width();
+    heightNum.textContent = ROWS_OF();
     copyNote.textContent = 'Copy the level and paste it to Claude to add it to the game, or keep it to load again later.';
     sheet.hidden = false;
   }
@@ -673,6 +699,17 @@ button:disabled { opacity: 0.4; }
     widthNum.textContent = w; levelText.value = toText();
     resize(); save();
   }
+  // Rows are added or removed at the top, so the ground stays put.
+  function setHeight(h) {
+    h = Math.max(MIN_ROWS, Math.min(400, h));
+    pushUndo();
+    while (grid.length < h) grid.unshift(Array(width()).fill('.'));
+    while (grid.length > h) grid.shift();
+    heightNum.textContent = h; levelText.value = toText();
+    resize(); save();
+  }
+  document.getElementById('heightDown').addEventListener('click', () => setHeight(ROWS_OF() - 10));
+  document.getElementById('heightUp').addEventListener('click', () => setHeight(ROWS_OF() + 10));
   document.getElementById('widthDown').addEventListener('click', () => setWidth(width() - 10));
   document.getElementById('widthUp').addEventListener('click', () => setWidth(width() + 10));
   document.getElementById('copyBtn').addEventListener('click', () => {
@@ -688,11 +725,12 @@ button:disabled { opacity: 0.4; }
         fallback);
     } catch (_) { fallback(); }
   });
-  document.getElementById('level1Btn').addEventListener('click', () => { pushUndo(); grid = parse(LEVEL_1); levelText.value = toText(); widthNum.textContent = width(); resize(); save(); });
-  document.getElementById('blankBtn').addEventListener('click', () => { pushUndo(); grid = blank(40); levelText.value = toText(); widthNum.textContent = width(); resize(); save(); });
+  document.getElementById('level1Btn').addEventListener('click', () => { pushUndo(); grid = parse(LEVEL_1); showLevel(); });
+  document.getElementById('blankBtn').addEventListener('click', () => { pushUndo(); grid = blank(40); showLevel(); });
+  document.getElementById('vblankBtn').addEventListener('click', () => { pushUndo(); grid = vblank(60); showLevel(); });
   document.getElementById('loadTextBtn').addEventListener('click', () => {
     if (!levelText.value.trim()) return;
-    pushUndo(); grid = parse(levelText.value); widthNum.textContent = width(); resize(); save();
+    pushUndo(); grid = parse(levelText.value); showLevel();
     sheet.hidden = true;
   });
 
@@ -741,5 +779,6 @@ button:disabled { opacity: 0.4; }
   setTool('#');
   new ResizeObserver(resize).observe(wrap);
   resize();
+  wrap.scrollTop = wrap.scrollHeight;
 })();
 </script>
