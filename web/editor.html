@@ -314,6 +314,7 @@ button:disabled { opacity: 0.4; }
     { ch: 'Y', label: 'Lucky Charm card' },
     { ch: 'N', label: 'Bounce House card' },
     { ch: 'h', label: 'Secret Helper card' },
+    { ch: 'g', label: 'Magnet card' },
     { ch: 'w', label: 'Wall Cling card' },
     { ch: 'b', label: 'Brick Drop card' },
     { ch: 's', label: 'Slow Burst card' },
@@ -358,7 +359,7 @@ button:disabled { opacity: 0.4; }
     while (src.length < ROWS) src.unshift('');
     for (const line of src) {
       const row = [];
-      for (let x = 0; x < width; x++) row.push(line[x] && '.#=RWPGHSV123^TBDQJLKEIFZUOYNhwbspAMXC*e'.includes(line[x]) ? line[x] : '.');
+      for (let x = 0; x < width; x++) row.push(line[x] && '.#=RWPGHSV123^TBDQJLKEIFZUOYNhgwbspAMXC*e'.includes(line[x]) ? line[x] : '.');
       rows.push(row);
     }
     return rows;
