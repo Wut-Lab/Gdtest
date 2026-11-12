@@ -4,18 +4,18 @@ extends Area2D
 ##   D = Dash, Q = Ground Pound, J = Double Jump, L = Glide, K = Quick, E = Tele-hop,
 ##   I = High Jump, F = Phase Jump, Z = Shockwave, U = Stunning Landing,
 ##   O = Grip and Go, Y = Lucky Charm, N = Bounce House,
-##   s = Slow Burst, p = Portion Booster, A = Air Brake, M = Momentum, X = Heart Box (in a text map)
+##   w = Wall Cling, b = Brick Drop, s = Slow Burst, p = Portion Booster, A = Air Brake, M = Momentum, X = Heart Box (in a text map)
 
 signal collected(ability: String)
 
 const LETTERS := {"D": "dash", "Q": "pound", "J": "double_jump", "L": "glide", "K": "quick",
-	"E": "tele_hop", "I": "high_jump", "F": "phase_jump", "Z": "shockwave", "U": "stun_landing", "O": "grip_and_go", "Y": "lucky_charm", "N": "bounce_house", "s": "slow_burst", "p": "portion_booster", "A": "air_brake", "M": "momentum", "X": "heart_box"}
+	"E": "tele_hop", "I": "high_jump", "F": "phase_jump", "Z": "shockwave", "U": "stun_landing", "O": "grip_and_go", "Y": "lucky_charm", "N": "bounce_house", "w": "wall_cling", "b": "brick_drop", "s": "slow_burst", "p": "portion_booster", "A": "air_brake", "M": "momentum", "X": "heart_box"}
 const NAMES := {"dash": "Dash", "pound": "Ground Pound", "double_jump": "Double Jump", "glide": "Glide",
-	"quick": "Quick", "tele_hop": "Tele-hop", "high_jump": "High Jump", "phase_jump": "Phase Jump", "shockwave": "Shockwave", "stun_landing": "Stunning Landing", "grip_and_go": "Grip and Go", "lucky_charm": "Lucky Charm", "bounce_house": "Bounce House", "slow_burst": "Slow Burst",
+	"quick": "Quick", "tele_hop": "Tele-hop", "high_jump": "High Jump", "phase_jump": "Phase Jump", "shockwave": "Shockwave", "stun_landing": "Stunning Landing", "grip_and_go": "Grip and Go", "lucky_charm": "Lucky Charm", "bounce_house": "Bounce House", "wall_cling": "Wall Cling", "brick_drop": "Brick Drop", "slow_burst": "Slow Burst",
 	"portion_booster": "Portion Booster", "air_brake": "Air Brake", "momentum": "Momentum", "heart_box": "Heart Box"}
 ## Card types, color coded: attacks are red, jumps are blue, movement is yellow, misc is gray.
 const TYPES := {"dash": "attack", "pound": "attack", "double_jump": "jump", "glide": "jump",
-	"quick": "movement", "tele_hop": "movement", "high_jump": "jump", "phase_jump": "jump", "shockwave": "attack", "stun_landing": "attack", "grip_and_go": "movement", "lucky_charm": "misc", "bounce_house": "misc", "slow_burst": "misc", "portion_booster": "misc", "air_brake": "movement", "momentum": "movement", "heart_box": "misc"}
+	"quick": "movement", "tele_hop": "movement", "high_jump": "jump", "phase_jump": "jump", "shockwave": "attack", "stun_landing": "attack", "grip_and_go": "movement", "lucky_charm": "misc", "bounce_house": "misc", "wall_cling": "jump", "brick_drop": "attack", "slow_burst": "misc", "portion_booster": "misc", "air_brake": "movement", "momentum": "movement", "heart_box": "misc"}
 const TYPE_NAMES := {"attack": "Attack card", "jump": "Jump card", "movement": "Movement card", "misc": "Misc card"}
 const TYPE_COLORS := {"attack": Color("e5484d"), "jump": Color("3d7be0"), "movement": Color("e0a400"),
 	"misc": Color("7d8597")}
@@ -45,6 +45,10 @@ const DESCRIPTIONS := {
 		+ "spiked platform and keep your heart.",
 	"bounce_house": "Passive: rubber bounces you 25% higher, and landing on normal ground from "
 		+ "a big fall gives you a little bounce.",
+	"wall_cling": "Passive: press against a wall in mid-air to hang on for up to 1 second, then "
+		+ "jump to kick off it. Works on normal walls, not rubber ones.",
+	"brick_drop": "Press Brick (C or L) in the air to drop a brick straight down. It stays where "
+		+ "it lands, even on a spike square, and you can stand on it. Recharges in 3 seconds.",
 	"slow_burst": "Passive: when you get hurt, every obstacle within 3 tiles of you moves at half "
 		+ "speed for 3 seconds.",
 	"portion_booster": "Passive: every percentage on your equipped attack, jump and movement "
@@ -58,7 +62,7 @@ const DESCRIPTIONS := {
 const PAPER := Color("eef1fa")
 const EDGE := Color("1b2440")
 
-@export_enum("dash", "pound", "double_jump", "glide", "quick", "tele_hop", "high_jump", "phase_jump", "shockwave", "stun_landing", "grip_and_go", "lucky_charm", "bounce_house", "slow_burst", "portion_booster", "air_brake", "momentum", "heart_box") var ability := "dash"
+@export_enum("dash", "pound", "double_jump", "glide", "quick", "tele_hop", "high_jump", "phase_jump", "shockwave", "stun_landing", "grip_and_go", "lucky_charm", "bounce_house", "wall_cling", "brick_drop", "slow_burst", "portion_booster", "air_brake", "momentum", "heart_box") var ability := "dash"
 
 var _t := 0.0
 
@@ -217,6 +221,19 @@ static func _draw_symbol(ci: CanvasItem, ability_name: String, o: Vector2, c: Co
 			for i in 5:
 				var x := -8.0 + i * 4.0
 				ci.draw_rect(Rect2(o + Vector2(x, 1.0 if i % 2 == 0 else 4.0), Vector2(4, b)), c)
+			ci.draw_rect(Rect2(o + Vector2(-9, 8), Vector2(18, b)), c)
+		"wall_cling":
+			# A block hanging on the side of a wall.
+			ci.draw_rect(Rect2(o + Vector2(4, -9), Vector2(4, 18)), c)
+			ci.draw_rect(Rect2(o + Vector2(-4, -5), Vector2(7, 7)), c)
+			ci.draw_rect(Rect2(o + Vector2(-7, 4), Vector2(b, b)), c)
+			ci.draw_rect(Rect2(o + Vector2(-5, 7), Vector2(b, b)), c)
+		"brick_drop":
+			# A brick falling onto a ground line, with motion lines above it.
+			ci.draw_rect(Rect2(o + Vector2(-5, -2), Vector2(10, 7)), c)
+			ci.draw_rect(Rect2(o + Vector2(-1, -2), Vector2(1, 7)), PAPER)
+			ci.draw_rect(Rect2(o + Vector2(-4, -8), Vector2(b, 4)), c)
+			ci.draw_rect(Rect2(o + Vector2(2, -9), Vector2(b, 5)), c)
 			ci.draw_rect(Rect2(o + Vector2(-9, 8), Vector2(18, b)), c)
 		"slow_burst":
 			# A clock face: a square ring with two hands.

@@ -81,6 +81,7 @@ func _setup_project() -> void:
 		"pause": [KEY_ESCAPE, KEY_P],
 		"dash": [KEY_SHIFT, KEY_X, KEY_K],
 		"pound": [KEY_DOWN, KEY_S, KEY_J],
+		"brick": [KEY_C, KEY_L],
 	}
 	var joy_buttons := {
 		"move_left": JOY_BUTTON_DPAD_LEFT,
@@ -89,6 +90,7 @@ func _setup_project() -> void:
 		"pause": JOY_BUTTON_START,
 		"dash": JOY_BUTTON_X,
 		"pound": JOY_BUTTON_B,
+		"brick": JOY_BUTTON_Y,
 	}
 	var joy_axis := {"move_left": -1.0, "move_right": 1.0}
 	for action in keys:
@@ -313,7 +315,7 @@ func _hud_scene() -> Node:
 	var start := _menu(root, "StartMenu", "Reach the goal",
 		"Run, jump and bounce to the green goal. Hold jump to go higher.\n"
 		+ "Falls and spikes cost a heart. Grab hearts and ability cards.\n"
-		+ "Keys: arrows or A/D move, Space jumps, Shift dashes, Down pounds.",
+		+ "Keys: arrows or A/D move, Space jumps, Shift dashes, Down pounds, C drops a brick.",
 		"StartBody", "PlayButton", "Play")
 	_level_row(start.get_node("Panel/Box"))
 	_color_row(start.get_node("Panel/Box"))
@@ -540,6 +542,8 @@ func _touch_scene() -> Node:
 	_button_label(dash, "DASH", 76, 15)
 	var pound := _touch_button(pad, "Pound", "pound", 76, false, Vector2(W - margin - 84, H - margin - 180))
 	_button_label(pound, "POUND", 76, 15)
+	var brick := _touch_button(pad, "Brick", "brick", 76, false, Vector2(W - margin - 180, H - margin - 180))
+	_button_label(brick, "BRICK", 76, 15)
 	return layer
 
 

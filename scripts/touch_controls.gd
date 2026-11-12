@@ -20,6 +20,7 @@ const BIG := Vector2(96, 72)
 @onready var jump: TouchScreenButton = $Pad/Jump
 @onready var dash: TouchScreenButton = $Pad/Dash
 @onready var pound: TouchScreenButton = $Pad/Pound
+@onready var brick: TouchScreenButton = $Pad/Brick
 
 var _bar: ColorRect
 var _keys := {}   # button -> TouchKey
@@ -36,6 +37,7 @@ func _ready() -> void:
 	_setup_key(jump, BIG, "JUMP", 0.0, Color("79e2c2"), Color("1b2440"))
 	_setup_key(dash, SMALL, "DASH", 0.0, Color("e5484d"))
 	_setup_key(pound, SMALL, "POUND", 0.0, Color("e5484d"))
+	_setup_key(brick, SMALL, "BRICK", 0.0, Color("e5484d"))
 	pad.visible = DisplayServer.is_touchscreen_available()
 	set_abilities([])
 	get_viewport().size_changed.connect(_layout)
@@ -75,10 +77,13 @@ func bar_height() -> float:
 	return BAR_HEIGHT + BORDER if pad.visible else 0.0
 
 
-## Dash and Pound buttons show only once their cards are collected.
+## Dash, Pound and Brick buttons show only when their cards are equipped.
 func set_abilities(abilities: Array[String]) -> void:
 	dash.visible = "dash" in abilities
 	pound.visible = "pound" in abilities
+	brick.visible = "brick_drop" in abilities
+	if is_node_ready():
+		_layout()
 
 
 func _layout() -> void:
@@ -93,9 +98,18 @@ func _layout() -> void:
 	right.position = Vector2(x + SMALL.x + GAP, cy)
 	x = size.x - BORDER - MARGIN - BIG.x / 2.0
 	jump.position = Vector2(x, cy)
-	x -= BIG.x / 2.0 + GAP + SMALL.x / 2.0
-	dash.position = Vector2(x, cy)
-	pound.position = Vector2(x - SMALL.x - GAP, cy)
+	# Card buttons fill in leftward from Jump, only the ones showing. On narrow screens the gaps
+	# between them shrink so they never reach the arrows.
+	var shown := [dash, pound, brick].filter(func(b: TouchScreenButton) -> bool: return b.visible)
+	var room := x - BIG.x / 2.0 - (right.position.x + SMALL.x / 2.0 + GAP)
+	var gap := GAP
+	if shown.size() > 0:
+		gap = clampf((room - shown.size() * SMALL.x) / shown.size(), 2.0, GAP)
+	x -= BIG.x / 2.0 + gap + SMALL.x / 2.0
+	for b in [dash, pound, brick]:
+		b.position = Vector2(x, cy)
+		if b.visible:
+			x -= SMALL.x + gap
 	# Those were centers; buttons are placed by their top-left corner.
 	for b in _keys:
 		b.position -= _keys[b].key_size / 2.0

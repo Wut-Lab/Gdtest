@@ -19,7 +19,7 @@ them headless, publish the web build, and commit/push to `main`.
    Copy a tool into the project root to run it: `godot --headless --path . --script res://build_scenes.gd`,
    then delete the copy and run `godot --headless --path . --import`.
 3. Levels are text maps in `levels/*.txt` (`. # = R W ^ P G H C * D Q J L K E X S V T B 1 2 3`; W = rubber wall, ^ = one-way block, H = extra
-   heart, C = treasure chest, * = pixel (currency), D/Q/J/L/K/E/I/F/Z/U/O/Y/N/s/p/A/M/X = Dash/Ground Pound/Double Jump/Glide/Quick/Tele-hop/High Jump/Phase Jump/Shockwave/Stunning Landing/Grip and Go/Lucky Charm/Bounce House/Slow Burst/Portion Booster/Air Brake/Momentum/Heart Box ability cards, S = spike square obstacle, V = up-down spike square, T/B = wide platform with spikes on top/bottom, digits are red/yellow/blue teleport pairs), loaded by `scripts/level.gd`. Keep arrival pads off the main route.
+   heart, C = treasure chest, * = pixel (currency), D/Q/J/L/K/E/I/F/Z/U/O/Y/N/w/b/s/p/A/M/X = Dash/Ground Pound/Double Jump/Glide/Quick/Tele-hop/High Jump/Phase Jump/Shockwave/Stunning Landing/Grip and Go/Lucky Charm/Bounce House/Wall Cling/Brick Drop/Slow Burst/Portion Booster/Air Brake/Momentum/Heart Box ability cards, S = spike square obstacle, V = up-down spike square, T/B = wide platform with spikes on top/bottom, digits are red/yellow/blue teleport pairs), loaded by `scripts/level.gd`. Keep arrival pads off the main route.
    Random levels come from `scripts/level_gen.gd` (seeded; its header lists the guidelines that keep them beatable).
    The game fills any screen (stretch aspect expand; portrait swaps to a 544×960 base and
    zooms the camera) — check both orientations when changing layout.

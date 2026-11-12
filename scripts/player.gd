@@ -85,6 +85,11 @@ const SIZE := 24.0
 ## Slow Burst: when hurt, obstacles overlapping this square (half-size in px) slow down.
 @export var slow_burst_reach := 96.0
 @export var slow_burst_time := 3.0
+## Wall Cling: seconds you can hang on walls per jump, and how hard you kick off.
+@export var cling_time := 1.0
+@export var cling_kick := 1.3
+## Brick Drop: seconds between bricks.
+@export var brick_cooldown := 3.0
 ## Bounce House: rubber bounces go this many times as high (speed scales by the square root),
 ## and landing on normal ground faster than house_fall_speed bounces back at house_hop of it.
 @export var house_height := 1.25
@@ -115,6 +120,10 @@ var _was_on_floor := true
 var _bouncing := false
 var _stun := 0.0
 var _shock_cd := 0.0
+var _cling_left := 1.0   # Wall Cling: hang time left this jump
+var _cling_dir := 0.0    # which way the wall you're clinging to faces (0 = not clinging)
+var _brick_cd := 0.0
+var _brick: Node = null
 var _takeoff_x := 0.0   # Grip and Go: where you left the ground
 ## Momentum card: seconds spent running one way without stopping or turning.
 var _momentum := 0.0
@@ -153,6 +162,11 @@ func _play(p: AudioStreamPlayer, pitch := 1.0) -> void:
 
 func reset_to(pos: Vector2) -> void:
 	position = pos
+	_cling_dir = 0.0
+	_cling_left = cling_time
+	_brick_cd = 0.0
+	if is_instance_valid(_brick):
+		_brick.queue_free()
 	velocity = Vector2.ZERO
 	_coyote = 0.0
 	_jump_buffer = 0.0
@@ -319,6 +333,18 @@ func _physics_process(delta: float) -> void:
 		_squash = Vector2(0.7, 1.35)
 		_puff()
 		_play(_jump_sfx)
+	elif _jump_buffer > 0.0 and _cling_dir != 0.0 and Input.is_action_just_pressed("jump"):
+		# Wall Cling: kick off the wall, away from it, and get your hang time back.
+		velocity = Vector2(_cling_dir * run_speed * cling_kick, -jump_velocity * 0.9)
+		_face = _cling_dir
+		_cling_dir = 0.0
+		_cling_left = cling_time
+		_stun = 0.15   # a moment before steering, so the kick is felt
+		_jump_buffer = 0.0
+		_bouncing = false
+		_squash = Vector2(0.7, 1.35)
+		_puff()
+		_play(_jump_sfx)
 	elif _jump_buffer > 0.0 and not on_floor and _air_jump and "double_jump" in abilities \
 			and not _pounding and _stun == 0.0 and Input.is_action_just_pressed("jump"):
 		# Double jump card: one extra jump in the air, 75% as high as a full jump.
@@ -382,14 +408,51 @@ func _physics_process(delta: float) -> void:
 		_grip_and_go()
 	if _was_on_floor and not is_on_floor():
 		_takeoff_x = position.x
+	_update_cling(delta, bounced_now)
 	_was_on_floor = is_on_floor() and not bounced_now
 
 	if position.y > fall_limit_y:
 		fell.emit()
 
 
+## Wall Cling card: pressed against a normal wall in mid-air, hang there (up to 1 second per
+## jump); jump to kick off it.
+func _update_cling(delta: float, bounced_now: bool) -> void:
+	if is_on_floor():
+		_cling_left = cling_time
+	_cling_dir = 0.0
+	if "wall_cling" not in abilities or is_on_floor() or bounced_now or _cling_left <= 0.0 \
+			or _pounding or velocity.y < 0.0:
+		return
+	for i in get_slide_collision_count():
+		var col := get_slide_collision(i)
+		var n := col.get_normal()
+		if absf(n.x) > 0.7 and _rubber_data(col) == null \
+				and not col.get_collider().is_in_group("card_targets"):
+			_cling_dir = signf(n.x)
+			_cling_left = maxf(_cling_left - delta, 0.0)
+			velocity.y = 0.0   # hang on
+			_squash = _squash.lerp(Vector2(0.85, 1.1), 0.3)
+			return
+
+
+## Brick Drop card: drop a brick straight down from under you (one at a time).
+func _drop_brick() -> void:
+	_brick_cd = brick_cooldown
+	if is_instance_valid(_brick):
+		_brick.queue_free()
+	_brick = Brick.new()
+	get_parent().add_child(_brick)
+	_brick.global_position = global_position + Vector2(0.0, SIZE / 2.0 + Brick.T / 2.0 + 2.0)
+	_play(_land_sfx, 0.8)
+
+
 func _update_dash_and_pound(delta: float, on_floor: bool) -> void:
 	_dash_cd = maxf(_dash_cd - delta, 0.0)
+	_brick_cd = maxf(_brick_cd - delta, 0.0)
+	if Input.is_action_just_pressed("brick") and "brick_drop" in abilities and not on_floor \
+			and _brick_cd == 0.0:
+		_drop_brick()
 	_shock_cd = maxf(_shock_cd - delta, 0.0)
 	if on_floor:
 		_air_dash_used = false
