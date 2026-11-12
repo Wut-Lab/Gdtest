@@ -4,6 +4,8 @@ extends Node2D
 ##   "shock": a Shockwave rolling out both ways along the floor.
 ##   "zap":   a Stunning Landing burst of electric sparks at the feet.
 ##   "slow":  a Slow Burst ring spreading out to the edge of its square.
+##   "pop":   a squashed Bad Block bursting into little red blocks.
+##   "plus":  floating "+N" text for pixels from a broken obstacle (set `text`).
 ##   "lucky": a Lucky Charm gold ring and sparkles when a hit is shrugged off.
 
 const SHOCK := Color("ffd9a0")
@@ -15,17 +17,19 @@ const SLOW := Color("8fb8ff")
 var kind := "zap"
 ## Shockwave reach in pixels.
 var reach := 160.0
+var text := ""
 var _age := 0.0
 var _life := 0.35
 var _bolts: Array = []
 var _next_bolts := 0.0
 
 
-static func spawn(parent: Node, at: Vector2, fx_kind: String, fx_reach := 160.0) -> void:
+static func spawn(parent: Node, at: Vector2, fx_kind: String, fx_reach := 160.0, fx_text := "") -> void:
 	var fx := CardFx.new()
 	fx.kind = fx_kind
 	fx.reach = fx_reach
-	fx._life = {"shock": 0.4, "lucky": 0.5, "slow": 0.45}.get(fx_kind, 0.35)
+	fx.text = fx_text
+	fx._life = {"shock": 0.4, "lucky": 0.5, "slow": 0.45, "pop": 0.4, "plus": 0.8}.get(fx_kind, 0.35)
 	fx.z_index = 5
 	parent.add_child(fx)
 	fx.global_position = at
@@ -111,6 +115,16 @@ func _draw() -> void:
 				var bh := h * (1.0 - i * 0.3)
 				draw_rect(Rect2(bx - 3.0, -bh, 6.0, bh), c)
 		draw_rect(Rect2(-x, -2.0, x * 2.0, 2.0), Color(SHOCK, 0.5 * (1.0 - k)))
+	elif kind == "pop":
+		for i in 8:
+			var a := i * TAU / 8.0
+			var p := Vector2(cos(a), sin(a)) * (6.0 + 26.0 * k) + Vector2(0, 30.0 * k * k)
+			draw_rect(Rect2(p - Vector2(3, 3), Vector2(6, 6)), Color("e5484d", 1.0 - k))
+	elif kind == "plus":
+		var font := ThemeDB.fallback_font
+		var p := Vector2(-12.0, -20.0 - 24.0 * k)
+		draw_string_outline(font, p, text, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, 4, Color("1b2440", 1.0 - k))
+		draw_string(font, p, text, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(LUCKY, 1.0 - k))
 	elif kind == "slow":
 		# A pale blue square outline growing out to the edge of the slowed area.
 		var r := reach * (0.3 + 0.7 * k)

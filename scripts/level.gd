@@ -23,6 +23,8 @@ signal card_collected(ability: String)
 signal chest_opened(index: int)
 signal pixel_collected(index: int)
 signal player_hurt(push: Vector2)
+## A breakable obstacle or enemy was destroyed: kind is "spike" or "bad_block".
+signal obstacle_broken(pos: Vector2, kind: String)
 
 const T := 32
 const ATLAS_GROUND_TOP := Vector2i(0, 0)
@@ -95,6 +97,7 @@ func load_map_text(text: String) -> void:
 	var spikes: Array[Vector2i] = []
 	var vspikes: Array[Vector2i] = []
 	var platforms := {}   # cell -> spikes on top?
+	var bad_blocks: Array[Vector2i] = []
 	var lines := text.replace("\r", "").split("\n")
 	for y in lines.size():
 		var line: String = lines[y]
@@ -119,6 +122,8 @@ func load_map_text(text: String) -> void:
 					pixel_cells.append(Vector2i(x, y))
 				"V":
 					vspikes.append(Vector2i(x, y))
+				"e":
+					bad_blocks.append(Vector2i(x, y))
 				"T", "B":
 					platforms[Vector2i(x, y)] = ch == "T"
 				"1", "2", "3":
@@ -142,7 +147,7 @@ func load_map_text(text: String) -> void:
 	_place_chests(chests)
 	_place_pixels(pixel_cells)
 	_place_hearts(hearts, cards)
-	_place_spikes(spikes, vspikes, platforms)
+	_place_spikes(spikes, vspikes, platforms, bad_blocks)
 	_update_walls()
 	queue_redraw()
 
@@ -186,7 +191,8 @@ func _place_hearts(cells: Array[Vector2i], cards: Dictionary) -> void:
 		_pickups.add_child(c)
 
 
-func _place_spikes(cells: Array[Vector2i], vertical_cells: Array[Vector2i], platforms: Dictionary) -> void:
+func _place_spikes(cells: Array[Vector2i], vertical_cells: Array[Vector2i], platforms: Dictionary,
+		bad_blocks: Array[Vector2i] = []) -> void:
 	for child in _obstacles.get_children():
 		_obstacles.remove_child(child)
 		child.queue_free()
@@ -195,7 +201,14 @@ func _place_spikes(cells: Array[Vector2i], vertical_cells: Array[Vector2i], plat
 		s.vertical = cell in vertical_cells
 		s.position = Vector2(cell.x * T + T / 2.0, cell.y * T + T / 2.0)
 		s.hurt_player.connect(func(push: Vector2) -> void: player_hurt.emit(push))
+		s.broken.connect(func(pos: Vector2) -> void: obstacle_broken.emit(pos, "spike"))
 		_obstacles.add_child(s)
+	for cell in bad_blocks:
+		var e := BadBlock.new()
+		e.position = Vector2(cell.x * T + T / 2.0, (cell.y + 1) * T - BadBlock.SIZE / 2.0)
+		e.hurt_player.connect(func(push: Vector2) -> void: player_hurt.emit(push))
+		e.broken.connect(func(pos: Vector2) -> void: obstacle_broken.emit(pos, "bad_block"))
+		_obstacles.add_child(e)
 	for cell in platforms:
 		var p := SpikePlatform.new()
 		p.spikes_top = platforms[cell]

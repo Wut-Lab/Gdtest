@@ -8,6 +8,7 @@ extends AnimatableBody2D
 
 ## push.x: which way to knock the player (-1 left, 1 right); push.y: -1 up, 1 down.
 signal hurt_player(push: Vector2)
+signal broken(pos: Vector2)
 
 const T := 32.0
 const SPIKE := 10.0         # how far the spikes stick out
@@ -89,6 +90,7 @@ func take_hit(kind: String) -> bool:
 		return false
 	health -= 1
 	if health <= 0:
+		broken.emit(global_position)
 		hide()
 		process_mode = Node.PROCESS_MODE_DISABLED
 	return true

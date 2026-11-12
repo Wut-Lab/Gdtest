@@ -46,6 +46,7 @@ func _ready() -> void:
 	level.heart_check = func() -> bool: return hearts < _start_hearts()   # no pickups at full health
 	level.card_collected.connect(_on_card_collected)
 	level.chest_opened.connect(_on_chest_opened)
+	level.obstacle_broken.connect(_on_obstacle_broken)
 	level.pixel_collected.connect(_on_pixel_collected)
 	level.player_hurt.connect(_on_player_hurt)
 	hud.play_requested.connect(new_run)
@@ -322,6 +323,21 @@ func _on_chest_opened(index: int) -> void:
 		CardCollection.add_pixels(n)
 		hud.set_pixels(CardCollection.pixels)
 		hud.toast("Chest: +%d pixels!" % n)
+
+
+## Broken spike squares drop a card 8% of the time, otherwise 1–2 pixels. Squashed Bad Blocks
+## drop a card 10% of the time, otherwise 1 pixel. Cards come from the Drop pool, ones this
+## file doesn't own yet.
+func _on_obstacle_broken(pos: Vector2, kind: String) -> void:
+	var chance := 0.1 if kind == "bad_block" else 0.08
+	var left := CardCollection.pool("drop").filter(func(a: String) -> bool: return not CardCollection.owned.has(a))
+	if randf() < chance and not left.is_empty():
+		_on_card_collected(left.pick_random())
+		return
+	var n := 1 if kind == "bad_block" else randi_range(1, 2)
+	CardCollection.add_pixels(n)
+	hud.set_pixels(CardCollection.pixels)
+	CardFx.spawn(level, pos, "plus", 0.0, "+%d" % n)
 
 
 func _on_card_collected(ability: String) -> void:

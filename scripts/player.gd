@@ -142,6 +142,7 @@ var _hurt_sfx := _make_sfx("res://audio/hurt.wav", -4.0)
 
 
 func _ready() -> void:
+	add_to_group("player")
 	for p in [_jump_sfx, _land_sfx, _hurt_sfx]:
 		add_child(p)
 
