@@ -196,9 +196,9 @@ func try_shrug_off(push: Vector2) -> bool:
 	return true
 
 
-## Potion Booster card: the percentages on attack, jump and movement cards go up 5 points.
+## Portion Booster card: the percentages on attack, jump and movement cards go up 5 points.
 func _pct(base: float) -> float:
-	return base + (0.05 if "potion_booster" in abilities else 0.0)
+	return base + (0.05 if "portion_booster" in abilities else 0.0)
 
 
 ## Slow Burst card: after getting hurt, every obstacle overlapping a square 3 tiles out from you
@@ -280,7 +280,7 @@ func _physics_process(delta: float) -> void:
 	_squash = _squash.lerp(Vector2.ONE, 1.0 - exp(-squash_recovery * delta))
 	invincible = maxf(invincible - delta, 0.0)
 	phased = "phase_jump" in abilities and not is_on_floor() and not _pounding \
-			and absf(velocity.y) <= (phase_window + (0.1 if "potion_booster" in abilities else 0.0)) * jump_velocity
+			and absf(velocity.y) <= (phase_window + (0.1 if "portion_booster" in abilities else 0.0)) * jump_velocity
 	_phase_look = move_toward(_phase_look, 0.25 if phased else 1.0, delta * (12.0 if phased else 3.0))
 	queue_redraw()
 	if not active:
