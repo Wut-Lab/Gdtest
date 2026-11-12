@@ -53,6 +53,7 @@ var _replay_list: VBoxContainer
 var _replay_info: Label
 var _mode_title: Label
 var _mode_seed := 0
+var _mode_notes := {}   # "hard"/"scramble" -> Label under its button
 
 
 func _ready() -> void:
@@ -239,6 +240,12 @@ func _ready() -> void:
 		d.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		d.custom_minimum_size = Vector2(300, 0)
 		mode.add_child(d)
+		if key != "true":
+			var note := Label.new()
+			note.theme_type_variation = "SmallLabel"
+			note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			mode.add_child(note)
+			_mode_notes[key] = note
 	_button(mode, "Back", _open_replay)
 
 	var buy := _page("Buy")
@@ -464,7 +471,7 @@ func _open_replay() -> void:
 		_replay_list.remove_child(c)
 		c.queue_free()
 	var liked := CardCollection.liked
-	_replay_info.text = ("Levels you liked: %d / %d. Replays give no rewards." % [liked.size(), CardCollection.MAX_LIKED]) \
+	_replay_info.text = ("Levels you liked: %d / %d. Hard and Scramble pay once each." % [liked.size(), CardCollection.MAX_LIKED]) \
 		if liked.size() > 0 else "No saved levels yet. Win a random level and tap Save to Replay Room."
 	for sv in liked:
 		var row := HBoxContainer.new()
@@ -472,11 +479,18 @@ func _open_replay() -> void:
 		row.add_theme_constant_override("separation", 8)
 		var shape := "Vertical" if LevelGen.is_vertical(sv) else ("Diagonal" if LevelGen.is_diagonal(sv) else "Horizontal")
 		var play := Button.new()
-		play.text = "▶ Seed %d · %s" % [sv, shape]
+		var medals := ("  ★" if CardCollection.is_beaten("hard:seed%d" % sv) else "") \
+			+ ("  ✦" if CardCollection.is_beaten("scramble:seed%d" % sv) else "")
+		play.text = "▶ Seed %d · %s%s" % [sv, shape, medals]
 		play.custom_minimum_size = Vector2(250, 44)
 		play.pressed.connect(func() -> void:
 			_mode_seed = sv
 			_mode_title.text = "Seed %d" % sv
+			for k in _mode_notes:
+				var done := CardCollection.is_beaten("%s:seed%d" % [k, sv])
+				_mode_notes[k].text = ("%s Medal earned" % ("★" if k == "hard" else "✦")) if done \
+					else "First clear: +3 pixels and a medal"
+				_mode_notes[k].add_theme_color_override("font_color", Color("ffd166") if done else Color("79e2c2"))
 			_show("Mode"))
 		row.add_child(play)
 		var remove := Button.new()

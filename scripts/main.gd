@@ -17,6 +17,8 @@ const START_HEARTS := 2
 var state := State.READY
 var run_time := 0.0
 const WIN_REWARD := 3
+## First Hard or Scramble clear of a liked level.
+const REPLAY_REWARD := 3
 const FAST_REWARD := 4
 const PAR_SLACK := 1.5
 var falls := 0
@@ -27,6 +29,8 @@ var level: Level
 var seed_value := 0
 ## Names the level for the save file's opened-chest list: "main", "seed123" or "custom".
 var _level_key := "main"
+## Replay Room mode of the level being played: "", "true", "hard" or "scramble".
+var _replay_mode := ""
 ## Which town door the last run started from, so Back to Town returns there.
 var _came_from := "dungeon"
 var player: Player
@@ -173,6 +177,7 @@ func play_main_level() -> void:
 	_came_from = "dungeon"
 	seed_value = 0
 	_level_key = "main"
+	_replay_mode = ""
 	hud.set_seed(0)
 	load_level_text(FileAccess.get_file_as_string(level.map_file))
 
@@ -183,6 +188,7 @@ func play_random_level(s: int, mode := "") -> void:
 	_came_from = "replay" if mode != "" else "dungeon"
 	seed_value = s if s > 0 else LevelGen.random_seed()
 	_level_key = "seed%d" % seed_value
+	_replay_mode = mode
 	hud.set_seed(seed_value)
 	var text := LevelGen.generate(seed_value)
 	if mode == "hard":
@@ -208,6 +214,7 @@ func enter_town(at_door := "") -> void:
 	state = State.TOWN
 	seed_value = 0
 	_level_key = "town"
+	_replay_mode = ""
 	_near_door = ""
 	hud.set_seed(0)
 	var town := FileAccess.get_file_as_string(TOWN_MAP)
@@ -504,7 +511,7 @@ func _on_like_pressed() -> void:
 	hud.set_like(true, seed_value in CardCollection.liked)
 
 
-## Replay Room: play a liked level again (already beaten, so no rewards).
+## Replay Room: play a liked level again (Hard and Scramble pay once each; see win_reward).
 func _play_replay(s: int, mode: String) -> void:
 	hud.main_menu.hide()
 	play_random_level(s, mode)
@@ -523,6 +530,10 @@ func _on_goal_reached() -> void:
 	player.active = false
 	player.velocity = Vector2.ZERO
 	var reward := win_reward()
+	var medal := _medal_key()
+	if medal != "" and not CardCollection.is_beaten(medal):
+		hud.toast("%s medal! Shown on this level in the Replay Room." % ("Hard ★" if _replay_mode == "hard" else "Scramble ✦"))
+		CardCollection.mark_beaten(medal)
 	if _level_key != "custom":
 		CardCollection.mark_beaten(_level_key)
 	if reward > 0:
@@ -535,11 +546,20 @@ func _on_goal_reached() -> void:
 
 
 ## Winning pays 3 pixels, or 4 for a fast run, the first time only: replays and editor
-## test levels pay nothing, so a level can't be farmed.
+## test levels pay nothing, so a level can't be farmed. Hard and Scramble replays pay 3 pixels
+## and a medal the first time each is cleared on a level (also once only, so no farming).
 func win_reward() -> int:
+	var medal := _medal_key()
+	if medal != "":
+		return 0 if CardCollection.is_beaten(medal) else REPLAY_REWARD
 	if _level_key == "custom" or CardCollection.is_beaten(_level_key):
 		return 0
 	return FAST_REWARD if run_time <= par_time() else WIN_REWARD
+
+
+## The save key for a Hard or Scramble replay's medal ("hard:seed7"), or "" for other levels.
+func _medal_key() -> String:
+	return "%s:%s" % [_replay_mode, _level_key] if _replay_mode in ["hard", "scramble"] else ""
 
 
 ## A fast run: start to goal in under 1.5× the time it takes to just run that distance
@@ -566,4 +586,5 @@ func _setup_web_bridge() -> void:
 func _on_js_load_level(args: Array) -> void:
 	if args.size() > 0:
 		_level_key = "custom"
+		_replay_mode = ""
 		load_level_text(str(args[0]))
