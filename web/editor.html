@@ -333,6 +333,7 @@ button:disabled { opacity: 0.4; }
     { ch: 'S', label: 'Spike square' },
     { ch: 'V', label: 'Up-down spikes' },
     { ch: 'e', label: 'Bad Block' },
+    { ch: 'k', label: 'Hard Bad Block' },
     { ch: 'T', label: 'Spiked-top platform' },
     { ch: 'B', label: 'Spiked-bottom platform' },
     { ch: '1', label: 'Red warp' },
@@ -368,7 +369,7 @@ button:disabled { opacity: 0.4; }
     while (src.length < MIN_ROWS) src.unshift('');
     for (const line of src) {
       const row = [];
-      for (let x = 0; x < width; x++) row.push(line[x] && '.#=RWPGHSV123^TBDQJLKEIFZUOYNhgwbspAMXC*e@'.includes(line[x]) ? line[x] : '.');
+      for (let x = 0; x < width; x++) row.push(line[x] && '.#=RWPGHSV123^TBDQJLKEIFZUOYNhgwbspAMXC*ek@'.includes(line[x]) ? line[x] : '.');
       rows.push(row);
     }
     return rows;
@@ -510,11 +511,16 @@ button:disabled { opacity: 0.4; }
         const sy = top ? by - k * 3 : by + t;
         g.fillRect(cx, top ? sy + k : sy, k * 3, k * 2); g.fillRect(cx + k, top ? sy - k : sy + k * 2, k, k * 2);
       }
-    } else if (ch === 'e') {
+    } else if (ch === 'e' || ch === 'k') {
       // Bad Block: red square with angry eyes, standing on the floor of its cell.
-      const b = s * 0.8, o = (s - b) / 2;
-      g.fillStyle = '#b8323a'; g.fillRect(x + o, y + s - b, b, b);
-      g.fillStyle = '#e5484d'; g.fillRect(x + o, y + s - b, b, b * 0.18);
+      // Hard Bad Block (k): darker magenta with two white horns.
+      const b = s * 0.8, o = (s - b) / 2, hard = ch === 'k';
+      if (hard) {
+        g.fillStyle = '#eef1fa';
+        g.fillRect(x + o, y + s - b - s * 0.14, s * 0.12, s * 0.14); g.fillRect(x + s - o - s * 0.12, y + s - b - s * 0.14, s * 0.12, s * 0.14);
+      }
+      g.fillStyle = hard ? '#6e1a4a' : '#b8323a'; g.fillRect(x + o, y + s - b, b, b);
+      g.fillStyle = hard ? '#a8287a' : '#e5484d'; g.fillRect(x + o, y + s - b, b, b * 0.18);
       g.fillStyle = '#eef1fa'; g.fillRect(x + s * 0.3, y + s * 0.45, s * 0.16, s * 0.18); g.fillRect(x + s * 0.54, y + s * 0.45, s * 0.16, s * 0.18);
       g.fillStyle = '#1b2440'; g.fillRect(x + s * 0.36, y + s * 0.52, s * 0.07, s * 0.1); g.fillRect(x + s * 0.6, y + s * 0.52, s * 0.07, s * 0.1);
     } else if (ch === 'V') {

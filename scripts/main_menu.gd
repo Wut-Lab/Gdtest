@@ -10,6 +10,7 @@ extends Control
 ##   Shop:    3 cards on display for pixels, restocked every few wins
 ##   Buy:     one shop card up close, with what it does and Buy
 ##   Replay:  the Replay Room: up to 10 liked levels to play again (no rewards)
+##   Mode:    how to replay one: True, Hard or Scramble
 ##   Credits: who and what made the game, and the engine's license
 ## Options opens the same Options page as the pause menu.
 
@@ -18,7 +19,8 @@ signal options_pressed
 ## A Shop or Cards visit from town is over.
 signal closed
 ## Replay Room: play this liked level.
-signal replay_requested(seed_value: int)
+## mode: "true", "hard" or "scramble".
+signal replay_requested(seed_value: int, mode: String)
 
 const BUTTON_SIZE := Vector2(240, 44)
 const DIM := Color("a9b3d1")
@@ -49,6 +51,8 @@ var _buy: Button
 var _buy_sfx: AudioStreamPlayer
 var _replay_list: VBoxContainer
 var _replay_info: Label
+var _mode_title: Label
+var _mode_seed := 0
 
 
 func _ready() -> void:
@@ -219,6 +223,24 @@ func _ready() -> void:
 	replay_scroll.add_child(_replay_list)
 	_button(replay, "Back", _back_out)
 
+	var mode := _page("Mode")
+	_mode_title = _title("")
+	mode.add_child(_mode_title)
+	for m in [["True Replay", "true", "The level exactly as it was."],
+			["Hard Replay", "hard", "More Bad Blocks, and they're faster, horned and sharper-eyed."],
+			["Scramble Replay", "scramble", "Start and goal land in new random spots, at least half the level apart."]]:
+		var key: String = m[1]
+		_button(mode, m[0], func() -> void: replay_requested.emit(_mode_seed, key))
+		var d := Label.new()
+		d.text = m[2]
+		d.theme_type_variation = "SmallLabel"
+		d.add_theme_color_override("font_color", DIM)
+		d.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		d.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		d.custom_minimum_size = Vector2(300, 0)
+		mode.add_child(d)
+	_button(mode, "Back", _open_replay)
+
 	var buy := _page("Buy")
 	_buy_big = CardIcon.new()
 	_buy_big.card_scale = 4.0
@@ -270,6 +292,7 @@ func _ready() -> void:
 	panel.add_child(shop)
 	panel.add_child(buy)
 	panel.add_child(replay)
+	panel.add_child(mode)
 	panel.add_child(credits)
 	open()
 
@@ -286,7 +309,10 @@ func open(player_color := Color("ff6b5e")) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not visible or not event.is_action_pressed("ui_cancel"):
 		return
-	if _pages["Card"].visible:
+	if _pages["Mode"].visible:
+		get_viewport().set_input_as_handled()
+		_open_replay()
+	elif _pages["Card"].visible:
 		get_viewport().set_input_as_handled()
 		_open_collection()
 	elif _pages["Buy"].visible:
@@ -448,7 +474,10 @@ func _open_replay() -> void:
 		var play := Button.new()
 		play.text = "▶ Seed %d · %s" % [sv, shape]
 		play.custom_minimum_size = Vector2(250, 44)
-		play.pressed.connect(func() -> void: replay_requested.emit(sv))
+		play.pressed.connect(func() -> void:
+			_mode_seed = sv
+			_mode_title.text = "Seed %d" % sv
+			_show("Mode"))
 		row.add_child(play)
 		var remove := Button.new()
 		remove.text = "✕"

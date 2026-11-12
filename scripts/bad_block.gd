@@ -17,6 +17,8 @@ const PUPIL := Color("1b2440")
 const SIGHT := 320.0
 
 @export var speed := 70.0
+## Hard Bad Block (k, Hard Replay): faster, sees farther, darker with horns.
+@export var hard := false
 
 var _origin := Vector2.ZERO
 var _player: Node2D
@@ -32,6 +34,8 @@ var _squash := 0.0
 func _ready() -> void:
 	add_to_group("card_targets")
 	_origin = position
+	if hard:
+		speed *= 1.6
 	collision_layer = 4   # its own layer: the player passes into it instead of standing on it
 	collision_mask = 1
 	var col := CollisionShape2D.new()
@@ -102,7 +106,7 @@ func _physics_process(delta: float) -> void:
 	velocity.x = 0.0
 	if _player and _stun == 0.0 and is_on_floor():
 		var d := _player.global_position - global_position
-		if absf(d.x) < SIGHT and absf(d.y) < 96.0 and absf(d.x) > 2.0:
+		if absf(d.x) < SIGHT * (1.5 if hard else 1.0) and absf(d.y) < 96.0 and absf(d.x) > 2.0:
 			_dir = signf(d.x)
 			if _ground_ahead():
 				velocity.x = _dir * speed * (0.5 if _slow > 0.0 else 1.0)
@@ -142,9 +146,13 @@ func _check_player() -> void:
 
 func _draw() -> void:
 	var h := SIZE / 2.0
-	draw_rect(Rect2(-h, -h, SIZE, SIZE), BODY)
-	draw_rect(Rect2(-h, -h, SIZE, 5), TOP)
-	draw_rect(Rect2(-h, h - 4, SIZE, 4), SHADE)
+	if hard:
+		for sx in [-1.0, 1.0]:
+			draw_colored_polygon(PackedVector2Array([Vector2(sx * 11.0, -h), Vector2(sx * 4.0, -h),
+				Vector2(sx * 12.0, -h - 8.0)]), Color("eef1fa"))
+	draw_rect(Rect2(-h, -h, SIZE, SIZE), Color("6e1a4a") if hard else BODY)
+	draw_rect(Rect2(-h, -h, SIZE, 5), Color("a8287a") if hard else TOP)
+	draw_rect(Rect2(-h, h - 4, SIZE, 4), Color("3f0f2b") if hard else SHADE)
 	var ex := _dir * 3.0
 	if _stun > 0.0:
 		draw_rect(Rect2(ex - 7.0, -3.0, 5.0, 2.0), EYES)

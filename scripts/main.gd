@@ -174,13 +174,25 @@ func play_main_level() -> void:
 
 
 ## A random level from a seed; a seed below 1 picks a new one.
-func play_random_level(s: int) -> void:
-	_came_from = "dungeon"
+## mode: "" (a dungeon level), or a Replay Room mode: "true", "hard" or "scramble".
+func play_random_level(s: int, mode := "") -> void:
+	_came_from = "replay" if mode != "" else "dungeon"
 	seed_value = s if s > 0 else LevelGen.random_seed()
 	_level_key = "seed%d" % seed_value
 	hud.set_seed(seed_value)
-	load_level_text(LevelGen.generate(seed_value))
-	if LevelGen.is_vertical(seed_value):
+	var text := LevelGen.generate(seed_value)
+	if mode == "hard":
+		text = LevelRemix.hard(text, seed_value)
+	elif mode == "scramble":
+		var rng := RandomNumberGenerator.new()
+		rng.randomize()
+		text = LevelRemix.scramble(text, rng)
+	load_level_text(text)
+	if mode == "hard":
+		hud.banner("Hard Replay!")
+	elif mode == "scramble":
+		hud.banner("Scramble Replay: find the goal!")
+	elif LevelGen.is_vertical(seed_value):
 		hud.banner("Climb to the top!")
 	elif LevelGen.is_diagonal(seed_value):
 		hud.banner("Climb up and across!")
@@ -489,10 +501,9 @@ func _on_like_pressed() -> void:
 
 
 ## Replay Room: play a liked level again (already beaten, so no rewards).
-func _play_replay(s: int) -> void:
+func _play_replay(s: int, mode: String) -> void:
 	hud.main_menu.hide()
-	play_random_level(s)
-	_came_from = "replay"
+	play_random_level(s, mode)
 
 
 func _show_abilities() -> void:

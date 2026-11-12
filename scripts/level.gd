@@ -33,6 +33,8 @@ signal door_near(kind: String, near: bool)
 signal checkpoint_reached(spot: Vector2)
 
 const T := 32
+## Bad Blocks marked k in the map (Hard Replay).
+var _hard_cells := {}
 const ATLAS_GROUND_TOP := Vector2i(0, 0)
 const ATLAS_GROUND_FILL := Vector2i(1, 0)
 const ATLAS_PLATFORM := Vector2i(2, 0)
@@ -113,6 +115,7 @@ func load_map_text(text: String) -> void:
 	var vspikes: Array[Vector2i] = []
 	var platforms := {}   # cell -> spikes on top?
 	var bad_blocks: Array[Vector2i] = []
+	_hard_cells.clear()
 	var doors := {}   # cell -> door character
 	var checkpoints: Array[Vector2i] = []
 	var lines := text.replace("\r", "").split("\n")
@@ -139,8 +142,10 @@ func load_map_text(text: String) -> void:
 					pixel_cells.append(Vector2i(x, y))
 				"V":
 					vspikes.append(Vector2i(x, y))
-				"e":
+				"e", "k":
 					bad_blocks.append(Vector2i(x, y))
+					if ch == "k":
+						_hard_cells[Vector2i(x, y)] = true
 				"@":
 					checkpoints.append(Vector2i(x, y))
 				"!", "$", "&", "%":
@@ -228,6 +233,7 @@ func _place_spikes(cells: Array[Vector2i], vertical_cells: Array[Vector2i], plat
 		_obstacles.add_child(s)
 	for cell in bad_blocks:
 		var e := BadBlock.new()
+		e.hard = _hard_cells.has(cell)
 		e.position = Vector2(cell.x * T + T / 2.0, (cell.y + 1) * T - BadBlock.SIZE / 2.0)
 		e.hurt_player.connect(func(push: Vector2) -> void: player_hurt.emit(push))
 		e.broken.connect(func(pos: Vector2) -> void: obstacle_broken.emit(pos, "bad_block"))
