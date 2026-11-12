@@ -11,6 +11,8 @@ extends RefCounted
 ##   - Wide pits get a floating platform, a moving platform or a spike square to ride across,
 ##     or a teleporter pair to warp over them.
 ##   - At most 2 extra hearts per level.
+##   - Bad Blocks (e) stand at the far end of some landing runs of 4+ tiles, at most 3 a level,
+##     so there's room to see them coming and jump on them.
 ##   - 1–3 pixels float over gaps, 2 rows above the higher edge, in the jump's arc.
 ##     Not over the teleporter pits, which are too wide to jump.
 ##
@@ -25,6 +27,7 @@ const ROWS := 17
 const TOP_MIN := 9        # highest ground row
 const TOP_MAX := 15       # lowest ground row (row 16 is always fill)
 const MAX_HEARTS := 2
+const MAX_BAD_BLOCKS := 3
 ## Chance a level has a treasure chest, up on a floating platform off the main path.
 const CHEST_CHANCE := 0.2
 
@@ -137,6 +140,9 @@ static func _landing(cols: Array, st: Dictionary, rng: RandomNumberGenerator) ->
 	if st.hearts < MAX_HEARTS and w >= 4 and rng.randf() < 0.08:
 		cols[x + 1][h - 3] = "H"
 		st.hearts += 1
+	if st.get("bad", 0) < MAX_BAD_BLOCKS and w >= 4 and rng.randf() < 0.3:
+		cols[x + w - 1][h - 1] = "e"
+		st.bad = st.get("bad", 0) + 1
 
 
 static func _piece(cols: Array, st: Dictionary, rng: RandomNumberGenerator, piece: String) -> void:

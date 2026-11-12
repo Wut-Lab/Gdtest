@@ -2,7 +2,8 @@ class_name MainMenu
 extends Control
 ## The title screen, shown when the game starts and after leaving a run.
 ##   Main:    the player, the game's name, the save file in use, Play, Cards, Options, Credits
-##   Files:   3 save files to pick from (each has its own cards); Erase starts one over
+##   Files:   3 save files to pick from (each has its own cards); Delete starts one over,
+##            after an "Are you sure?" check
 ##   Cards:   the card collection: every card by type, locked ones as silhouettes
 ##   Card:    one card up close, with what it does and Equip / Unequip
 ##   Shop:    3 cards on display for pixels, restocked every few wins
@@ -221,7 +222,11 @@ func _ready() -> void:
 		row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		var pick := Button.new()
 		pick.custom_minimum_size = Vector2(250, 56)
-		pick.pressed.connect(_pick_file.bind(n))
+		pick.pressed.connect(func() -> void:
+			if _erase_buttons[n - 1].get_meta("armed", false):
+				_update_file_row(n)   # tapping the file while asking cancels the delete
+			else:
+				_pick_file(n))
 		row.add_child(pick)
 		var erase := Button.new()
 		erase.custom_minimum_size = Vector2(92, 56)
@@ -282,7 +287,7 @@ func _update_file_row(n: int) -> void:
 			CardCollection.ALL.size(), CardCollection.file_pixels(n)]
 	else:
 		pick.text = "File %d%s\nNew game" % [n, mark]
-	erase.text = "Erase"
+	erase.text = "Delete"
 	erase.visible = used
 	erase.set_meta("armed", false)
 
@@ -294,11 +299,12 @@ func _pick_file(n: int) -> void:
 	play_pressed.emit()
 
 
-## Erase asks for a second tap before deleting a file's cards.
+## Delete asks "Are you sure?" first: tap Yes to delete the file, or tap the file to cancel.
 func _erase_file(n: int) -> void:
 	var erase := _erase_buttons[n - 1]
 	if not erase.get_meta("armed", false):
-		erase.text = "Sure?"
+		_file_buttons[n - 1].text = "Are you sure?\nDelete File %d for good? Tap here to keep it." % n
+		erase.text = "Yes"
 		erase.set_meta("armed", true)
 		return
 	CardCollection.erase_file(n)
