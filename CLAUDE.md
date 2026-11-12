@@ -28,3 +28,7 @@ them headless, publish the web build, and commit/push to `main`.
    `editor.html` with the engine files to the artifact URLs above (same `url` keeps the link).
    Test pages locally with a viewport meta wrapper; Godot needs `canvas:` set because the editor
    page has two canvases.
+
+## Ability cards
+Every new or changed card also goes on the blueprint (https://claude.ai/artifact/5cGycwN3TVXU54HniGTReQ,
+Ability Cards tab, db collection `tab1`: title, ctype, status, drop, upgrade, details).
