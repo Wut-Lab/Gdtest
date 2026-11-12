@@ -310,7 +310,7 @@ func _on_pixel_collected(index: int) -> void:
 
 ## A chest holds a card 20% of the time (from the Chest Only cards; none yet), otherwise
 ## 2–10 pixels. A card this file already
-## owns turns into 1–2 pixels instead.
+## owns turns into DUPLICATE_PIXELS instead.
 func _on_chest_opened(index: int) -> void:
 	if _level_key != "custom":
 		CardCollection.mark_chest("%s:%d" % [_level_key, index])
@@ -340,6 +340,10 @@ func _on_obstacle_broken(pos: Vector2, kind: String) -> void:
 	CardFx.spawn(level, pos, "plus", 0.0, "+%d" % n)
 
 
+## A card you already own turns into this many pixels.
+const DUPLICATE_PIXELS := 2
+
+
 func _on_card_collected(ability: String) -> void:
 	# Found cards join the collection for good. A new one is equipped now if a slot is free.
 	if CardCollection.add(ability):
@@ -350,10 +354,9 @@ func _on_card_collected(ability: String) -> void:
 		else:
 			hud.toast("New card: %s! Added to your collection." % card_name)
 	elif _level_key != "custom":
-		var n := randi_range(1, 2)
-		CardCollection.add_pixels(n)
+		CardCollection.add_pixels(DUPLICATE_PIXELS)
 		hud.set_pixels(CardCollection.pixels)
-		hud.toast("Duplicate %s: +%d pixels" % [AbilityCard.NAMES[ability], n])
+		hud.toast("Duplicate %s: +%d pixels" % [AbilityCard.NAMES[ability], DUPLICATE_PIXELS])
 	_show_abilities()
 
 
