@@ -14,18 +14,18 @@ const STARTER := "heart_box"
 const ALL := ["dash", "pound", "double_jump", "glide", "quick", "tele_hop", "high_jump", "phase_jump", "shockwave", "stun_landing", "grip_and_go", "lucky_charm", "bounce_house", "wall_cling", "brick_drop", "slow_burst", "portion_booster", "air_brake", "momentum", "heart_box"]
 
 ## Where each card can come from (its drop group, as on the blueprint):
-##   shop = Shop Only, find = Find Only (chests), drop = Drop Only, level = Find and Drop
-##   (anything earned in levels, never sold), all = Shop, Find and Drop, starter = only the
-##   card every new save file starts with. Cards not listed are "all".
+##   shop = Shop Only, drop = Drop Only (earned in levels, never sold), chest = Chest Only,
+##   both = Shop and Drop, starter = only the card every new save file starts with.
+## No cards are in chests yet, so chests give pixels. Cards not listed are "both".
 const DROP_GROUPS := {
-	"dash": "level", "pound": "shop", "shockwave": "level", "stun_landing": "shop",
-	"brick_drop": "all",
-	"double_jump": "shop", "glide": "level", "high_jump": "shop", "phase_jump": "level",
-	"wall_cling": "all",
-	"quick": "shop", "tele_hop": "level", "air_brake": "level", "grip_and_go": "shop",
-	"momentum": "all",
-	"heart_box": "starter", "lucky_charm": "shop", "bounce_house": "shop", "slow_burst": "level",
-	"portion_booster": "level",
+	"dash": "drop", "pound": "shop", "shockwave": "drop", "stun_landing": "shop",
+	"brick_drop": "both",
+	"double_jump": "shop", "glide": "drop", "high_jump": "shop", "phase_jump": "drop",
+	"wall_cling": "both",
+	"quick": "shop", "tele_hop": "drop", "air_brake": "drop", "grip_and_go": "shop",
+	"momentum": "both",
+	"heart_box": "starter", "lucky_charm": "shop", "bounce_house": "shop", "slow_burst": "drop",
+	"portion_booster": "drop",
 }
 ## The shop: every card costs the same for now, 3 on display, new stock every 3 wins.
 const PRICE := 30
@@ -114,14 +114,14 @@ static func mark_chest(key: String) -> void:
 
 
 static func drop_group(ability: String) -> String:
-	return DROP_GROUPS.get(ability, "all")
+	return DROP_GROUPS.get(ability, "both")
 
 
-## Cards that can come from a source ("shop", "find" or "drop").
+## Cards that can come from a source ("shop", "drop" or "chest").
 static func pool(source: String) -> Array:
 	return ALL.filter(func(a: String) -> bool:
 		var g := drop_group(a)
-		return g == source or g == "all" or (g == "level" and source in ["find", "drop"]))
+		return g == source or (g == "both" and source in ["shop", "drop"]))
 
 
 ## The shop's cards, stocking it first if it's empty. Cards already owned aren't stocked.

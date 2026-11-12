@@ -304,12 +304,14 @@ func _on_pixel_collected(index: int) -> void:
 	hud.set_pixels(CardCollection.pixels)
 
 
-## A chest holds a card 20% of the time, otherwise 2–10 pixels. A card this file already
+## A chest holds a card 20% of the time (from the Chest Only cards; none yet), otherwise
+## 2–10 pixels. A card this file already
 ## owns turns into 1–2 pixels instead.
 func _on_chest_opened(index: int) -> void:
 	if _level_key != "custom":
 		CardCollection.mark_chest("%s:%d" % [_level_key, index])
-	var card: String = CardCollection.pool("find").pick_random() if randf() < 0.2 else ""
+	var chest_cards := CardCollection.pool("chest")
+	var card: String = chest_cards.pick_random() if randf() < 0.2 and not chest_cards.is_empty() else ""
 	if card != "":
 		_on_card_collected(card)
 	else:
