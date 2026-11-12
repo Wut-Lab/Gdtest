@@ -2,17 +2,17 @@ class_name AbilityCard
 extends Area2D
 ## An ability card floating in the level. Touch it to gain its ability for this run.
 ##   D = Dash, Q = Ground Pound, J = Double Jump, L = Glide, K = Quick, E = Tele-hop,
-##   Z = Shockwave, U = Stunning Landing, A = Air Brake, M = Momentum, X = Heart Box (in a text map)
+##   I = High Jump, F = Phase Jump, Z = Shockwave, U = Stunning Landing, A = Air Brake, M = Momentum, X = Heart Box (in a text map)
 
 signal collected(ability: String)
 
 const LETTERS := {"D": "dash", "Q": "pound", "J": "double_jump", "L": "glide", "K": "quick",
-	"E": "tele_hop", "Z": "shockwave", "U": "stun_landing", "A": "air_brake", "M": "momentum", "X": "heart_box"}
+	"E": "tele_hop", "I": "high_jump", "F": "phase_jump", "Z": "shockwave", "U": "stun_landing", "A": "air_brake", "M": "momentum", "X": "heart_box"}
 const NAMES := {"dash": "Dash", "pound": "Ground Pound", "double_jump": "Double Jump", "glide": "Glide",
-	"quick": "Quick", "tele_hop": "Tele-hop", "shockwave": "Shockwave", "stun_landing": "Stunning Landing", "air_brake": "Air Brake", "momentum": "Momentum", "heart_box": "Heart Box"}
+	"quick": "Quick", "tele_hop": "Tele-hop", "high_jump": "High Jump", "phase_jump": "Phase Jump", "shockwave": "Shockwave", "stun_landing": "Stunning Landing", "air_brake": "Air Brake", "momentum": "Momentum", "heart_box": "Heart Box"}
 ## Card types, color coded: attacks are red, jumps are blue, movement is yellow, misc is gray.
 const TYPES := {"dash": "attack", "pound": "attack", "double_jump": "jump", "glide": "jump",
-	"quick": "movement", "tele_hop": "movement", "shockwave": "attack", "stun_landing": "attack", "air_brake": "movement", "momentum": "movement", "heart_box": "misc"}
+	"quick": "movement", "tele_hop": "movement", "high_jump": "jump", "phase_jump": "jump", "shockwave": "attack", "stun_landing": "attack", "air_brake": "movement", "momentum": "movement", "heart_box": "misc"}
 const TYPE_NAMES := {"attack": "Attack card", "jump": "Jump card", "movement": "Movement card", "misc": "Misc card"}
 const TYPE_COLORS := {"attack": Color("e5484d"), "jump": Color("3d7be0"), "movement": Color("e0a400"),
 	"misc": Color("7d8597")}
@@ -29,6 +29,9 @@ const DESCRIPTIONS := {
 	"quick": "Passive: you run 25% faster while this card is equipped.",
 	"tele_hop": "Passive: when you come out of a teleporter, you hop straight up, half as high "
 		+ "as a full jump.",
+	"high_jump": "Passive: your jumps go 20% higher.",
+	"phase_jump": "Passive: at the top of every jump you phase out for a split second, and "
+		+ "nothing can hurt you until you phase back in.",
 	"shockwave": "Passive: when you land a Ground Pound, a shockwave rolls along the floor and "
 		+ "pushes nearby spike squares and spiked platforms 2 tiles away. Needs Ground Pound; recharges in 2.5 seconds.",
 	"stun_landing": "Passive: land on a spike square or spiked platform, or within 1 tile of one, "
@@ -42,7 +45,7 @@ const DESCRIPTIONS := {
 const PAPER := Color("eef1fa")
 const EDGE := Color("1b2440")
 
-@export_enum("dash", "pound", "double_jump", "glide", "quick", "tele_hop", "shockwave", "stun_landing", "air_brake", "momentum", "heart_box") var ability := "dash"
+@export_enum("dash", "pound", "double_jump", "glide", "quick", "tele_hop", "high_jump", "phase_jump", "shockwave", "stun_landing", "air_brake", "momentum", "heart_box") var ability := "dash"
 
 var _t := 0.0
 
@@ -150,6 +153,21 @@ static func _draw_symbol(ci: CanvasItem, ability_name: String, o: Vector2, c: Co
 			ci.draw_rect(Rect2(o + Vector2(-8, 4), Vector2(7, b)), c)
 			ci.draw_rect(Rect2(o + Vector2(1, 6), Vector2(b, b)), c)
 			ci.draw_rect(Rect2(o + Vector2(5, 6), Vector2(b, b)), c)
+		"high_jump":
+			# A tall up arrow over a short bar.
+			ci.draw_rect(Rect2(o + Vector2(-1, -5), Vector2(b, 12)), c)
+			for i in 3:
+				var w := (1 + i * 2) * b
+				ci.draw_rect(Rect2(o + Vector2(-w / 2.0, -9 + i * b), Vector2(w, b)), c)
+			ci.draw_rect(Rect2(o + Vector2(-6, 9), Vector2(12, b)), c)
+		"phase_jump":
+			# A solid block with a faded copy of it above, at the top of its arc.
+			ci.draw_rect(Rect2(o + Vector2(-3, 3), Vector2(6, 6)), c)
+			ci.draw_rect(Rect2(o + Vector2(-3, -9), Vector2(6, 6)), Color(c, 0.4))
+			ci.draw_rect(Rect2(o + Vector2(-7, -5), Vector2(b, b)), c)
+			ci.draw_rect(Rect2(o + Vector2(5, -5), Vector2(b, b)), c)
+			ci.draw_rect(Rect2(o + Vector2(-9, -1), Vector2(b, b)), c)
+			ci.draw_rect(Rect2(o + Vector2(7, -1), Vector2(b, b)), c)
 		"shockwave":
 			# A block on the ground with waves rolling out both ways.
 			ci.draw_rect(Rect2(o + Vector2(-3, -6), Vector2(6, 6)), c)

@@ -306,6 +306,8 @@ button:disabled { opacity: 0.4; }
     { ch: 'L', label: 'Glide card' },
     { ch: 'K', label: 'Quick card' },
     { ch: 'E', label: 'Tele-hop card' },
+    { ch: 'I', label: 'High Jump card' },
+    { ch: 'F', label: 'Phase Jump card' },
     { ch: 'Z', label: 'Shockwave card' },
     { ch: 'U', label: 'Stun Landing card' },
     { ch: 'A', label: 'Air Brake card' },
@@ -347,7 +349,7 @@ button:disabled { opacity: 0.4; }
     while (src.length < ROWS) src.unshift('');
     for (const line of src) {
       const row = [];
-      for (let x = 0; x < width; x++) row.push(line[x] && '.#=RWPGHSV123^TBDQJLKEZUAMXC*'.includes(line[x]) ? line[x] : '.');
+      for (let x = 0; x < width; x++) row.push(line[x] && '.#=RWPGHSV123^TBDQJLKEIFZUAMXC*'.includes(line[x]) ? line[x] : '.');
       rows.push(row);
     }
     return rows;
@@ -384,7 +386,7 @@ button:disabled { opacity: 0.4; }
   const ctx = canvas.getContext('2d');
   let cell = 28;
 
-  const CARD = { D: '#e5484d', Q: '#e5484d', J: '#3d7be0', L: '#3d7be0', K: '#e0a400', E: '#e0a400', Z: '#e5484d', U: '#e5484d', A: '#e0a400', M: '#e0a400', X: '#7d8597' };   // red attacks, blue jumps, yellow movement, gray misc
+  const CARD = { D: '#e5484d', Q: '#e5484d', J: '#3d7be0', L: '#3d7be0', K: '#e0a400', E: '#e0a400', I: '#3d7be0', F: '#3d7be0', Z: '#e5484d', U: '#e5484d', A: '#e0a400', M: '#e0a400', X: '#7d8597' };   // red attacks, blue jumps, yellow movement, gray misc
   function drawTile(g, ch, x, y, s, above) {
     if (ch === '#') {
       g.fillStyle = col.stone; g.fillRect(x, y, s, s);

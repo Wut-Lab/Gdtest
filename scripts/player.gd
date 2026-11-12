@@ -70,6 +70,11 @@ const SIZE := 24.0
 @export var shockwave_cooldown := 2.5
 ## Stunning Landing: landing on or within 1 tile of a spike square freezes it this long.
 @export var stun_time := 3.0
+## High Jump: jumps go this many times as high (speed scales by the square root).
+@export var high_jump := 1.2
+## Phase Jump: you're phased out while your rise or fall speed is under this share of a jump's
+## launch speed: the apex plus 5% of the jump's air time on each side.
+@export var phase_window := 0.1
 
 @export_group("Look")
 @export var color := Color("ff6b5e")
@@ -83,6 +88,9 @@ var abilities: Array[String] = []
 var fall_limit_y := INF
 ## Seconds of blinking after being hurt, when nothing can hurt you again.
 var invincible := 0.0
+## Phase Jump card: phased out (nothing can hurt you) right now.
+var phased := false
+var _phase_look := 1.0   # how solid you're drawn: dips when phasing, then fades back in
 
 var _coyote := 0.0
 var _jump_buffer := 0.0
@@ -142,6 +150,8 @@ func reset_to(pos: Vector2) -> void:
 	_pounding = false
 	_air_jump = true
 	invincible = 0.0
+	phased = false
+	_phase_look = 1.0
 	camera.reset_smoothing()
 
 
@@ -181,6 +191,16 @@ func _run_speed() -> float:
 	return s
 
 
+## Launch speed of a jump: High Jump makes it 20% higher.
+func _jump_speed() -> float:
+	return jump_velocity * (sqrt(high_jump) if "high_jump" in abilities else 1.0)
+
+
+## Nothing can hurt you: blinking after a hit, or phased out by Phase Jump.
+func is_safe() -> bool:
+	return invincible > 0.0 or phased
+
+
 func is_dashing() -> bool:
 	return _dash > 0.0
 
@@ -197,6 +217,9 @@ func get_squash() -> Vector2:
 func _physics_process(delta: float) -> void:
 	_squash = _squash.lerp(Vector2.ONE, 1.0 - exp(-squash_recovery * delta))
 	invincible = maxf(invincible - delta, 0.0)
+	phased = "phase_jump" in abilities and not is_on_floor() and not _pounding \
+			and absf(velocity.y) <= phase_window * jump_velocity
+	_phase_look = move_toward(_phase_look, 0.25 if phased else 1.0, delta * (12.0 if phased else 3.0))
 	queue_redraw()
 	if not active:
 		return
@@ -227,7 +250,7 @@ func _physics_process(delta: float) -> void:
 	else:
 		_jump_buffer = maxf(_jump_buffer - delta, 0.0)
 	if _jump_buffer > 0.0 and _coyote > 0.0:
-		velocity.y = -jump_velocity
+		velocity.y = -_jump_speed()
 		_jump_buffer = 0.0
 		_coyote = 0.0
 		_bouncing = false
@@ -237,7 +260,7 @@ func _physics_process(delta: float) -> void:
 	elif _jump_buffer > 0.0 and not on_floor and _air_jump and "double_jump" in abilities \
 			and not _pounding and _stun == 0.0 and Input.is_action_just_pressed("jump"):
 		# Double jump card: one extra jump in the air, 75% as high as a full jump.
-		velocity.y = -jump_velocity * 0.866   # sqrt(0.75): 75% of a full jump's height
+		velocity.y = -_jump_speed() * 0.866   # sqrt(0.75): 75% of a full jump's height
 		_air_jump = false
 		_jump_buffer = 0.0
 		_bouncing = false
@@ -453,10 +476,17 @@ func _draw() -> void:
 	# Squash and stretch, anchored at the feet.
 	var s := Vector2(SIZE * _squash.x, SIZE * _squash.y)
 	var rect := Rect2(Vector2(-s.x / 2.0, SIZE / 2.0 - s.y), s)
-	draw_rect(rect, color)
+	if _phase_look < 0.99:
+		# Phase Jump: see-through, with a shimmering outline drifting off you.
+		var k := 1.0 - _phase_look
+		var wob := sin(Time.get_ticks_msec() * 0.03) * 3.0 * k
+		draw_rect(rect.grow(2.0 + wob), Color(0.62, 0.95, 1.0, 0.6 * k), false, 2.0)
+		draw_rect(rect.grow(5.0 - wob), Color(0.62, 0.95, 1.0, 0.25 * k), false, 2.0)
+	draw_rect(rect, Color(color, _phase_look))
 	var ex := _face * 4.0
 	var ey := rect.position.y + s.y * 0.3
 	# Dark eyes on light colors, light eyes on dark colors, so they always show.
 	var eyes := eye_color if color.get_luminance() > 0.3 else Color("eef1fa")
+	eyes.a = _phase_look
 	draw_rect(Rect2(ex - 5.0, ey, 3.0, 5.0), eyes)
 	draw_rect(Rect2(ex + 2.0, ey, 3.0, 5.0), eyes)
