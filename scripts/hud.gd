@@ -9,6 +9,10 @@ signal main_level_requested
 signal random_level_requested(seed_value: int)
 signal pause_requested
 signal player_color_changed(color: Color)
+## Town: go back to town (from the dungeon gate, a win or running out of hearts).
+signal town_requested
+## Town: the Enter button by a building's door.
+signal enter_pressed
 
 @onready var time_label: Label = %TimeLabel
 @onready var falls_label: Label = %FallsLabel
@@ -23,6 +27,7 @@ signal player_color_changed(color: Color)
 @onready var seed_label: Label = %SeedLabel
 @onready var cards_label: Label = %CardsLabel
 var pixel_counter: PixelCounter
+var enter_button: Button
 @onready var out_menu: Control = %OutMenu
 @onready var out_label: Label = %OutLabel
 @onready var retry_button: Button = %RetryButton
@@ -53,6 +58,28 @@ func _ready() -> void:
 	pixel_counter.alignment = BoxContainer.ALIGNMENT_END
 	add_child(pixel_counter)
 	move_child(pixel_counter, 0)   # under the menus
+	# Town: an Enter button that shows up while standing at a building's door.
+	enter_button = Button.new()
+	enter_button.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	enter_button.offset_left = -130.0
+	enter_button.offset_right = 130.0
+	enter_button.offset_top = 64.0
+	enter_button.offset_bottom = 112.0
+	enter_button.focus_mode = Control.FOCUS_NONE
+	enter_button.hide()
+	enter_button.pressed.connect(enter_pressed.emit)
+	$Root.add_child(enter_button)
+	$Root.move_child(enter_button, pixel_counter.get_index() + 1)
+	# The start screen is now the dungeon gate, reached from town.
+	start_menu.get_node("Panel/Box/Title").text = "The Dungeon"
+	play_button.text = "Training level"
+	for menu in [start_menu, win_menu, out_menu]:
+		var town := Button.new()
+		town.text = "Back to Town"
+		town.custom_minimum_size = Vector2(200, 44)
+		town.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		town.pressed.connect(town_requested.emit)
+		menu.get_node("Panel/Box").add_child(town)
 	play_button.pressed.connect(main_level_requested.emit)
 	random_button.pressed.connect(func() -> void:
 		random_level_requested.emit(seed_edit.text.strip_edges().to_int()))
@@ -82,6 +109,22 @@ func _on_color_input() -> void:
 	color_wheel.value = brightness.value
 	color_preview.color = c
 	player_color_changed.emit(c)
+
+
+## Town hides the run's timer, falls, hearts and seed.
+func set_town_mode(on: bool) -> void:
+	for n in [time_label, falls_label, hearts_display]:
+		n.visible = not on
+	if on:
+		seed_label.hide()
+		cards_label.hide()
+	enter_button.hide()
+
+
+## Shows the Enter button for a building ("" hides it).
+func show_enter(place: String) -> void:
+	enter_button.text = "Enter %s" % place
+	enter_button.visible = place != ""
 
 
 ## The title screen, with the player's square in their color.

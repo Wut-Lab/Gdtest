@@ -26,6 +26,7 @@ var _sound_toggle: Button
 var _preview: AudioStreamPlayer
 var _last_preview := 0
 var _from_main := false
+var _quit: Button
 var _preview_square: PlayerPreview
 var _slots: Array[CardIcon] = []
 var _slot_names: Array[Label] = []
@@ -56,7 +57,7 @@ func _ready() -> void:
 	_button(paused, "Continue", func() -> void: continue_pressed.emit())
 	_button(paused, "Cards", func() -> void: _show("Cards"))
 	_button(paused, "Options", func() -> void: _show("Options"))
-	_button(paused, "Back", func() -> void: quit_pressed.emit())
+	_quit = _button(paused, "Back to Town", func() -> void: quit_pressed.emit())
 
 	var cards := _page_box("Cards")
 	_preview_square = PlayerPreview.new()
@@ -137,6 +138,11 @@ func _ready() -> void:
 	_preview.volume_db = -8.0
 	add_child(_preview)
 	hide()
+
+
+## The quit button's label: "Back to Town" in the dungeon, "Main Menu" in town.
+func set_quit_text(text: String) -> void:
+	_quit.text = text
 
 
 func open() -> void:

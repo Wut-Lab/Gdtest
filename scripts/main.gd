@@ -3,7 +3,10 @@ extends Node
 ## You start with 2 hearts (3 with the Heart Box card); each fall or spike hit costs one, and losing the last ends the run.
 ## In a web build it also lets the page send a level in (used by the level editor).
 
-enum State { READY, PLAY, WON, OUT }
+## TOWN: walking around Square Hub Town. MENU: inside a town building (shop, cards, dungeon gate).
+enum State { READY, PLAY, WON, OUT, TOWN, MENU }
+
+const TOWN_MAP := "res://levels/town.txt"
 
 const SETTINGS_PATH := "user://settings.cfg"
 const START_HEARTS := 2
@@ -25,6 +28,8 @@ var seed_value := 0
 ## Names the level for the save file's opened-chest list: "main", "seed123" or "custom".
 var _level_key := "main"
 var player: Player
+## The town building the player is standing at ("" = none).
+var _near_door := ""
 
 var _js_load_level: JavaScriptObject
 
@@ -49,6 +54,10 @@ func _ready() -> void:
 	level.obstacle_broken.connect(_on_obstacle_broken)
 	level.pixel_collected.connect(_on_pixel_collected)
 	level.player_hurt.connect(_on_player_hurt)
+	level.door_near.connect(_on_door_near)
+	hud.enter_pressed.connect(_enter_door)
+	hud.town_requested.connect(enter_town.bind("dungeon"))
+	hud.main_menu.closed.connect(_leave_building)
 	hud.play_requested.connect(new_run)
 	hud.main_level_requested.connect(play_main_level)
 	hud.random_level_requested.connect(play_random_level)
@@ -66,7 +75,7 @@ func _ready() -> void:
 	hud.set_hearts(hearts, _start_hearts())
 	hud.show_main_menu(player.color)
 	$TouchControls.hide()   # touch controls only while playing, so menus get the whole screen
-	hud.main_menu.play_pressed.connect(hud.show_start)
+	hud.main_menu.play_pressed.connect(enter_town)
 	hud.main_menu.options_pressed.connect(hud.pause_menu.open_options)
 	get_viewport().size_changed.connect(_on_screen_changed)
 	_on_screen_changed()
@@ -159,7 +168,79 @@ func play_random_level(s: int) -> void:
 	load_level_text(LevelGen.generate(seed_value))
 
 
+## Square Hub Town: walk around and go into its buildings. Coming back from the dungeon puts
+## you at its gate.
+func enter_town(at_door := "") -> void:
+	state = State.TOWN
+	seed_value = 0
+	_level_key = "town"
+	_near_door = ""
+	hud.set_seed(0)
+	level.load_map_text(FileAccess.get_file_as_string(TOWN_MAP))
+	_sync_chests()
+	_fit_to_level()
+	get_tree().paused = false
+	hud.tuning_panel.hide()
+	var spot := level.start.position
+	for d in level.get_doors():
+		if d.kind == at_door:
+			spot = d.position + Vector2(0, -12)
+	player.reset_to(spot)
+	player.active = true
+	player.abilities.assign(CardCollection.equipped)
+	hearts = _start_hearts()
+	_show_abilities()
+	hud.set_pixels(CardCollection.pixels)
+	hud.hide_menus()
+	hud.set_town_mode(true)
+	hud.pause_menu.set_quit_text("Main Menu")
+	$TouchControls.show()
+	hud.pause_button.show()
+	if at_door == "":
+		hud.banner("Square Hub Town")
+
+
+func _on_door_near(kind: String, near: bool) -> void:
+	if near:
+		_near_door = kind
+	elif _near_door == kind:
+		_near_door = ""
+	hud.show_enter(TownDoor.NAMES[_near_door] if _near_door != "" and state == State.TOWN else "")
+
+
+## Go into the building you're standing at.
+func _enter_door() -> void:
+	if state != State.TOWN or _near_door == "" or get_tree().paused:
+		return
+	state = State.MENU
+	player.active = false
+	player.velocity = Vector2.ZERO
+	$TouchControls.hide()
+	hud.pause_button.hide()
+	hud.show_enter("")
+	match _near_door:
+		"dungeon": hud.show_start()
+		"shop": hud.main_menu.open_page("Shop")
+		"cards": hud.main_menu.open_page("Cards")
+
+
+## Back out of a shop or card hall visit.
+func _leave_building() -> void:
+	if state != State.MENU:
+		return
+	state = State.TOWN
+	player.active = true
+	player.abilities.assign(CardCollection.equipped)   # equips may have changed
+	_show_abilities()
+	hud.set_pixels(CardCollection.pixels)
+	$TouchControls.show()
+	hud.pause_button.show()
+	hud.show_enter(TownDoor.NAMES[_near_door] if _near_door != "" else "")
+
+
 func new_run() -> void:
+	hud.set_town_mode(false)
+	hud.pause_menu.set_quit_text("Back to Town")
 	player.reset_to(level.start.position)
 	player.active = true
 	run_time = 0.0
@@ -184,7 +265,7 @@ func new_run() -> void:
 
 ## Pause the game and open the pause menu (Pause button, Esc or P).
 func pause() -> void:
-	if state != State.PLAY or get_tree().paused:
+	if state not in [State.PLAY, State.TOWN] or get_tree().paused:
 		return
 	get_tree().paused = true
 	hud.pause_button.hide()
@@ -197,31 +278,39 @@ func pause() -> void:
 func resume() -> void:
 	hud.pause_menu.hide()
 	get_tree().paused = false
+	if state == State.TOWN:
+		player.abilities.assign(CardCollection.equipped)   # in town, equips can change from Pause > Cards
+		_show_abilities()
 	hud.pause_button.show()
 	hud.tune_button.show()
 	$TouchControls.show()
 	get_viewport().gui_release_focus()
 
 
-## Leave the run and go back to the start screen.
+## Pause menu's quit: from the dungeon back to town, from town to the main menu.
 func go_to_start() -> void:
 	resume()
+	if state != State.TOWN:
+		enter_town("dungeon")
+		return
 	state = State.READY
 	player.active = false
 	player.reset_to(level.start.position)
 	hud.pause_button.hide()
+	hud.show_enter("")
 	hud.show_main_menu(player.color)
 	$TouchControls.hide()   # touch controls only while playing, so menus get the whole screen
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("pause") and state == State.PLAY and not get_tree().paused:
+	if event.is_action_pressed("pause") and state in [State.PLAY, State.TOWN] and not get_tree().paused:
 		pause()
-	elif event.is_action_pressed("restart") and not get_tree().paused:
+	elif event.is_action_pressed("restart") and state in [State.PLAY, State.WON, State.OUT] \
+			and not get_tree().paused:
 		new_run()
-	elif state == State.READY and (event.is_action_pressed("move_left")
-			or event.is_action_pressed("move_right") or event.is_action_pressed("jump")):
-		new_run()
+	elif state == State.TOWN and (event.is_action_pressed("ui_up")
+			or (event is InputEventKey and event.pressed and event.keycode == KEY_E)):
+		_enter_door()
 
 
 func _process(delta: float) -> void:

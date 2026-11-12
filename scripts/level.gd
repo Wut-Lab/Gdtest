@@ -16,6 +16,7 @@ extends Node2D
 ##   C  treasure chest (a card or some pixels, once per save file)
 ##   T  wide moving platform with spikes on top (3 tiles wide, centered on its cell)
 ##   B  wide moving platform with spikes underneath (ride on top)
+##   !  town: dungeon gate     $  town: shop     &  town: card hall
 
 signal goal_reached
 signal heart_collected
@@ -25,6 +26,8 @@ signal pixel_collected(index: int)
 signal player_hurt(push: Vector2)
 ## A breakable obstacle or enemy was destroyed: kind is "spike" or "bad_block".
 signal obstacle_broken(pos: Vector2, kind: String)
+## The player walked up to (or away from) a town building's door.
+signal door_near(kind: String, near: bool)
 
 const T := 32
 const ATLAS_GROUND_TOP := Vector2i(0, 0)
@@ -45,6 +48,7 @@ var _pickups: Node2D
 var _obstacles: Node2D
 var _chests: Node2D
 var _pixels: Node2D
+var _doors: Node2D
 ## Main sets this: whether a heart can be picked up right now (false at full health).
 var heart_check := Callable()
 
@@ -77,6 +81,10 @@ func _ready() -> void:
 	_pixels = Node2D.new()
 	_pixels.name = "Pixels"
 	add_child(_pixels)
+	_doors = Node2D.new()
+	_doors.name = "Doors"
+	add_child(_doors)
+	move_child(_doors, 0)   # buildings behind everything else
 	if map_file != "":
 		load_map_text(FileAccess.get_file_as_string(map_file))
 	else:
@@ -98,6 +106,7 @@ func load_map_text(text: String) -> void:
 	var vspikes: Array[Vector2i] = []
 	var platforms := {}   # cell -> spikes on top?
 	var bad_blocks: Array[Vector2i] = []
+	var doors := {}   # cell -> door character
 	var lines := text.replace("\r", "").split("\n")
 	for y in lines.size():
 		var line: String = lines[y]
@@ -124,6 +133,8 @@ func load_map_text(text: String) -> void:
 					vspikes.append(Vector2i(x, y))
 				"e":
 					bad_blocks.append(Vector2i(x, y))
+				"!", "$", "&":
+					doors[Vector2i(x, y)] = ch
 				"T", "B":
 					platforms[Vector2i(x, y)] = ch == "T"
 				"1", "2", "3":
@@ -144,6 +155,7 @@ func load_map_text(text: String) -> void:
 		goal.hide()
 		goal.set_deferred("monitoring", false)
 	_place_teleporters(pads)
+	_place_doors(doors)
 	_place_chests(chests)
 	_place_pixels(pixel_cells)
 	_place_hearts(hearts, cards)
@@ -239,6 +251,19 @@ func _place_chests(cells: Array[Vector2i]) -> void:
 		_chests.add_child(c)
 
 
+## Town buildings stand on the floor of their cell.
+func _place_doors(doors: Dictionary) -> void:
+	for child in _doors.get_children():
+		_doors.remove_child(child)
+		child.queue_free()
+	for cell in doors:
+		var d := TownDoor.new()
+		d.kind = TownDoor.KINDS[doors[cell]]
+		d.position = Vector2(cell.x * T + T / 2.0, (cell.y + 1) * T)
+		d.near_changed.connect(func(door: TownDoor, near: bool) -> void: door_near.emit(door.kind, near))
+		_doors.add_child(d)
+
+
 func _place_pixels(cells: Array[Vector2i]) -> void:
 	for child in _pixels.get_children():
 		_pixels.remove_child(child)
@@ -252,6 +277,10 @@ func _place_pixels(cells: Array[Vector2i]) -> void:
 
 func get_pixels() -> Array[Node]:
 	return _pixels.get_children()
+
+
+func get_doors() -> Array[Node]:
+	return _doors.get_children()
 
 
 func get_chests() -> Array[Node]:

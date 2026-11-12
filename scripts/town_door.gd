@@ -1,0 +1,108 @@
+class_name TownDoor
+extends Area2D
+## A building's door in Square Hub Town: stand in front of it and press Enter (Up key or the
+## on-screen button) to go in. ! = the dungeon gate, $ = the shop, & = the card hall.
+## It sits on the floor of its cell; the building is drawn around it, 3 tiles wide.
+
+signal near_changed(door: TownDoor, near: bool)
+
+const KINDS := {"!": "dungeon", "$": "shop", "&": "cards"}
+const NAMES := {"dungeon": "the Dungeon", "shop": "the Shop", "cards": "the Card Hall"}
+const SIGNS := {"dungeon": "DUNGEON", "shop": "SHOP", "cards": "CARDS"}
+const EDGE := Color("1b2440")
+
+var kind := "shop"
+var _t := 0.0
+
+
+func _ready() -> void:
+	var col := CollisionShape2D.new()
+	var shape := RectangleShape2D.new()
+	shape.size = Vector2(40, 40)
+	col.shape = shape
+	col.position = Vector2(0, -20)
+	add_child(col)
+	body_entered.connect(func(b: Node2D) -> void: if b is Player: near_changed.emit(self, true))
+	body_exited.connect(func(b: Node2D) -> void: if b is Player: near_changed.emit(self, false))
+
+
+func _process(delta: float) -> void:
+	_t += delta
+	queue_redraw()
+
+
+func _draw() -> void:
+	match kind:
+		"dungeon": _draw_dungeon()
+		"shop": _draw_shop()
+		"cards": _draw_cards()
+	var font := ThemeDB.fallback_font
+	var text: String = SIGNS[kind]
+	var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
+	draw_string(font, Vector2(-w / 2.0, -98), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("eef1fa"))
+
+
+## A stone gatehouse with a dark arch and two flickering torches.
+func _draw_dungeon() -> void:
+	draw_rect(Rect2(-56, -128, 112, 128), EDGE)
+	draw_rect(Rect2(-54, -126, 108, 126), Color("6b7391"))
+	for row in 8:
+		for i in 4:
+			var x := -54.0 + i * 27.0 + (13.0 if row % 2 else 0.0)
+			draw_rect(Rect2(x, -126 + row * 16, 1, 16), Color("4a5070"))
+		draw_rect(Rect2(-54, -126 + row * 16, 108, 1), Color("4a5070"))
+	# Battlements.
+	for i in 4:
+		draw_rect(Rect2(-56 + i * 32, -140, 18, 14), EDGE)
+		draw_rect(Rect2(-54 + i * 32, -138, 14, 12), Color("6b7391"))
+	draw_rect(Rect2(-40, -112, 80, 22), Color("2a3150"))
+	# Arch.
+	draw_rect(Rect2(-22, -64, 44, 64), Color("0b0f1e"))
+	draw_rect(Rect2(-16, -72, 32, 8), Color("0b0f1e"))
+	for tx in [-38.0, 30.0]:
+		draw_rect(Rect2(tx, -52, 8, 14), Color("5a3d22"))
+		var f := 0.75 + sin(_t * 9.0 + tx) * 0.25
+		draw_rect(Rect2(tx - 1, -62 - 4 * f, 10, 10 * f), Color("ff9a3c"))
+		draw_rect(Rect2(tx + 2, -58 - 2 * f, 4, 5 * f), Color("ffe27a"))
+
+
+## A wooden shop with a striped awning and a pixel in the window.
+func _draw_shop() -> void:
+	draw_rect(Rect2(-50, -110, 100, 110), EDGE)
+	draw_rect(Rect2(-48, -108, 96, 108), Color("9c6b3f"))
+	for i in 6:
+		draw_rect(Rect2(-48, -100 + i * 18, 96, 1), Color("6e4626"))
+	draw_rect(Rect2(-40, -114, 80, 22), Color("2a3150"))
+	# Striped awning.
+	for i in 6:
+		draw_rect(Rect2(-54 + i * 18, -84, 18, 14), Color("e5484d") if i % 2 == 0 else Color("eef1fa"))
+	draw_rect(Rect2(-54, -70, 108, 3), EDGE)
+	# Window with a big pixel.
+	draw_rect(Rect2(14, -56, 28, 26), EDGE)
+	draw_rect(Rect2(16, -54, 24, 22), Color("2a3150"))
+	PixelCounter.draw_icon(self, Vector2(21, -50 + sin(_t * 2.0) * 1.5), 7.0)
+	# Door.
+	draw_rect(Rect2(-30, -56, 30, 56), EDGE)
+	draw_rect(Rect2(-28, -54, 26, 54), Color("6e4626"))
+	draw_rect(Rect2(-8, -30, 3, 3), Color("f2c230"))
+
+
+## A tall blue hall with a big card over the door.
+func _draw_cards() -> void:
+	draw_rect(Rect2(-50, -132, 100, 132), EDGE)
+	draw_rect(Rect2(-48, -130, 96, 130), Color("3d5aa8"))
+	for x in [-40.0, 32.0]:
+		draw_rect(Rect2(x, -130, 8, 130), Color("324a8c"))
+	draw_rect(Rect2(-40, -112, 80, 22), Color("2a3150"))
+	# Four card-type colors over the door.
+	var types := ["attack", "jump", "movement", "misc"]
+	for i in 4:
+		var c: Color = AbilityCard.TYPE_COLORS[types[i]]
+		var x := -34.0 + i * 18.0
+		var bob := sin(_t * 2.0 + i) * 1.5
+		draw_rect(Rect2(x, -84 + bob, 14, 18), c)
+		draw_rect(Rect2(x + 2, -82 + bob, 10, 10), Color("eef1fa"))
+	# Door.
+	draw_rect(Rect2(-18, -58, 36, 58), EDGE)
+	draw_rect(Rect2(-16, -56, 32, 56), Color("1f2d5c"))
+	draw_rect(Rect2(-1, -56, 2, 56), EDGE)

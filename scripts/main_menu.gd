@@ -1,7 +1,8 @@
 class_name MainMenu
 extends Control
 ## The title screen, shown when the game starts and after leaving a run.
-##   Main:    the player, the game's name, the save file in use, Play, Cards, Options, Credits
+##   Main:    the player, the game's name, the save file in use, Play, Options, Credits
+## Shop and Cards are opened from their buildings in town (open_page).
 ##   Files:   3 save files to pick from (each has its own cards); Delete starts one over,
 ##            after an "Are you sure?" check
 ##   Cards:   the card collection: every card by type, locked ones as silhouettes
@@ -13,6 +14,8 @@ extends Control
 
 signal play_pressed
 signal options_pressed
+## A Shop or Cards visit from town is over.
+signal closed
 
 const BUTTON_SIZE := Vector2(240, 44)
 const DIM := Color("a9b3d1")
@@ -26,6 +29,8 @@ var _big_type: Label
 var _big_text: Label
 var _equip: Button
 var _shown := ""
+## Opened from a town building: Back leaves the menu instead of going to the Main page.
+var _town := false
 var _file_label: Label
 var _file_buttons: Array[Button] = []
 var _erase_buttons: Array[Button] = []
@@ -76,8 +81,6 @@ func _ready() -> void:
 	_file_label.add_theme_color_override("font_color", DIM)
 	main.add_child(_file_label)
 	_button(main, "Play", func() -> void: _open_files())
-	_button(main, "Shop", func() -> void: _open_shop())
-	_button(main, "Cards", func() -> void: _open_collection())
 	_button(main, "Options", func() -> void: options_pressed.emit())
 	_button(main, "Credits", func() -> void: _show("Credits"))
 
@@ -139,7 +142,7 @@ func _ready() -> void:
 			row.add_child(b)
 			_icons[a] = icon
 		cards.add_child(row)
-	_button(cards, "Back", func() -> void: _show("Main"))
+	_button(cards, "Back", _back_out)
 
 	var card := _page("Card")
 	_big = CardIcon.new()
@@ -191,7 +194,7 @@ func _ready() -> void:
 		_shop_slots.append(b)
 		_shop_icons.append(icon)
 		_shop_prices.append(price)
-	_button(shop, "Back", func() -> void: _show("Main"))
+	_button(shop, "Back", _back_out)
 
 	var buy := _page("Buy")
 	_buy_big = CardIcon.new()
@@ -248,6 +251,7 @@ func _ready() -> void:
 
 
 func open(player_color := Color("ff6b5e")) -> void:
+	_town = false
 	_square.color = player_color
 	CardCollection.setup()
 	_update_main_label()
@@ -264,8 +268,30 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif _pages["Buy"].visible:
 		get_viewport().set_input_as_handled()
 		_open_shop()
-	elif _pages["Shop"].visible or _pages["Credits"].visible or _pages["Cards"].visible or _pages["Files"].visible:
+	elif _pages["Shop"].visible or _pages["Cards"].visible:
 		get_viewport().set_input_as_handled()
+		_back_out()
+	elif _pages["Credits"].visible or _pages["Cards"].visible or _pages["Files"].visible:
+		get_viewport().set_input_as_handled()
+		_show("Main")
+
+
+## Opens the Shop or Cards page from its town building.
+func open_page(page_name: String) -> void:
+	CardCollection.setup()
+	_town = true
+	show()
+	if page_name == "Shop":
+		_open_shop()
+	else:
+		_open_collection()
+
+
+func _back_out() -> void:
+	if _town:
+		hide()
+		closed.emit()
+	else:
 		_show("Main")
 
 
