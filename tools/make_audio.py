@@ -4,7 +4,7 @@
     python3 tools/make_audio.py
 
 Writes audio/music.ogg (a soft, happy loop, exactly 3:00 at 96 BPM) and audio/jump.wav,
-audio/land.wav, audio/hurt.wav, audio/buy.wav. Everything is synthesized here, so edit this file and rerun
+audio/land.wav, audio/hurt.wav, audio/buy.wav, audio/ding.wav. Everything is synthesized here, so edit this file and rerun
 it to change the sound, then run `godot --headless --path . --import`.
 """
 import os
@@ -278,6 +278,14 @@ def sfx_buy():
     return out * 0.7
 
 
+def sfx_ding():
+    """Checkpoint: one clear, bright bell note with a soft octave shimmer."""
+    w = bell(midi_hz(88), 0.25)
+    t = np.arange(len(w)) / SR
+    w += 0.3 * np.sin(2 * np.pi * midi_hz(100) * t) * np.exp(-t / 0.12)
+    return w * 0.55
+
+
 def write_wav(path, x, rate=SR):
     x = np.clip(x, -1, 1)
     with wave.open(path, "wb") as f:
@@ -293,6 +301,7 @@ def main():
     write_wav(os.path.join(OUT, "land.wav"), sfx_land())
     write_wav(os.path.join(OUT, "hurt.wav"), sfx_hurt())
     write_wav(os.path.join(OUT, "buy.wav"), sfx_buy())
+    write_wav(os.path.join(OUT, "ding.wav"), sfx_ding())
     tmp = os.path.join(OUT, "_music.wav")
     music = render_music()
     write_wav(tmp, music)

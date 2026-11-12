@@ -225,7 +225,7 @@ button:disabled { opacity: 0.4; }
       <span class="spacer"></span>
       <button id="closeSheet" type="button" class="primary">Done</button>
     </div>
-    <p>Characters: <code>#</code> ground, <code>=</code> platform you can jump up through, <code>R</code> rubber, <code>W</code> rubber wall (kicks you back; hold jump against it mid-air to wall-jump), <code>P</code> start, <code>G</code> goal, <code>H</code> extra heart, <code>S</code> spike square (paces 2 tiles each way; spiky sides cost a heart, the top is safe to ride), <code>V</code> up-down spike square (rises 3 tiles from its cell and back; spikes on top and bottom), <code>1</code> <code>2</code> <code>3</code> red, yellow and blue warps (place two of a color to link them), <code>.</code> empty. Height adds rows at the top for vertical climbs (scroll up and down to paint). Tip: put the pad you arrive at somewhere off the main path, or players walking past it get sent back. Your work is saved on this device as you go.</p>
+    <p>Characters: <code>#</code> ground, <code>=</code> platform you can jump up through, <code>R</code> rubber, <code>W</code> rubber wall (kicks you back; hold jump against it mid-air to wall-jump), <code>P</code> start, <code>G</code> goal, <code>H</code> extra heart, <code>S</code> spike square (paces 2 tiles each way; spiky sides cost a heart, the top is safe to ride), <code>V</code> up-down spike square (rises 3 tiles from its cell and back; spikes on top and bottom), <code>1</code> <code>2</code> <code>3</code> red, yellow and blue warps (place two of a color to link them), <code>@</code> checkpoint (falls send you back to it once touched), <code>.</code> empty. Height adds rows at the top for vertical climbs (scroll up and down to paint). Tip: put the pad you arrive at somewhere off the main path, or players walking past it get sent back. Your work is saved on this device as you go.</p>
   </div>
 </div>
 
@@ -305,6 +305,7 @@ button:disabled { opacity: 0.4; }
     { ch: 'P', label: 'Start' },
     { ch: 'G', label: 'Goal' },
     { ch: 'H', label: 'Heart' },
+    { ch: '@', label: 'Checkpoint' },
     { ch: 'C', label: 'Chest' },
     { ch: '*', label: 'Pixel' },
     { ch: 'D', label: 'Dash card' },
@@ -367,7 +368,7 @@ button:disabled { opacity: 0.4; }
     while (src.length < MIN_ROWS) src.unshift('');
     for (const line of src) {
       const row = [];
-      for (let x = 0; x < width; x++) row.push(line[x] && '.#=RWPGHSV123^TBDQJLKEIFZUOYNhgwbspAMXC*e'.includes(line[x]) ? line[x] : '.');
+      for (let x = 0; x < width; x++) row.push(line[x] && '.#=RWPGHSV123^TBDQJLKEIFZUOYNhgwbspAMXC*e@'.includes(line[x]) ? line[x] : '.');
       rows.push(row);
     }
     return rows;
@@ -465,6 +466,13 @@ button:disabled { opacity: 0.4; }
       [['#ff6b5e', 0, 0], ['#79e2c2', 1, 0], ['#4da3ff', 0, 1], ['#f2c230', 1, 1]].forEach(([c, i, j]) => {
         g.fillStyle = c; g.fillRect(ox + 2 + i * b, oy + 2 + j * b, b, b);
       });
+    } else if (ch === '@') {
+      // Checkpoint: a small stone pedestal with a black cube glowing above it.
+      g.fillStyle = '#5a6380'; g.fillRect(x + s * 0.15, y + s * 0.84, s * 0.7, s * 0.16);
+      g.fillStyle = '#8a93b8'; g.fillRect(x + s * 0.3, y + s * 0.55, s * 0.4, s * 0.3);
+      g.fillStyle = '#b4bbd6'; g.fillRect(x + s * 0.18, y + s * 0.45, s * 0.64, s * 0.12);
+      g.fillStyle = 'rgba(138,92,255,0.35)'; g.fillRect(x + s * 0.22, y + s * 0.02, s * 0.56, s * 0.4);
+      g.fillStyle = '#0b0d14'; g.fillRect(x + s * 0.32, y + s * 0.08, s * 0.36, s * 0.3);
     } else if (ch === 'C') {
       // Treasure chest: dark outline, wood lid and body, metal bands, gold lock.
       const w = s * 0.82, h = s * 0.7, ox = x + (s - w) / 2, oy = y + s - h;

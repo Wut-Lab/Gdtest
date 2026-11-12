@@ -14,6 +14,7 @@ extends RefCounted
 ##   - Bad Blocks (e): 1–3 a level, at the far end of landing runs of 4+ tiles (or, if none
 ##     landed there, one on the flat run before the goal),
 ##     so there's room to see them coming and jump on them.
+##   - A checkpoint (@) on flat ground near the middle.
 ##   - 1–3 pixels float over gaps, 2 rows above the higher edge, in the jump's arc.
 ##     Not over the teleporter pits, which are too wide to jump.
 ##
@@ -93,6 +94,7 @@ static func generate(seed_value: int) -> String:
 		cols[gx - 2][h - 1] = "e"   # every level gets at least one Bad Block
 
 	_add_pixels(cols, rng)
+	_add_checkpoint(cols)
 
 	var lines := PackedStringArray()
 	for y in ROWS:
@@ -292,6 +294,22 @@ static func _add_pixels(cols: Array, rng: RandomNumberGenerator) -> void:
 		col[row] = "*"
 
 
+## A checkpoint on flat ground as close to the middle of the level as possible.
+static func _add_checkpoint(cols: Array) -> void:
+	var mid := cols.size() / 2
+	for d in mid:
+		for x in [mid + d, mid - d]:
+			if x < 1 or x >= cols.size() - 1:
+				continue
+			var t := _top(cols[x])
+			if t >= ROWS or t < 3 or _top(cols[x - 1]) != t or _top(cols[x + 1]) != t:
+				continue
+			if cols[x][t] != "#" or cols[x][t - 1] != "." or cols[x][t - 2] != ".":
+				continue
+			cols[x][t - 1] = "@"
+			return
+
+
 ## The row of a column's highest solid tile.
 static func _top(col: Array) -> int:
 	for y in ROWS:
@@ -338,6 +356,7 @@ static func _pick(rng: RandomNumberGenerator, weights: Dictionary) -> String:
 ##   - Obstacles (S, V, T) and Bad Blocks sit on wide platforms you cross from one end to the other.
 ##   - Falling just drops you to a lower platform or the floor; you never fall out.
 ##     (Diagonal levels: the floor is only under the start, so falling off the climb is a fall.)
+##   - A checkpoint on the platform closest to halfway up.
 ##   - Same required groups as horizontal levels: 1–4 obstacles, 1–2 teleporter pairs and 3–15
 ##     basic special blocks (rubber pads, rubber wall bumps, one-way block platforms).
 ## Diagonal levels use the same rules in a wide space, with every step heading right.
@@ -397,6 +416,17 @@ static func generate_vertical(seed_value: int, diagonal := false) -> String:
 	if st.bad == 0 and not st.wide.is_empty():
 		var w: Dictionary = st.wide[rng.randi_range(0, st.wide.size() - 1)]
 		_v_put(g, w.x + w.w - 1, w.y - 1, "e")
+	# A checkpoint on the platform closest to halfway up, where there's room for it.
+	var half: int = (floor_y + top.y) / 2
+	var path: Array = st.path.duplicate()
+	path.sort_custom(func(a, b) -> bool: return absi(a.y - half) < absi(b.y - half))
+	for p in path:
+		var cx: int = p.x + p.w / 2
+		if p.w >= 3 and p.y < floor_y and g[p.y][cx] in ["=", "^"] \
+				and g[p.y - 1][cx] == "." and g[p.y - 2][cx] == "." \
+				and g[p.y - 1][cx - 1] == "." and g[p.y - 1][cx + 1] == ".":
+			g[p.y - 1][cx] = "@"
+			break
 	# 1–3 pixels hanging in the jump arcs between platforms.
 	var spots: Array = st.pixel_spots
 	for i in range(spots.size() - 1, 0, -1):
@@ -474,6 +504,7 @@ static func _v_step(g: Array, st: Dictionary, rng: RandomNumberGenerator, rise: 
 		st.hearts += 1
 	var plat := {"x": best, "w": w, "y": y, "exit": 0}
 	st.cur = plat
+	st.get_or_add("path", []).append(plat)
 	return plat
 
 
@@ -529,4 +560,5 @@ static func _v_piece(g: Array, st: Dictionary, rng: RandomNumberGenerator, piece
 			var ledge := _v_step(g, st, rng, 3, 3, "=")
 			_v_put(g, ledge.x + 1, ledge.y - 1, "C")
 			st.pixel_spots.pop_back()
+			st.path.pop_back()   # the ledge is off the main climb
 			st.cur = cur

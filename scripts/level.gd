@@ -16,6 +16,7 @@ extends Node2D
 ##   C  treasure chest (a card or some pixels, once per save file)
 ##   T  wide moving platform with spikes on top (3 tiles wide, centered on its cell)
 ##   B  wide moving platform with spikes underneath (ride on top)
+##   @  checkpoint (falls send you back here once you've touched it)
 ##   !  town: dungeon gate     $  town: shop     &  town: card hall
 
 signal goal_reached
@@ -28,6 +29,8 @@ signal player_hurt(push: Vector2)
 signal obstacle_broken(pos: Vector2, kind: String)
 ## The player walked up to (or away from) a town building's door.
 signal door_near(kind: String, near: bool)
+## The player touched a checkpoint. spot is where to respawn.
+signal checkpoint_reached(spot: Vector2)
 
 const T := 32
 const ATLAS_GROUND_TOP := Vector2i(0, 0)
@@ -49,6 +52,7 @@ var _obstacles: Node2D
 var _chests: Node2D
 var _pixels: Node2D
 var _doors: Node2D
+var _checkpoints: Node2D
 ## Main sets this: whether a heart can be picked up right now (false at full health).
 var heart_check := Callable()
 
@@ -85,6 +89,9 @@ func _ready() -> void:
 	_doors.name = "Doors"
 	add_child(_doors)
 	move_child(_doors, 0)   # buildings behind everything else
+	_checkpoints = Node2D.new()
+	_checkpoints.name = "Checkpoints"
+	add_child(_checkpoints)
 	if map_file != "":
 		load_map_text(FileAccess.get_file_as_string(map_file))
 	else:
@@ -107,6 +114,7 @@ func load_map_text(text: String) -> void:
 	var platforms := {}   # cell -> spikes on top?
 	var bad_blocks: Array[Vector2i] = []
 	var doors := {}   # cell -> door character
+	var checkpoints: Array[Vector2i] = []
 	var lines := text.replace("\r", "").split("\n")
 	for y in lines.size():
 		var line: String = lines[y]
@@ -133,6 +141,8 @@ func load_map_text(text: String) -> void:
 					vspikes.append(Vector2i(x, y))
 				"e":
 					bad_blocks.append(Vector2i(x, y))
+				"@":
+					checkpoints.append(Vector2i(x, y))
 				"!", "$", "&":
 					doors[Vector2i(x, y)] = ch
 				"T", "B":
@@ -156,6 +166,7 @@ func load_map_text(text: String) -> void:
 		goal.set_deferred("monitoring", false)
 	_place_teleporters(pads)
 	_place_doors(doors)
+	_place_checkpoints(checkpoints)
 	_place_chests(chests)
 	_place_pixels(pixel_cells)
 	_place_hearts(hearts, cards)
@@ -233,6 +244,8 @@ func _place_spikes(cells: Array[Vector2i], vertical_cells: Array[Vector2i], plat
 
 ## Bring back every heart pickup and send obstacles to their starting spots, for a new run.
 func reset_pickups() -> void:
+	for c in _checkpoints.get_children():
+		c.set_active(false)
 	for h in _pickups.get_children():
 		h.reset()
 	for s in _obstacles.get_children():
@@ -249,6 +262,19 @@ func _place_chests(cells: Array[Vector2i]) -> void:
 		c.position = Vector2(cells[i].x * T + T / 2.0, (cells[i].y + 1) * T)
 		c.opened.connect(func(_c: Chest) -> void: chest_opened.emit(i))
 		_chests.add_child(c)
+
+
+## Checkpoints stand on the floor of their cell. The respawn spot is like the start's.
+func _place_checkpoints(cells: Array[Vector2i]) -> void:
+	for child in _checkpoints.get_children():
+		_checkpoints.remove_child(child)
+		child.queue_free()
+	for cell in cells:
+		var c := Checkpoint.new()
+		c.position = Vector2(cell.x * T + T / 2.0, (cell.y + 1) * T)
+		var spot := Vector2(cell.x * T + T / 2.0, (cell.y + 1) * T - 12.0)
+		c.reached.connect(func(_c: Checkpoint) -> void: checkpoint_reached.emit(spot))
+		_checkpoints.add_child(c)
 
 
 ## Town buildings stand on the floor of their cell.

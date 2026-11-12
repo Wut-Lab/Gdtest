@@ -30,6 +30,9 @@ var _level_key := "main"
 var player: Player
 ## The town building the player is standing at ("" = none).
 var _near_door := ""
+## Where falls send you: the start, or the last checkpoint touched this run.
+var _respawn := Vector2.ZERO
+var _ding: AudioStreamPlayer
 
 var _js_load_level: JavaScriptObject
 
@@ -55,6 +58,11 @@ func _ready() -> void:
 	level.pixel_collected.connect(_on_pixel_collected)
 	level.player_hurt.connect(_on_player_hurt)
 	level.door_near.connect(_on_door_near)
+	level.checkpoint_reached.connect(_on_checkpoint)
+	_ding = AudioStreamPlayer.new()
+	_ding.stream = load("res://audio/ding.wav")
+	_ding.bus = AudioSettings.SOUNDS_BUS
+	add_child(_ding)
 	hud.enter_pressed.connect(_enter_door)
 	hud.town_requested.connect(enter_town.bind("dungeon"))
 	hud.main_menu.closed.connect(_leave_building)
@@ -246,6 +254,7 @@ func new_run() -> void:
 	hud.set_town_mode(false)
 	hud.pause_menu.set_quit_text("Back to Town")
 	player.reset_to(level.start.position)
+	_respawn = level.start.position
 	player.active = true
 	run_time = 0.0
 	falls = 0
@@ -344,8 +353,17 @@ func _on_player_fell() -> void:
 	if state != State.PLAY:
 		player.reset_to(level.start.position)
 		return
-	player.reset_to(level.start.position)
+	player.reset_to(_respawn)
 	_lose_heart()
+
+
+## A checkpoint: falls send you back here for the rest of this run.
+func _on_checkpoint(spot: Vector2) -> void:
+	if state != State.PLAY:
+		return
+	_respawn = spot
+	_ding.play()
+	hud.toast("Checkpoint!")
 
 
 ## Touched a spike: lose a heart and get knocked away, unless still blinking from the last hit.
