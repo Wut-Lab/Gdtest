@@ -5,8 +5,17 @@ extends RefCounted
 ##             more Hard Bad Blocks are added on flat ground away from the start, goal and checkpoint.
 ##   scramble: the start and goal move to random spots you can stand on, at least half the
 ##             level apart (across for wide levels, up for tall ones, both added up for diagonal).
+##             The goal is always one a tile map of jumps says the start can reach (see reach()).
 
 const FLOOR := "#="
+## Tiles you can't move through (^ one-way blocks only stop you from above).
+const SOLID := "#=RWTBSV"
+## Tiles you can stand on top of.
+const TOP := "#=RWB^S"   # S: a horizontal spike square has a safe top to ride
+## A plain jump: about 4 tiles up and 5 across. Rubber bounces reach about 7 up.
+const JUMP_UP := 4
+const BOUNCE_UP := 7
+const JUMP_ACROSS := 5
 
 
 static func _grid(text: String) -> Array:
@@ -107,9 +116,10 @@ static func scramble(text: String, rng: RandomNumberGenerator) -> String:
 		if w <= 34:
 			return dy >= 0.5      # tall level: half of it up
 		return dx + dy >= 1.0     # diagonal: half across plus half up
-	for _try in 200:
+	for _try in 40:
 		var a: Vector2i = spots[rng.randi_range(0, spots.size() - 1)]
-		var ends := spots.filter(func(b: Vector2i) -> bool: return far.call(a, b))
+		var reached := reach(g, a)
+		var ends := spots.filter(func(b: Vector2i) -> bool: return far.call(a, b) and reached.has(b))
 		if ends.is_empty():
 			continue
 		var b: Vector2i = ends[rng.randi_range(0, ends.size() - 1)]
@@ -117,3 +127,88 @@ static func scramble(text: String, rng: RandomNumberGenerator) -> String:
 		g[b.y][b.x] = "G"
 		return _text(g)
 	return text
+
+
+## A cell the player can stand in: open, and something to stand on below.
+static func _node(g: Array, x: int, y: int) -> bool:
+	var c := _at(g, x, y)
+	return not c in SOLID and c != "^" and _at(g, x, y + 1) in TOP and y + 1 < g.size()
+
+
+static func _open(g: Array, x: int, y: int, up: bool) -> bool:
+	var c := _at(g, x, y)
+	return not c in SOLID and (up or c != "^")
+
+
+## Can you jump from a to b? Tries arcs from low to high: straight up from a to a top row,
+## across, then down onto b. Rising passes through one-way blocks; falling doesn't.
+static func _can_jump(g: Array, a: Vector2i, b: Vector2i, up_max: int) -> bool:
+	var dx := absi(b.x - a.x)
+	var drop := b.y - a.y   # positive: b is lower
+	if a.y - b.y > up_max or dx > JUMP_ACROSS + clampi(drop / 2, 0, 3):
+		return false
+	var step := signi(b.x - a.x)
+	for top in range(mini(a.y, b.y), a.y - up_max - 1, -1):
+		var ok := true
+		for y in range(top, a.y + 1):
+			if not _open(g, a.x, y, true):
+				ok = false
+				break
+		if ok and dx > 0:
+			var x := a.x
+			while x != b.x:
+				x += step
+				if not _open(g, x, top, true):
+					ok = false
+					break
+		if ok:
+			for y in range(top, b.y + 1):
+				if not _open(g, b.x, y, false):
+					ok = false
+					break
+		if ok:
+			return true
+	return false
+
+
+## Every standing spot reachable from start by walking, jumping, falling, bouncing on
+## rubber and teleporting (each digit pair links both ways). A cautious map: moving
+## platforms and abilities aren't counted, so it can miss real routes, never invent them.
+static func reach(g: Array, start: Vector2i) -> Dictionary:
+	var h := g.size()
+	var w: int = (g[0] as Array).size()
+	var pads := {}
+	for p in _find(g, "123"):
+		if not pads.has(g[p.y][p.x]):
+			pads[g[p.y][p.x]] = []
+		pads[g[p.y][p.x]].append(p)
+	var stand := {}
+	for y in h:
+		for x in w:
+			if _node(g, x, y):
+				stand[Vector2i(x, y)] = true
+	var seen := {start: true}
+	var todo: Array[Vector2i] = [start]
+	while not todo.is_empty():
+		var a: Vector2i = todo.pop_back()
+		var up_max := BOUNCE_UP if _at(g, a.x, a.y + 1) == "R" else JUMP_UP
+		var next: Array[Vector2i] = []
+		for x in range(maxi(a.x - JUMP_ACROSS - 3, 0), mini(a.x + JUMP_ACROSS + 4, w)):
+			for y in range(maxi(a.y - up_max, 0), h):
+				var b := Vector2i(x, y)
+				if stand.has(b) and not seen.has(b) and _can_jump(g, a, b, up_max):
+					next.append(b)
+		# Teleporters: touching a pad drops you below its partner.
+		for d in [-1, 0, 1]:
+			var c := _at(g, a.x + d, a.y)
+			if pads.has(c):
+				for p in pads[c]:
+					var y: int = p.y
+					while y < h and not _node(g, p.x, y) and _open(g, p.x, y, false):
+						y += 1
+					next.append(Vector2i(p.x, y))
+		for b in next:
+			if stand.has(b) and not seen.has(b):
+				seen[b] = true
+				todo.append(b)
+	return seen
