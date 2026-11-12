@@ -2,17 +2,18 @@ class_name AbilityCard
 extends Area2D
 ## An ability card floating in the level. Touch it to gain its ability for this run.
 ##   D = Dash, Q = Ground Pound, J = Double Jump, L = Glide, K = Quick, E = Tele-hop,
-##   I = High Jump, F = Phase Jump, Z = Shockwave, U = Stunning Landing, A = Air Brake, M = Momentum, X = Heart Box (in a text map)
+##   I = High Jump, F = Phase Jump, Z = Shockwave, U = Stunning Landing,
+##   O = Grip and Go, Y = Lucky Charm, A = Air Brake, M = Momentum, X = Heart Box (in a text map)
 
 signal collected(ability: String)
 
 const LETTERS := {"D": "dash", "Q": "pound", "J": "double_jump", "L": "glide", "K": "quick",
-	"E": "tele_hop", "I": "high_jump", "F": "phase_jump", "Z": "shockwave", "U": "stun_landing", "A": "air_brake", "M": "momentum", "X": "heart_box"}
+	"E": "tele_hop", "I": "high_jump", "F": "phase_jump", "Z": "shockwave", "U": "stun_landing", "O": "grip_and_go", "Y": "lucky_charm", "A": "air_brake", "M": "momentum", "X": "heart_box"}
 const NAMES := {"dash": "Dash", "pound": "Ground Pound", "double_jump": "Double Jump", "glide": "Glide",
-	"quick": "Quick", "tele_hop": "Tele-hop", "high_jump": "High Jump", "phase_jump": "Phase Jump", "shockwave": "Shockwave", "stun_landing": "Stunning Landing", "air_brake": "Air Brake", "momentum": "Momentum", "heart_box": "Heart Box"}
+	"quick": "Quick", "tele_hop": "Tele-hop", "high_jump": "High Jump", "phase_jump": "Phase Jump", "shockwave": "Shockwave", "stun_landing": "Stunning Landing", "grip_and_go": "Grip and Go", "lucky_charm": "Lucky Charm", "air_brake": "Air Brake", "momentum": "Momentum", "heart_box": "Heart Box"}
 ## Card types, color coded: attacks are red, jumps are blue, movement is yellow, misc is gray.
 const TYPES := {"dash": "attack", "pound": "attack", "double_jump": "jump", "glide": "jump",
-	"quick": "movement", "tele_hop": "movement", "high_jump": "jump", "phase_jump": "jump", "shockwave": "attack", "stun_landing": "attack", "air_brake": "movement", "momentum": "movement", "heart_box": "misc"}
+	"quick": "movement", "tele_hop": "movement", "high_jump": "jump", "phase_jump": "jump", "shockwave": "attack", "stun_landing": "attack", "grip_and_go": "movement", "lucky_charm": "misc", "air_brake": "movement", "momentum": "movement", "heart_box": "misc"}
 const TYPE_NAMES := {"attack": "Attack card", "jump": "Jump card", "movement": "Movement card", "misc": "Misc card"}
 const TYPE_COLORS := {"attack": Color("e5484d"), "jump": Color("3d7be0"), "movement": Color("e0a400"),
 	"misc": Color("7d8597")}
@@ -36,6 +37,10 @@ const DESCRIPTIONS := {
 		+ "pushes nearby spike squares and spiked platforms 2 tiles away. Needs Ground Pound; recharges in 2.5 seconds.",
 	"stun_landing": "Passive: land on a spike square or spiked platform, or within 1 tile of one, "
 		+ "to stun it. It stops moving for 3 seconds.",
+	"grip_and_go": "Passive: land after moving at least 2 tiles sideways in the air, and you "
+		+ "dash on for 75% of that distance.",
+	"lucky_charm": "Passive: you have a 20% chance to shrug off a hit from a spike square or "
+		+ "spiked platform and keep your heart.",
 	"air_brake": "Passive: you steer much more sharply in the air, and stop almost at once when "
 		+ "you let go.",
 	"momentum": "Passive: keep running without stopping or turning to build up speed, up to "
@@ -45,7 +50,7 @@ const DESCRIPTIONS := {
 const PAPER := Color("eef1fa")
 const EDGE := Color("1b2440")
 
-@export_enum("dash", "pound", "double_jump", "glide", "quick", "tele_hop", "high_jump", "phase_jump", "shockwave", "stun_landing", "air_brake", "momentum", "heart_box") var ability := "dash"
+@export_enum("dash", "pound", "double_jump", "glide", "quick", "tele_hop", "high_jump", "phase_jump", "shockwave", "stun_landing", "grip_and_go", "lucky_charm", "air_brake", "momentum", "heart_box") var ability := "dash"
 
 var _t := 0.0
 
@@ -184,6 +189,20 @@ static func _draw_symbol(ci: CanvasItem, ability_name: String, o: Vector2, c: Co
 			ci.draw_rect(Rect2(o + Vector2(-9, 7), Vector2(18, b)), c)
 			ci.draw_rect(Rect2(o + Vector2(-8, 4), Vector2(b, b)), c)
 			ci.draw_rect(Rect2(o + Vector2(6, 4), Vector2(b, b)), c)
+		"grip_and_go":
+			# A block landing on a ground line with a dash chevron in front of it.
+			ci.draw_rect(Rect2(o + Vector2(-8, -2), Vector2(6, 6)), c)
+			ci.draw_rect(Rect2(o + Vector2(-9, 6), Vector2(18, b)), c)
+			for i in 5:
+				var dx: float = (2.0 - absf(i - 2.0)) * b
+				ci.draw_rect(Rect2(o + Vector2(1.0 + dx, -6.0 + i * b), Vector2(b, b)), c)
+		"lucky_charm":
+			# A blocky four-leaf clover with a stem.
+			for p in [Vector2(-5, -7), Vector2(1, -7), Vector2(-5, -1), Vector2(1, -1)]:
+				ci.draw_rect(Rect2(o + p, Vector2(4, 4)), c)
+			ci.draw_rect(Rect2(o + Vector2(-1, -3), Vector2(2, 2)), c)
+			ci.draw_rect(Rect2(o + Vector2(1, 3), Vector2(b, 3)), c)
+			ci.draw_rect(Rect2(o + Vector2(3, 6), Vector2(b, 3)), c)
 		"air_brake":
 			# A block stopped short against a wall, with brake marks behind it.
 			ci.draw_rect(Rect2(o + Vector2(-3, -4), Vector2(7, 7)), c)

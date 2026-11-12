@@ -3,10 +3,12 @@ extends Node2D
 ## Short card effects drawn in blocks, freed when done.
 ##   "shock": a Shockwave rolling out both ways along the floor.
 ##   "zap":   a Stunning Landing burst of electric sparks at the feet.
+##   "lucky": a Lucky Charm gold ring and sparkles when a hit is shrugged off.
 
 const SHOCK := Color("ffd9a0")
 const SPARK := Color("ffe27a")
 const SPARK_2 := Color("9ff3ff")
+const LUCKY := Color("f2c230")
 
 var kind := "zap"
 ## Shockwave reach in pixels.
@@ -21,7 +23,7 @@ static func spawn(parent: Node, at: Vector2, fx_kind: String, fx_reach := 160.0)
 	var fx := CardFx.new()
 	fx.kind = fx_kind
 	fx.reach = fx_reach
-	fx._life = 0.4 if fx_kind == "shock" else 0.35
+	fx._life = {"shock": 0.4, "lucky": 0.5}.get(fx_kind, 0.35)
 	fx.z_index = 5
 	parent.add_child(fx)
 	fx.global_position = at
@@ -100,6 +102,14 @@ func _draw() -> void:
 				var bh := h * (1.0 - i * 0.3)
 				draw_rect(Rect2(bx - 3.0, -bh, 6.0, bh), c)
 		draw_rect(Rect2(-x, -2.0, x * 2.0, 2.0), Color(SHOCK, 0.5 * (1.0 - k)))
+	elif kind == "lucky":
+		# A gold square ring growing out from you, with four sparkles flying off its corners.
+		var r := 14.0 + 22.0 * k
+		var c := Color(LUCKY, 1.0 - k)
+		draw_rect(Rect2(-r, -r, r * 2.0, r * 2.0), c, false, 3.0)
+		for d in [Vector2(1, 1), Vector2(-1, 1), Vector2(1, -1), Vector2(-1, -1)]:
+			var p: Vector2 = d * (r + 6.0)
+			draw_rect(Rect2(p - Vector2(2, 2), Vector2(4, 4)), Color(1, 1, 1, 1.0 - k))
 	else:
 		var c1 := Color(SPARK, 1.0 - k * 0.6)
 		var c2 := Color(SPARK_2, 1.0 - k * 0.6)

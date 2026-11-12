@@ -75,6 +75,13 @@ const SIZE := 24.0
 ## Phase Jump: you're phased out while your rise or fall speed is under this share of a jump's
 ## launch speed: the apex plus 5% of the jump's air time on each side.
 @export var phase_window := 0.1
+## Grip and Go: landing after moving at least this far sideways (px) in the air dashes on
+## for this share of that distance (capped).
+@export var grip_min_distance := 64.0
+@export var grip_share := 0.75
+@export var grip_max_distance := 192.0
+## Lucky Charm: chance to shrug off a hit from an obstacle.
+@export var lucky_chance := 0.2
 
 @export_group("Look")
 @export var color := Color("ff6b5e")
@@ -100,6 +107,7 @@ var _was_on_floor := true
 var _bouncing := false
 var _stun := 0.0
 var _shock_cd := 0.0
+var _takeoff_x := 0.0   # Grip and Go: where you left the ground
 ## Momentum card: seconds spent running one way without stopping or turning.
 var _momentum := 0.0
 var _dash := 0.0          # time left in the current dash
@@ -167,9 +175,37 @@ func knock_back(push: Vector2) -> void:
 	_play(_hurt_sfx)
 
 
+## Lucky Charm card: maybe shrug off an obstacle's hit. Returns true if it was shrugged off:
+## no heart lost, just a little push away and a moment of safety.
+func try_shrug_off(push: Vector2) -> bool:
+	if "lucky_charm" not in abilities or randf() >= lucky_chance:
+		return false
+	velocity = Vector2(push.x * 200.0, -260.0 if push.y <= 0.0 else 260.0)
+	_stun = 0.15
+	invincible = 0.6
+	CardFx.spawn(get_parent(), global_position, "lucky")
+	_play(_jump_sfx, 1.8)
+	return true
+
+
+## Grip and Go card: after covering at least 2 tiles sideways in the air, landing dashes on
+## for 75% of that distance.
+func _grip_and_go() -> void:
+	var moved := position.x - _takeoff_x
+	if absf(moved) < grip_min_distance or _dash > 0.0:
+		return
+	_face = signf(moved)
+	_dash = minf(absf(moved) * grip_share, grip_max_distance) / dash_speed
+	velocity = Vector2(_face * dash_speed, 0.0)
+	_squash = Vector2(1.4, 0.7)
+	_puff()
+	_play(_jump_sfx, 1.4)
+
+
 ## Move to a teleport pad, keeping the current velocity.
 func teleport_to(pos: Vector2) -> void:
 	global_position = pos
+	_takeoff_x = pos.x
 	_coyote = 0.0          # you arrive in the air: no ledge-grace jump carried over
 	_was_on_floor = false
 	camera.reset_smoothing()
@@ -311,6 +347,10 @@ func _physics_process(delta: float) -> void:
 		_play(_land_sfx)
 	if "stun_landing" in abilities and is_on_floor() and not _was_on_floor:
 		_stun_landing()
+	if "grip_and_go" in abilities and is_on_floor() and not _was_on_floor and not bounced_now:
+		_grip_and_go()
+	if _was_on_floor and not is_on_floor():
+		_takeoff_x = position.x
 	_was_on_floor = is_on_floor() and not bounced_now
 
 	if position.y > fall_limit_y:

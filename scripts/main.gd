@@ -255,6 +255,8 @@ func _on_player_fell() -> void:
 func _on_player_hurt(push: Vector2) -> void:
 	if state != State.PLAY or player.is_safe():
 		return
+	if player.try_shrug_off(push):
+		return   # Lucky Charm: shrugged it off
 	hits += 1
 	player.knock_back(push)
 	_lose_heart()

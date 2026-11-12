@@ -11,7 +11,7 @@ const FILES := 3
 const MAX_EQUIPPED := 3
 const STARTER := "heart_box"
 ## Every card, grouped by type, in the order the collection screen shows them.
-const ALL := ["dash", "pound", "double_jump", "glide", "quick", "tele_hop", "high_jump", "phase_jump", "shockwave", "stun_landing", "air_brake", "momentum", "heart_box"]
+const ALL := ["dash", "pound", "double_jump", "glide", "quick", "tele_hop", "high_jump", "phase_jump", "shockwave", "stun_landing", "grip_and_go", "lucky_charm", "air_brake", "momentum", "heart_box"]
 
 ## Where each card can come from (its drop group, as on the blueprint):
 ##   shop = Shop Only, find = Find Only (chests), drop = Drop Only, all = Shop, Find and Drop.
