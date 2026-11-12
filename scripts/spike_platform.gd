@@ -39,6 +39,8 @@ var _shift := Vector2.ZERO
 var _shift_to := Vector2.ZERO
 var _bolts: Array = []
 var _next_bolts := 0.0
+## Slow Burst: seconds left moving at half speed.
+var _slow := 0.0
 
 
 func _ready() -> void:
@@ -76,6 +78,7 @@ func take_hit(_kind: String) -> bool:
 func reset() -> void:
 	_t = 0.0
 	_stun = 0.0
+	_slow = 0.0
 	_shift = Vector2.ZERO
 	_shift_to = Vector2.ZERO
 	position = _origin
@@ -92,6 +95,11 @@ func half_size() -> Vector2:
 ## Stunning Landing card: freeze in place for this many seconds.
 func stun(seconds: float) -> void:
 	_stun = maxf(_stun, seconds)
+
+
+## Slow Burst card: move at half speed for this many seconds.
+func slow(seconds: float) -> void:
+	_slow = maxf(_slow, seconds)
 
 
 func is_stunned() -> bool:
@@ -111,7 +119,8 @@ func _physics_process(delta: float) -> void:
 			_next_bolts = 0.07   # re-roll the sparks so they crackle
 			_bolts = CardFx.stun_bolts(half_size())
 	else:
-		_t += delta
+		_t += delta * (0.5 if _slow > 0.0 else 1.0)
+	_slow = maxf(_slow - delta, 0.0)
 	_shift = _shift.move_toward(_shift_to, 480.0 * delta)
 	var span := 2.0 * T
 	var d := fposmod(_t * speed + span, span * 4.0)
@@ -150,3 +159,5 @@ func _draw() -> void:
 			draw_rect(Rect2(c, o, half, w), METAL_SHADE)
 	if _stun > 0.0:
 		CardFx.draw_stun(self, _bolts, _stun)
+	if _slow > 0.0:
+		CardFx.draw_slow(self, half_size(), _slow)

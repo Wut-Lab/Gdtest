@@ -82,6 +82,9 @@ const SIZE := 24.0
 @export var grip_max_distance := 192.0
 ## Lucky Charm: chance to shrug off a hit from an obstacle.
 @export var lucky_chance := 0.2
+## Slow Burst: when hurt, obstacles overlapping this square (half-size in px) slow down.
+@export var slow_burst_reach := 96.0
+@export var slow_burst_time := 3.0
 ## Bounce House: rubber bounces go this many times as high (speed scales by the square root),
 ## and landing on normal ground faster than house_fall_speed bounces back at house_hop of it.
 @export var house_height := 1.25
@@ -193,6 +196,24 @@ func try_shrug_off(push: Vector2) -> bool:
 	return true
 
 
+## Potion Booster card: the percentages on attack, jump and movement cards go up 5 points.
+func _pct(base: float) -> float:
+	return base + (0.05 if "potion_booster" in abilities else 0.0)
+
+
+## Slow Burst card: after getting hurt, every obstacle overlapping a square 3 tiles out from you
+## moves at half speed for 3 seconds.
+func slow_burst() -> void:
+	if "slow_burst" not in abilities:
+		return
+	var area := Rect2(global_position - Vector2.ONE * slow_burst_reach, Vector2.ONE * slow_burst_reach * 2.0)
+	for t in get_tree().get_nodes_in_group("card_targets"):
+		var half: Vector2 = t.half_size()
+		if t.visible and area.intersects(Rect2(t.global_position - half, half * 2.0)):
+			t.slow(slow_burst_time)
+	CardFx.spawn(get_parent(), global_position, "slow", slow_burst_reach)
+
+
 ## Grip and Go card: after covering at least 2 tiles sideways in the air, landing dashes on
 ## for 75% of that distance.
 func _grip_and_go() -> void:
@@ -200,7 +221,7 @@ func _grip_and_go() -> void:
 	if absf(moved) < grip_min_distance or _dash > 0.0:
 		return
 	_face = signf(moved)
-	_dash = minf(absf(moved) * grip_share, grip_max_distance) / dash_speed
+	_dash = minf(absf(moved) * _pct(grip_share), grip_max_distance) / dash_speed
 	velocity = Vector2(_face * dash_speed, 0.0)
 	_squash = Vector2(1.4, 0.7)
 	_puff()
@@ -218,7 +239,7 @@ func teleport_to(pos: Vector2) -> void:
 	_puff()
 	if "tele_hop" in abilities:
 		# Tele-hop card: pop straight up, half as high as a full jump (sqrt(0.5) of the speed).
-		velocity = Vector2(0.0, -jump_velocity * 0.707)
+		velocity = Vector2(0.0, -jump_velocity * sqrt(_pct(0.5)))   # half a jump's height
 		_bouncing = true   # keeps its full height even if jump isn't held
 		_play(_jump_sfx, 1.15)
 	teleported.emit()
@@ -226,15 +247,15 @@ func teleport_to(pos: Vector2) -> void:
 
 ## Running speed, 25% faster with the Quick card. Momentum builds up to 25% more over 2 seconds.
 func _run_speed() -> float:
-	var s := run_speed * (1.25 if "quick" in abilities else 1.0)
+	var s := run_speed * (1.0 + _pct(0.25) if "quick" in abilities else 1.0)
 	if "momentum" in abilities:
-		s *= 1.0 + 0.25 * clampf(_momentum / 2.0, 0.0, 1.0)
+		s *= 1.0 + _pct(0.25) * clampf(_momentum / 2.0, 0.0, 1.0)
 	return s
 
 
 ## Launch speed of a jump: High Jump makes it 20% higher.
 func _jump_speed() -> float:
-	return jump_velocity * (sqrt(high_jump) if "high_jump" in abilities else 1.0)
+	return jump_velocity * (sqrt(1.0 + _pct(high_jump - 1.0)) if "high_jump" in abilities else 1.0)
 
 
 ## Nothing can hurt you: blinking after a hit, or phased out by Phase Jump.
@@ -259,7 +280,7 @@ func _physics_process(delta: float) -> void:
 	_squash = _squash.lerp(Vector2.ONE, 1.0 - exp(-squash_recovery * delta))
 	invincible = maxf(invincible - delta, 0.0)
 	phased = "phase_jump" in abilities and not is_on_floor() and not _pounding \
-			and absf(velocity.y) <= phase_window * jump_velocity
+			and absf(velocity.y) <= (phase_window + (0.1 if "potion_booster" in abilities else 0.0)) * jump_velocity
 	_phase_look = move_toward(_phase_look, 0.25 if phased else 1.0, delta * (12.0 if phased else 3.0))
 	queue_redraw()
 	if not active:
@@ -301,7 +322,7 @@ func _physics_process(delta: float) -> void:
 	elif _jump_buffer > 0.0 and not on_floor and _air_jump and "double_jump" in abilities \
 			and not _pounding and _stun == 0.0 and Input.is_action_just_pressed("jump"):
 		# Double jump card: one extra jump in the air, 75% as high as a full jump.
-		velocity.y = -_jump_speed() * 0.866   # sqrt(0.75): 75% of a full jump's height
+		velocity.y = -_jump_speed() * sqrt(_pct(0.75))   # 75% of a full jump's height
 		_air_jump = false
 		_jump_buffer = 0.0
 		_bouncing = false
@@ -340,7 +361,7 @@ func _physics_process(delta: float) -> void:
 			if "shockwave" in abilities and _shock_cd == 0.0:
 				_shockwave()
 			if Input.is_action_pressed("jump"):
-				velocity.y = -jump_velocity * pound_rebound   # pound rebound: hold jump to spring back up
+				velocity.y = -jump_velocity * _pct(pound_rebound)   # pound rebound: hold jump to spring back up
 				_puff()
 				_play(_jump_sfx, 0.9)
 

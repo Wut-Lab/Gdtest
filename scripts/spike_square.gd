@@ -37,6 +37,8 @@ var _shift := Vector2.ZERO
 var _shift_to := Vector2.ZERO
 var _bolts: Array = []
 var _next_bolts := 0.0
+## Slow Burst: seconds left moving at half speed.
+var _slow := 0.0
 
 
 func _ready() -> void:
@@ -71,6 +73,7 @@ func _ready() -> void:
 func reset() -> void:
 	_t = 0.0
 	_stun = 0.0
+	_slow = 0.0
 	_shift = Vector2.ZERO
 	_shift_to = Vector2.ZERO
 	position = _origin
@@ -101,6 +104,11 @@ func half_size() -> Vector2:
 	return Vector2(T, T) / 2.0
 
 
+## Slow Burst card: move at half speed for this many seconds.
+func slow(seconds: float) -> void:
+	_slow = maxf(_slow, seconds)
+
+
 func is_stunned() -> bool:
 	return _stun > 0.0
 
@@ -114,7 +122,8 @@ func _physics_process(delta: float) -> void:
 	if _stun > 0.0:
 		_stun = maxf(_stun - delta, 0.0)   # stunned: hold still
 	else:
-		_t += delta
+		_t += delta * (0.5 if _slow > 0.0 else 1.0)
+	_slow = maxf(_slow - delta, 0.0)
 	_shift = _shift.move_toward(_shift_to, 480.0 * delta)
 	var path := Vector2.ZERO
 	if vertical:
@@ -180,3 +189,5 @@ func _draw() -> void:
 					draw_rect(Rect2(o, c + 1.0, w, half), METAL_SHADE)
 	if _stun > 0.0:
 		CardFx.draw_stun(self, _bolts, _stun)
+	if _slow > 0.0:
+		CardFx.draw_slow(self, half_size(), _slow)

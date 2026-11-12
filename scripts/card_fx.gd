@@ -3,12 +3,14 @@ extends Node2D
 ## Short card effects drawn in blocks, freed when done.
 ##   "shock": a Shockwave rolling out both ways along the floor.
 ##   "zap":   a Stunning Landing burst of electric sparks at the feet.
+##   "slow":  a Slow Burst ring spreading out to the edge of its square.
 ##   "lucky": a Lucky Charm gold ring and sparkles when a hit is shrugged off.
 
 const SHOCK := Color("ffd9a0")
 const SPARK := Color("ffe27a")
 const SPARK_2 := Color("9ff3ff")
 const LUCKY := Color("f2c230")
+const SLOW := Color("8fb8ff")
 
 var kind := "zap"
 ## Shockwave reach in pixels.
@@ -23,7 +25,7 @@ static func spawn(parent: Node, at: Vector2, fx_kind: String, fx_reach := 160.0)
 	var fx := CardFx.new()
 	fx.kind = fx_kind
 	fx.reach = fx_reach
-	fx._life = {"shock": 0.4, "lucky": 0.5}.get(fx_kind, 0.35)
+	fx._life = {"shock": 0.4, "lucky": 0.5, "slow": 0.45}.get(fx_kind, 0.35)
 	fx.z_index = 5
 	parent.add_child(fx)
 	fx.global_position = at
@@ -79,6 +81,13 @@ static func draw_stun(ci: CanvasItem, bolts: Array, stun_left: float) -> void:
 			ci.draw_polyline(bolts[i], SPARK if i == 0 else SPARK_2, 2.0)
 
 
+## Slowed look: a pale blue tint with a little clock hand ticking slowly round.
+static func draw_slow(ci: CanvasItem, half: Vector2, slow_left: float) -> void:
+	ci.draw_rect(Rect2(-half, half * 2.0), Color(SLOW, 0.25))
+	var a := slow_left * 2.0
+	ci.draw_line(Vector2.ZERO, Vector2(sin(a), -cos(a)) * minf(half.x, half.y) * 0.8, Color(SLOW, 0.9), 2.0)
+
+
 ## A jagged line from a to b as a list of points.
 static func bolt(a: Vector2, b: Vector2, steps := 4) -> PackedVector2Array:
 	var pts := PackedVector2Array([a])
@@ -102,6 +111,11 @@ func _draw() -> void:
 				var bh := h * (1.0 - i * 0.3)
 				draw_rect(Rect2(bx - 3.0, -bh, 6.0, bh), c)
 		draw_rect(Rect2(-x, -2.0, x * 2.0, 2.0), Color(SHOCK, 0.5 * (1.0 - k)))
+	elif kind == "slow":
+		# A pale blue square outline growing out to the edge of the slowed area.
+		var r := reach * (0.3 + 0.7 * k)
+		draw_rect(Rect2(-r, -r, r * 2.0, r * 2.0), Color(SLOW, 0.8 * (1.0 - k)), false, 3.0)
+		draw_rect(Rect2(-r, -r, r * 2.0, r * 2.0), Color(SLOW, 0.12 * (1.0 - k)))
 	elif kind == "lucky":
 		# A gold square ring growing out from you, with four sparkles flying off its corners.
 		var r := 14.0 + 22.0 * k

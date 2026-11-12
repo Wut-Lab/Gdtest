@@ -259,6 +259,7 @@ func _on_player_hurt(push: Vector2) -> void:
 		return   # Lucky Charm: shrugged it off
 	hits += 1
 	player.knock_back(push)
+	player.slow_burst()
 	_lose_heart()
 
 
