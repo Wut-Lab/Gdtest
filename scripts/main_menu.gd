@@ -5,6 +5,8 @@ extends Control
 ##   Files:   3 save files to pick from (each has its own cards); Erase starts one over
 ##   Cards:   the card collection: every card by type, locked ones as silhouettes
 ##   Card:    one card up close, with what it does and Equip / Unequip
+##   Shop:    3 cards on display for pixels, restocked every few wins
+##   Buy:     one shop card up close, with what it does and Buy
 ##   Credits: who and what made the game, and the engine's license
 ## Options opens the same Options page as the pause menu.
 
@@ -26,6 +28,16 @@ var _shown := ""
 var _file_label: Label
 var _file_buttons: Array[Button] = []
 var _erase_buttons: Array[Button] = []
+var _shop_info: Label
+var _shop_slots: Array[Button] = []
+var _shop_icons: Array[CardIcon] = []
+var _shop_prices: Array[Label] = []
+var _shop_pick := ""
+var _buy_big: CardIcon
+var _buy_type: Label
+var _buy_text: Label
+var _buy: Button
+var _buy_sfx: AudioStreamPlayer
 
 
 func _ready() -> void:
@@ -63,6 +75,7 @@ func _ready() -> void:
 	_file_label.add_theme_color_override("font_color", DIM)
 	main.add_child(_file_label)
 	_button(main, "Play", func() -> void: _open_files())
+	_button(main, "Shop", func() -> void: _open_shop())
 	_button(main, "Cards", func() -> void: _open_collection())
 	_button(main, "Options", func() -> void: options_pressed.emit())
 	_button(main, "Credits", func() -> void: _show("Credits"))
@@ -144,6 +157,62 @@ func _ready() -> void:
 	_equip = _button(card, "Equip", _toggle_equip)
 	_button(card, "Back", func() -> void: _open_collection())
 
+	var shop := _page("Shop")
+	shop.add_child(_title("Shop"))
+	_shop_info = Label.new()
+	_shop_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_shop_info.add_theme_color_override("font_color", DIM)
+	shop.add_child(_shop_info)
+	# The counter: cards on little stands over a blocky wooden counter.
+	var counter := Control.new()
+	counter.custom_minimum_size = Vector2(330, 150)
+	counter.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	counter.draw.connect(func() -> void: _draw_counter(counter))
+	shop.add_child(counter)
+	for i in CardCollection.SHOP_SIZE:
+		var b := Button.new()
+		b.flat = true
+		b.position = Vector2(15 + i * 104, 4)
+		b.size = Vector2(92, 96)
+		b.pressed.connect(func() -> void: _open_buy(CardCollection.shop_stock[i] if i < CardCollection.shop_stock.size() else ""))
+		var icon := CardIcon.new()
+		icon.card_scale = 2.2
+		icon.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		b.add_child(icon)
+		counter.add_child(b)
+		var price := Label.new()
+		price.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		price.position = Vector2(15 + i * 104, 118)
+		price.size = Vector2(92, 24)
+		price.add_theme_color_override("font_color", Color("f2c230"))
+		counter.add_child(price)
+		_shop_slots.append(b)
+		_shop_icons.append(icon)
+		_shop_prices.append(price)
+	_button(shop, "Back", func() -> void: _show("Main"))
+
+	var buy := _page("Buy")
+	_buy_big = CardIcon.new()
+	_buy_big.card_scale = 4.0
+	_buy_big.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	buy.add_child(_buy_big)
+	_buy_type = Label.new()
+	_buy_type.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	buy.add_child(_buy_type)
+	_buy_text = Label.new()
+	_buy_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_buy_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_buy_text.custom_minimum_size = Vector2(280, 0)
+	_buy_text.add_theme_color_override("font_color", DIM)
+	buy.add_child(_buy_text)
+	_buy = _button(buy, "Buy", _buy_card)
+	_button(buy, "Back", func() -> void: _open_shop())
+	_buy_sfx = AudioStreamPlayer.new()
+	_buy_sfx.stream = load("res://audio/buy.wav")
+	_buy_sfx.bus = AudioSettings.SOUNDS_BUS
+	add_child(_buy_sfx)
+
 	var files := _page("Files")
 	files.add_child(_title("Save Files"))
 	for n in range(1, CardCollection.FILES + 1):
@@ -167,6 +236,8 @@ func _ready() -> void:
 	panel.add_child(files)
 	panel.add_child(cards)
 	panel.add_child(card)
+	panel.add_child(shop)
+	panel.add_child(buy)
 	panel.add_child(credits)
 	open()
 
@@ -185,7 +256,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	if _pages["Card"].visible:
 		get_viewport().set_input_as_handled()
 		_open_collection()
-	elif _pages["Credits"].visible or _pages["Cards"].visible or _pages["Files"].visible:
+	elif _pages["Buy"].visible:
+		get_viewport().set_input_as_handled()
+		_open_shop()
+	elif _pages["Shop"].visible or _pages["Credits"].visible or _pages["Cards"].visible or _pages["Files"].visible:
 		get_viewport().set_input_as_handled()
 		_show("Main")
 
@@ -277,6 +351,68 @@ func _update_equip() -> void:
 func _toggle_equip() -> void:
 	CardCollection.toggle_equip(_shown)
 	_update_equip()
+
+
+func _open_shop() -> void:
+	CardCollection.setup()
+	var stock := CardCollection.get_shop()
+	var left := CardCollection.RESTOCK_WINS - CardCollection.shop_wins
+	_shop_info.text = "You have %d pixels  ·  New cards in %d win%s" % [CardCollection.pixels, left,
+		"" if left == 1 else "s"]
+	for i in _shop_slots.size():
+		var a: String = stock[i] if i < stock.size() else ""
+		_shop_icons[i].visible = a != ""
+		_shop_slots[i].disabled = a == ""
+		if a != "":
+			_shop_icons[i].ability = a
+		_shop_prices[i].text = ("%d px" % CardCollection.PRICE) if a != "" else ("Sold" if i < stock.size() else "")
+	_show("Shop")
+	for i in _shop_slots.size():
+		if not _shop_slots[i].disabled:
+			_shop_slots[i].grab_focus()
+			return
+	_pages["Shop"].get_child(-1).grab_focus()
+
+
+func _open_buy(a: String) -> void:
+	if a == "":
+		return
+	_shop_pick = a
+	_buy_big.ability = a
+	var type_name: String = AbilityCard.TYPES[a]
+	_buy_type.text = AbilityCard.TYPE_NAMES[type_name]
+	_buy_type.add_theme_color_override("font_color", AbilityCard.TYPE_COLORS[type_name].lightened(0.25))
+	_buy_text.text = AbilityCard.DESCRIPTIONS[a]
+	var short := CardCollection.PRICE - CardCollection.pixels
+	_buy.text = ("Buy (%d pixels)" % CardCollection.PRICE) if short <= 0 else ("Need %d more pixels" % short)
+	_buy.disabled = short > 0
+	_show("Buy")
+	if _buy.disabled:
+		_pages["Buy"].get_child(-1).grab_focus()
+
+
+func _buy_card() -> void:
+	if CardCollection.buy(_shop_pick):
+		_buy_sfx.play()
+		_open_shop()
+
+
+## Wooden stands under each slot and a blocky counter along the bottom.
+func _draw_counter(c: Control) -> void:
+	var wood := Color("9c6b3f")
+	var dark := Color("6e4626")
+	var light := Color("c48a52")
+	var edge := Color("3b2716")
+	for i in CardCollection.SHOP_SIZE:
+		var x := 15.0 + i * 104
+		c.draw_rect(Rect2(x + 30, 92, 32, 18), edge)
+		c.draw_rect(Rect2(x + 32, 92, 28, 16), dark)
+		c.draw_rect(Rect2(x + 32, 92, 28, 3), light)
+	c.draw_rect(Rect2(0, 108, c.size.x, 42), edge)
+	c.draw_rect(Rect2(2, 110, c.size.x - 4, 38), wood)
+	c.draw_rect(Rect2(2, 110, c.size.x - 4, 4), light)
+	for bx in range(2, int(c.size.x) - 4, 22):
+		c.draw_rect(Rect2(bx, 114, 1, 34), dark)
 
 
 func _title(text: String) -> Label:

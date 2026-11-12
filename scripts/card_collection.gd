@@ -13,6 +13,15 @@ const STARTER := "heart_box"
 ## Every card, grouped by type, in the order the collection screen shows them.
 const ALL := ["dash", "pound", "double_jump", "glide", "quick", "tele_hop", "shockwave", "stun_landing", "air_brake", "momentum", "heart_box"]
 
+## Where each card can come from (its drop group, as on the blueprint):
+##   shop = Shop Only, find = Find Only (chests), drop = Drop Only, all = Shop, Find and Drop.
+## Cards not listed are "all".
+const DROP_GROUPS := {}
+## The shop: every card costs the same for now, 3 on display, new stock every 3 wins.
+const PRICE := 30
+const SHOP_SIZE := 3
+const RESTOCK_WINS := 3
+
 ## The save file in use, 1 to 3.
 static var file := 1
 static var owned: Array[String] = []
@@ -20,6 +29,9 @@ static var equipped: Array[String] = []
 static var pixels := 0
 ## Chests already opened, as "level key:chest number", so each pays out once.
 static var opened_chests: Array[String] = []
+## The cards on display in the shop ("" = sold), and wins since it last restocked.
+static var shop_stock: Array[String] = []
+static var shop_wins := 0
 static var _loaded := false
 
 
@@ -48,12 +60,16 @@ static func use_file(n: int) -> void:
 		equipped = equipped.filter(func(a: String) -> bool: return a in owned)
 		pixels = int(cfg.get_value("progress", "pixels", 0))
 		opened_chests.assign(cfg.get_value("progress", "opened_chests", []))
+		shop_stock.assign(cfg.get_value("shop", "stock", []))
+		shop_wins = int(cfg.get_value("shop", "wins", 0))
 	else:
 		# A fresh file: written to disk the first time something changes.
 		owned.assign([STARTER])
 		equipped.assign([STARTER])
 		pixels = 0
 		opened_chests.clear()
+		shop_stock.clear()
+		shop_wins = 0
 	var settings := ConfigFile.new()
 	settings.load(SETTINGS)
 	settings.set_value("game", "last_file", n)
@@ -67,6 +83,8 @@ static func save() -> void:
 	cfg.set_value("cards", "equipped", equipped)
 	cfg.set_value("progress", "pixels", pixels)
 	cfg.set_value("progress", "opened_chests", opened_chests)
+	cfg.set_value("shop", "stock", shop_stock)
+	cfg.set_value("shop", "wins", shop_wins)
 	cfg.save(path(file))
 
 
@@ -83,6 +101,45 @@ static func mark_chest(key: String) -> void:
 	if key not in opened_chests:
 		opened_chests.append(key)
 		save()
+
+
+static func drop_group(ability: String) -> String:
+	return DROP_GROUPS.get(ability, "all")
+
+
+## Cards that can come from a source ("shop", "find" or "drop").
+static func pool(source: String) -> Array:
+	return ALL.filter(func(a: String) -> bool: return drop_group(a) in [source, "all"])
+
+
+## The shop's cards, stocking it first if it's empty. Cards already owned aren't stocked.
+static func get_shop() -> Array[String]:
+	if shop_stock.is_empty():
+		var left := pool("shop").filter(func(a: String) -> bool: return a not in owned)
+		left.shuffle()
+		shop_stock.assign(left.slice(0, SHOP_SIZE))
+		save()
+	return shop_stock
+
+
+## A win counts toward restocking the shop.
+static func record_win() -> void:
+	shop_wins += 1
+	if shop_wins >= RESTOCK_WINS:
+		shop_wins = 0
+		shop_stock.clear()
+	save()
+
+
+## Buys a card on display. Returns false if it isn't there or there aren't enough pixels.
+static func buy(ability: String) -> bool:
+	var i := shop_stock.find(ability)
+	if i < 0 or pixels < PRICE or ability in owned:
+		return false
+	pixels -= PRICE
+	shop_stock[i] = ""
+	add(ability)   # saves
+	return true
 
 
 ## A random card this file hasn't found yet, or "" if it has them all.

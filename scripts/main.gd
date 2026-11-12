@@ -306,7 +306,7 @@ func _on_pixel_collected(index: int) -> void:
 func _on_chest_opened(index: int) -> void:
 	if _level_key != "custom":
 		CardCollection.mark_chest("%s:%d" % [_level_key, index])
-	var card: String = CardCollection.ALL.pick_random() if randf() < 0.2 else ""
+	var card: String = CardCollection.pool("find").pick_random() if randf() < 0.2 else ""
 	if card != "":
 		_on_card_collected(card)
 	else:
@@ -347,6 +347,7 @@ func _on_goal_reached() -> void:
 	player.velocity = Vector2.ZERO
 	var reward := win_reward()
 	if reward > 0:
+		CardCollection.record_win()
 		CardCollection.add_pixels(reward)
 		hud.set_pixels(CardCollection.pixels)
 	hud.show_win(run_time, falls, hearts, seed_value, reward)

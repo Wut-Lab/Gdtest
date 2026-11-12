@@ -4,7 +4,7 @@
     python3 tools/make_audio.py
 
 Writes audio/music.ogg (a soft, happy loop, exactly 3:00 at 96 BPM) and audio/jump.wav,
-audio/land.wav, audio/hurt.wav. Everything is synthesized here, so edit this file and rerun
+audio/land.wav, audio/hurt.wav, audio/buy.wav. Everything is synthesized here, so edit this file and rerun
 it to change the sound, then run `godot --headless --path . --import`.
 """
 import os
@@ -267,6 +267,17 @@ def sfx_hurt():
     return (w + crunch) * 0.45
 
 
+def sfx_buy():
+    """Shop purchase: a two-note bell "cha-ching" over a little coin shimmer."""
+    out = np.zeros(int(0.7 * SR))
+    for start, f in ((0.0, midi_hz(84)), (0.09, midi_hz(91))):
+        w = bell(f, 0.2)[: len(out) - int(start * SR)]
+        out[int(start * SR): int(start * SR) + len(w)] += w * 0.5
+    shimmer = noise_hit(0.05, n_sec=0.15) * 0.15
+    out[: len(shimmer)] += shimmer
+    return out * 0.7
+
+
 def write_wav(path, x, rate=SR):
     x = np.clip(x, -1, 1)
     with wave.open(path, "wb") as f:
@@ -281,6 +292,7 @@ def main():
     write_wav(os.path.join(OUT, "jump.wav"), sfx_jump())
     write_wav(os.path.join(OUT, "land.wav"), sfx_land())
     write_wav(os.path.join(OUT, "hurt.wav"), sfx_hurt())
+    write_wav(os.path.join(OUT, "buy.wav"), sfx_buy())
     tmp = os.path.join(OUT, "_music.wav")
     music = render_music()
     write_wav(tmp, music)
