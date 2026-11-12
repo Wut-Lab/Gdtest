@@ -31,13 +31,27 @@ const MAX_HEARTS := 2
 const MAX_BAD_BLOCKS := 3
 ## Chance a level has a treasure chest, up on a floating platform off the main path.
 const CHEST_CHANCE := 0.2
+## Share of seeds that make a vertical level: a tall shaft you climb to the goal at the top.
+const VERTICAL_CHANCE := 0.4
+const V_WIDTH := 30          # columns, including the stone wall on each side
+const V_MAX_ROWS := 220
 
 
 static func random_seed() -> int:
 	return randi_range(1, 99999)
 
 
+## Whether a seed makes a vertical (climbing) level. Decided apart from the layout's own
+## random numbers, so horizontal seeds keep the layouts they always had.
+static func is_vertical(seed_value: int) -> bool:
+	var t := RandomNumberGenerator.new()
+	t.seed = seed_value * 31 + 7
+	return t.randf() < VERTICAL_CHANCE
+
+
 static func generate(seed_value: int) -> String:
+	if is_vertical(seed_value):
+		return generate_vertical(seed_value)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value
 	var cols: Array = []   # each column is an Array of ROWS one-character strings
@@ -299,3 +313,188 @@ static func _pick(rng: RandomNumberGenerator, weights: Dictionary) -> String:
 		if r <= 0.0:
 			return k
 	return weights.keys()[0]
+
+
+# ---------- Vertical levels ----------
+## A tall shaft between two stone walls. You climb jump-through platforms to the goal at the top.
+## Guidelines that keep it climbable:
+##   - The next platform is 3 rows up (2 when it's a long sideways hop), with at most 3 tiles of
+##     sideways gap, so every step is an easy jump. Platforms are jump-through (= or ^).
+##   - Rubber pads launch you 5 rows up to the next platform.
+##   - Teleporter pairs warp you 9 rows up, past a gap too tall to jump.
+##   - Obstacles (S, V, T) and Bad Blocks sit on wide platforms you cross from one end to the other.
+##   - Falling just drops you to a lower platform or the floor; you never fall out.
+##   - Same required groups as horizontal levels: 1–4 obstacles, 1–2 teleporter pairs and 3–15
+##     basic special blocks (rubber pads, rubber wall bumps, one-way block platforms).
+static func generate_vertical(seed_value: int) -> String:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_value
+	var g: Array = []   # rows (top to bottom), each an Array of one-character strings
+	for y in V_MAX_ROWS:
+		var row := []
+		for x in V_WIDTH:
+			row.append("#" if x == 0 or x == V_WIDTH - 1 or y >= V_MAX_ROWS - 2 else ".")
+		g.append(row)
+	var floor_y := V_MAX_ROWS - 2
+	g[floor_y - 1][3] = "P"
+	# cur: the platform you're standing on. exit: which end you leave from (-1 left, 1 right, 0 any).
+	var st := {"cur": {"x": 1, "w": V_WIDTH - 2, "y": floor_y, "exit": 0}, "hearts": 0, "bad": 0,
+		"pixel_spots": [], "wide": []}
+
+	var pieces := []
+	for i in rng.randi_range(1, 4):
+		pieces.append(["S", "V", "T"][rng.randi_range(0, 2)])
+	for i in rng.randi_range(1, 2):
+		pieces.append("warp%d" % (i + 1))
+	var basics := 0
+	var target := rng.randi_range(3, 15)
+	while basics < target:
+		var pick: String = ["rubber", "one_way", "wall"][rng.randi_range(0, 2)]
+		pieces.append(pick)
+		basics += {"rubber": 3, "one_way": 3, "wall": 1}[pick]
+	if rng.randf() < CHEST_CHANCE:
+		pieces.append("chest")
+	for i in range(pieces.size() - 1, 0, -1):
+		var j := rng.randi_range(0, i)
+		var tmp = pieces[i]
+		pieces[i] = pieces[j]
+		pieces[j] = tmp
+
+	for piece in pieces:
+		for i in rng.randi_range(1, 2):
+			_v_step(g, st, rng, 3, rng.randi_range(3, 5), "=")
+		_v_piece(g, st, rng, piece)
+	for i in rng.randi_range(2, 3):
+		_v_step(g, st, rng, 3, rng.randi_range(3, 5), "=")
+	# The goal on a last, wider platform.
+	var top: Dictionary = _v_step(g, st, rng, 3, 6, "=")
+	g[top.y - 1][top.x + 3] = "G"
+	if st.bad == 0 and not st.wide.is_empty():
+		var w: Dictionary = st.wide[rng.randi_range(0, st.wide.size() - 1)]
+		_v_put(g, w.x + w.w - 1, w.y - 1, "e")
+	# 1–3 pixels hanging in the jump arcs between platforms.
+	var spots: Array = st.pixel_spots
+	for i in range(spots.size() - 1, 0, -1):
+		var j := rng.randi_range(0, i)
+		var tmp = spots[i]
+		spots[i] = spots[j]
+		spots[j] = tmp
+	var placed := 0
+	for p in spots:
+		if placed >= rng.randi_range(1, 3):
+			break
+		if g[p.y][p.x] == ".":
+			g[p.y][p.x] = "*"
+			placed += 1
+
+	# Crop the empty sky above the goal, keeping 6 rows of headroom.
+	var first: int = maxi(top.y - 8, 0)
+	var lines := PackedStringArray()
+	for y in range(first, V_MAX_ROWS):
+		lines.append("".join(g[y]))
+	return "\n".join(lines) + "\n"
+
+
+## Puts a tile if the spot is inside the shaft.
+static func _v_put(g: Array, x: int, y: int, ch: String) -> void:
+	if x > 0 and x < V_WIDTH - 1 and y >= 0:
+		g[y][x] = ch
+
+
+## Whether a platform of width w at (x, y) has room: empty around it and 2 rows of air above.
+static func _v_free(g: Array, x: int, y: int, w: int) -> bool:
+	if x < 1 or x + w > V_WIDTH - 1 or y < 4:
+		return false
+	for yy in range(y - 3, y + 2):
+		for xx in range(maxi(x - 1, 1), mini(x + w + 1, V_WIDTH - 1)):
+			if g[yy][xx] != ".":
+				return false
+	return true
+
+
+## Adds the next platform `rise` rows above the current one, within an easy jump, and makes it
+## current. Returns it.
+static func _v_step(g: Array, st: Dictionary, rng: RandomNumberGenerator, rise: int, w: int,
+		ch: String, max_gap := 3, min_gap := -2) -> Dictionary:
+	var cur: Dictionary = st.cur
+	var y: int = cur.y - rise
+	var best := -1
+	for attempt in 40:
+		var gap := rng.randi_range(min_gap, max_gap)   # tiles of air between the edges (negative = overlap)
+		var side: int = cur.exit if cur.exit != 0 else (1 if rng.randf() < 0.5 else -1)
+		if attempt > 20:
+			side = -side
+		var x: int = cur.x + cur.w + gap if side > 0 else cur.x - gap - w
+		if cur.w > 12:   # the floor: anywhere
+			x = rng.randi_range(2, V_WIDTH - 2 - w)
+		if _v_free(g, x, y, w):
+			best = x
+			break
+	if best < 0:   # no room sideways: go straight up through it (platforms are jump-through)
+		best = clampi(cur.x + cur.w / 2 - w / 2, 1, V_WIDTH - 1 - w)
+	for i in w:
+		g[y][best + i] = ch
+	# A pixel in the arc of this jump, between the two platforms.
+	var mid_x: int = (cur.x + cur.w / 2 + best + w / 2) / 2 if cur.w <= 12 else best + w / 2
+	st.pixel_spots.append({"x": mid_x, "y": y - 2})
+	if st.hearts < MAX_HEARTS and rng.randf() < 0.06:
+		_v_put(g, best + w / 2, y - 3, "H")
+		st.hearts += 1
+	var plat := {"x": best, "w": w, "y": y, "exit": 0}
+	st.cur = plat
+	return plat
+
+
+## A wide platform you cross end to end: arrive at one end, leave from the other.
+static func _v_wide(g: Array, st: Dictionary, rng: RandomNumberGenerator, w: int) -> Dictionary:
+	var came_from: int = st.cur.x + st.cur.w / 2
+	var plat := _v_step(g, st, rng, 3, w, "=", 2)
+	var center: int = plat.x + w / 2
+	plat.exit = 1 if came_from < center else -1
+	st.wide.append(plat)
+	return plat
+
+
+static func _v_piece(g: Array, st: Dictionary, rng: RandomNumberGenerator, piece: String) -> void:
+	match piece:
+		"S", "V", "T":
+			var p := _v_wide(g, st, rng, 9)
+			_v_put(g, p.x + 4, p.y - 1, piece)
+			if st.bad < MAX_BAD_BLOCKS and rng.randf() < 0.3:
+				_v_put(g, p.x + (p.w - 1 if p.exit > 0 else 0), p.y - 1, "e")
+				st.bad += 1
+		"wall":
+			# A rubber wall bump (1–2 tall) standing on a wide platform: hop over it.
+			var p := _v_wide(g, st, rng, 7)
+			for i in rng.randi_range(1, 2):
+				_v_put(g, p.x + 3, p.y - 1 - i, "W")
+		"one_way":
+			# A few one-way block steps in a row.
+			for i in rng.randi_range(1, 2):
+				_v_step(g, st, rng, 3, rng.randi_range(3, 4), "^")
+		"rubber":
+			# A rubber pad off to the side of where you stand (never overhead), then a platform
+			# 5 rows up that only a bounce reaches.
+			var p := _v_step(g, st, rng, 2, 5, "=", 3, 1)
+			for i in range(1, 4):
+				g[p.y][p.x + i] = "R"
+			st.cur = {"x": p.x + 1, "w": 3, "y": p.y, "exit": 0}
+			var up := _v_step(g, st, rng, 5, 4, "=", 0)
+			up.exit = 0
+		"warp1", "warp2":
+			# A pad at the end of a platform, and its partner 9 rows up at the far end of a
+			# platform too high to jump to. You leave that one from its other end.
+			var pad := "1" if piece == "warp1" else "2"
+			var a := _v_step(g, st, rng, 3, 5, "=")
+			_v_put(g, a.x + 4, a.y - 1, pad)
+			var b := _v_step(g, st, rng, 9, 7, "=", 4)
+			var pad_left := rng.randf() < 0.5
+			_v_put(g, b.x if pad_left else b.x + 6, b.y - 1, pad)
+			b.exit = 1 if pad_left else -1
+		"chest":
+			# A small side ledge with a chest, off the main climb (the climb carries on from here).
+			var cur: Dictionary = st.cur.duplicate()
+			var ledge := _v_step(g, st, rng, 3, 3, "=")
+			_v_put(g, ledge.x + 1, ledge.y - 1, "C")
+			st.pixel_spots.pop_back()
+			st.cur = cur

@@ -166,6 +166,8 @@ func play_random_level(s: int) -> void:
 	_level_key = "seed%d" % seed_value
 	hud.set_seed(seed_value)
 	load_level_text(LevelGen.generate(seed_value))
+	if LevelGen.is_vertical(seed_value):
+		hud.banner("Climb to the top!")
 
 
 ## Square Hub Town: walk around and go into its buildings. Coming back from the dungeon puts
@@ -477,9 +479,11 @@ func win_reward() -> int:
 	return FAST_REWARD if run_time <= par_time() else WIN_REWARD
 
 
-## A fast run: start to goal in under 1.5× the time it takes to just run that distance.
+## A fast run: start to goal in under 1.5× the time it takes to just run that distance
+## (across plus up, so climbing levels count their height).
 func par_time() -> float:
-	return absf(level.goal.position.x - level.start.position.x) / player.run_speed * PAR_SLACK
+	var d := (level.goal.position - level.start.position).abs()
+	return (d.x + d.y) / player.run_speed * PAR_SLACK
 
 
 # ---------- Web page bridge ----------
