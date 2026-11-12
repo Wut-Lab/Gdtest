@@ -14,9 +14,19 @@ const STARTER := "heart_box"
 const ALL := ["dash", "pound", "double_jump", "glide", "quick", "tele_hop", "high_jump", "phase_jump", "shockwave", "stun_landing", "grip_and_go", "lucky_charm", "bounce_house", "wall_cling", "brick_drop", "slow_burst", "portion_booster", "air_brake", "momentum", "heart_box"]
 
 ## Where each card can come from (its drop group, as on the blueprint):
-##   shop = Shop Only, find = Find Only (chests), drop = Drop Only, all = Shop, Find and Drop.
-## Cards not listed are "all".
-const DROP_GROUPS := {}
+##   shop = Shop Only, find = Find Only (chests), drop = Drop Only, level = Find and Drop
+##   (anything earned in levels, never sold), all = Shop, Find and Drop, starter = only the
+##   card every new save file starts with. Cards not listed are "all".
+const DROP_GROUPS := {
+	"dash": "level", "pound": "shop", "shockwave": "level", "stun_landing": "shop",
+	"brick_drop": "all",
+	"double_jump": "shop", "glide": "level", "high_jump": "shop", "phase_jump": "level",
+	"wall_cling": "all",
+	"quick": "shop", "tele_hop": "level", "air_brake": "level", "grip_and_go": "shop",
+	"momentum": "all",
+	"heart_box": "starter", "lucky_charm": "shop", "bounce_house": "shop", "slow_burst": "level",
+	"portion_booster": "level",
+}
 ## The shop: every card costs the same for now, 3 on display, new stock every 3 wins.
 const PRICE := 30
 const SHOP_SIZE := 3
@@ -109,7 +119,9 @@ static func drop_group(ability: String) -> String:
 
 ## Cards that can come from a source ("shop", "find" or "drop").
 static func pool(source: String) -> Array:
-	return ALL.filter(func(a: String) -> bool: return drop_group(a) in [source, "all"])
+	return ALL.filter(func(a: String) -> bool:
+		var g := drop_group(a)
+		return g == source or g == "all" or (g == "level" and source in ["find", "drop"]))
 
 
 ## The shop's cards, stocking it first if it's empty. Cards already owned aren't stocked.
