@@ -41,7 +41,7 @@ var _next_bolts := 0.0
 
 func _ready() -> void:
 	sync_to_physics = true
-	add_to_group("spike_squares")
+	add_to_group("card_targets")
 	_origin = position
 	health = max_health
 	var col := CollisionShape2D.new()
@@ -96,29 +96,18 @@ func stun(seconds: float) -> void:
 	_stun = maxf(_stun, seconds)
 
 
+## Half its width and height, for the cards that reach for it.
+func half_size() -> Vector2:
+	return Vector2(T, T) / 2.0
+
+
 func is_stunned() -> bool:
 	return _stun > 0.0
 
 
 ## Shockwave card: slide up to tiles × 32 px sideways (dir -1 or 1), less if a wall is in the way.
 func shove(dir: float, tiles := 2) -> void:
-	var q := PhysicsShapeQueryParameters2D.new()
-	var shape := RectangleShape2D.new()
-	shape.size = Vector2(T - 6.0, T - 6.0)   # a bit smaller, so the floor it sits on doesn't count
-	q.shape = shape
-	q.exclude = [get_rid()]
-	q.collision_mask = collision_mask
-	var space := get_world_2d().direct_space_state
-	for n in range(tiles, 0, -1):
-		var clear := true
-		for i in range(1, n + 1):   # every tile it slides through must be open
-			q.transform = Transform2D(0.0, global_position + _shift_to - _shift + Vector2(dir * i * T, 0.0))
-			for hit in space.intersect_shape(q, 4):
-				if not hit.collider is Player:
-					clear = false
-		if clear:
-			_shift_to += Vector2(dir * n * T, 0.0)
-			return
+	_shift_to.x += CardFx.clear_shift(self, global_position + _shift_to - _shift, half_size(), dir, tiles)
 
 
 func _physics_process(delta: float) -> void:
@@ -145,9 +134,7 @@ func _physics_process(delta: float) -> void:
 		_next_bolts -= delta
 		if _next_bolts <= 0.0:
 			_next_bolts = 0.07   # re-roll the sparks so they crackle
-			var h := T / 2.0
-			_bolts = [CardFx.bolt(Vector2(-h, randf_range(-h, h)), Vector2(h, randf_range(-h, h)), 5),
-				CardFx.bolt(Vector2(randf_range(-h, h), -h), Vector2(randf_range(-h, h), h), 5)]
+			_bolts = CardFx.stun_bolts(half_size())
 	queue_redraw()
 	for area in _hit_areas:
 		for b in area.get_overlapping_bodies():
@@ -191,6 +178,5 @@ func _draw() -> void:
 				else:
 					draw_rect(Rect2(o, c + 1.0 - half, w, half * 2.0), METAL)
 					draw_rect(Rect2(o, c + 1.0, w, half), METAL_SHADE)
-	if _stun > 0.0 and (_stun > 1.0 or fmod(_stun, 0.2) < 0.12):
-		for i in _bolts.size():
-			draw_polyline(_bolts[i], CardFx.SPARK if i == 0 else CardFx.SPARK_2, 2.0)
+	if _stun > 0.0:
+		CardFx.draw_stun(self, _bolts, _stun)

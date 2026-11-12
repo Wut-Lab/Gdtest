@@ -42,6 +42,41 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 
+## Shockwave: how many px (sign included) a body of half-size `half` at `at` can slide sideways,
+## trying `tiles` tiles first and fewer if a wall is in the way. 0 if blocked.
+static func clear_shift(body: PhysicsBody2D, at: Vector2, half: Vector2, dir: float, tiles := 2) -> float:
+	var q := PhysicsShapeQueryParameters2D.new()
+	var shape := RectangleShape2D.new()
+	shape.size = half * 2.0 - Vector2(6.0, 6.0)   # a bit smaller, so the floor it sits on doesn't count
+	q.shape = shape
+	q.exclude = [body.get_rid()]
+	q.collision_mask = body.collision_mask
+	var space := body.get_world_2d().direct_space_state
+	for n in range(tiles, 0, -1):
+		var clear := true
+		for i in range(1, n + 1):   # every tile it slides through must be open
+			q.transform = Transform2D(0.0, at + Vector2(dir * i * 32.0, 0.0))
+			for hit in space.intersect_shape(q, 4):
+				if not hit.collider is Player:
+					clear = false
+		if clear:
+			return dir * n * 32.0
+	return 0.0
+
+
+## Electric sparks crackling over a box of half-size `half`, re-rolled by the caller.
+static func stun_bolts(half: Vector2) -> Array:
+	return [bolt(Vector2(-half.x, randf_range(-half.y, half.y)), Vector2(half.x, randf_range(-half.y, half.y)), 5),
+		bolt(Vector2(randf_range(-half.x, half.x), -half.y), Vector2(randf_range(-half.x, half.x), half.y), 5)]
+
+
+## Draws stun sparks, blinking in the last second.
+static func draw_stun(ci: CanvasItem, bolts: Array, stun_left: float) -> void:
+	if stun_left > 1.0 or fmod(stun_left, 0.2) < 0.12:
+		for i in bolts.size():
+			ci.draw_polyline(bolts[i], SPARK if i == 0 else SPARK_2, 2.0)
+
+
 ## A jagged line from a to b as a list of points.
 static func bolt(a: Vector2, b: Vector2, steps := 4) -> PackedVector2Array:
 	var pts := PackedVector2Array([a])

@@ -326,36 +326,37 @@ func _update_dash_and_pound(delta: float, on_floor: bool) -> void:
 		_play(_jump_sfx, 0.7)
 
 
-## Shockwave card: shove spike squares near the floor around you 2 tiles away from you.
+## Shockwave card: shove spike squares and spiked platforms near the floor 2 tiles away from you.
 func _shockwave() -> void:
 	_shock_cd = shockwave_cooldown
 	var feet := global_position.y + SIZE / 2.0
 	CardFx.spawn(get_parent(), Vector2(global_position.x, feet), "shock", shockwave_reach)
 	_play(_land_sfx, 0.6)
-	for s in get_tree().get_nodes_in_group("spike_squares"):
-		var sq := s as SpikeSquare
-		if not sq.visible:
+	for t in get_tree().get_nodes_in_group("card_targets"):
+		if not t.visible:
 			continue
-		var d := sq.global_position - global_position
-		var bottom := sq.global_position.y + SpikeSquare.T / 2.0
-		if absf(d.x) <= shockwave_reach and bottom > feet - 2.0 * SpikeSquare.T and bottom < feet + 6.0:
-			sq.shove(signf(d.x) if d.x != 0.0 else _face)
+		var half: Vector2 = t.half_size()
+		var d: Vector2 = t.global_position - global_position
+		var bottom: float = t.global_position.y + half.y
+		if absf(d.x) - half.x <= shockwave_reach and bottom > feet - 2.0 * 32.0 and bottom < feet + 6.0:
+			t.shove(signf(d.x) if d.x != 0.0 else _face)
 
 
-## Stunning Landing card: landing on a spike square, or within 1 tile of one, stuns it.
+## Stunning Landing card: landing on a spike square or spiked platform, or within 1 tile of
+## one, stuns it.
 func _stun_landing() -> void:
 	var feet := global_position.y + SIZE / 2.0
-	var reach := SIZE / 2.0 + SpikeSquare.T * 1.5 + 4.0   # half of each, a 1-tile gap, a little slack
 	var hit := false
-	for s in get_tree().get_nodes_in_group("spike_squares"):
-		var sq := s as SpikeSquare
-		if not sq.visible:
+	for t in get_tree().get_nodes_in_group("card_targets"):
+		if not t.visible:
 			continue
-		var d := sq.global_position - global_position
-		var top := sq.global_position.y - SpikeSquare.T / 2.0
-		var bottom := top + SpikeSquare.T
-		if absf(d.x) <= reach and top < feet + SpikeSquare.T and bottom > feet - 2.0 * SpikeSquare.T:
-			sq.stun(stun_time)
+		var half: Vector2 = t.half_size()
+		var d: Vector2 = t.global_position - global_position
+		var top: float = t.global_position.y - half.y
+		var bottom: float = t.global_position.y + half.y
+		# Within a 1-tile gap sideways (plus a little slack), and near your feet's height.
+		if absf(d.x) <= half.x + SIZE / 2.0 + 36.0 and top < feet + 32.0 and bottom > feet - 64.0:
+			t.stun(stun_time)
 			hit = true
 	if hit:
 		CardFx.spawn(get_parent(), Vector2(global_position.x, feet), "zap")

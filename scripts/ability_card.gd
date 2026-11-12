@@ -30,9 +30,9 @@ const DESCRIPTIONS := {
 	"tele_hop": "Passive: when you come out of a teleporter, you hop straight up, half as high "
 		+ "as a full jump.",
 	"shockwave": "Passive: when you land a Ground Pound, a shockwave rolls along the floor and "
-		+ "pushes nearby spike squares 2 tiles away. Needs Ground Pound; recharges in 2.5 seconds.",
-	"stun_landing": "Passive: land on a spike square, or within 1 tile of one, to stun it. "
-		+ "It stops moving for 3 seconds.",
+		+ "pushes nearby spike squares and spiked platforms 2 tiles away. Needs Ground Pound; recharges in 2.5 seconds.",
+	"stun_landing": "Passive: land on a spike square or spiked platform, or within 1 tile of one, "
+		+ "to stun it. It stops moving for 3 seconds.",
 	"air_brake": "Passive: you steer much more sharply in the air, and stop almost at once when "
 		+ "you let go.",
 	"momentum": "Passive: keep running without stopping or turning to build up speed, up to "
