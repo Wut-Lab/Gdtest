@@ -150,13 +150,23 @@ func _draw() -> void:
 		draw_rect(Rect2(ex - 7.0, -3.0, 5.0, 2.0), EYES)
 		draw_rect(Rect2(ex + 2.0, -3.0, 5.0, 2.0), EYES)
 	else:
-		# Angry eyes: white blocks with a slanted brow cut out, pupils looking where it walks.
-		draw_rect(Rect2(ex - 7.0, -5.0, 5.0, 6.0), EYES)
-		draw_rect(Rect2(ex + 2.0, -5.0, 5.0, 6.0), EYES)
-		draw_rect(Rect2(ex - 7.0, -5.0, 2.0, 2.0), BODY)
-		draw_rect(Rect2(ex + 5.0, -5.0, 2.0, 2.0), BODY)
-		draw_rect(Rect2(ex - 5.0 + _dir, -2.0, 2.0, 3.0), PUPIL)
-		draw_rect(Rect2(ex + 3.0 + _dir, -2.0, 2.0, 3.0), PUPIL)
+		# Angry face: eyes cut by thick brows slanting down to the middle, pupils glaring where
+		# it walks, and a frown of gritted teeth.
+		draw_rect(Rect2(ex - 9.0, -6.0, 7.0, 6.0), EYES)
+		draw_rect(Rect2(ex + 2.0, -6.0, 7.0, 6.0), EYES)
+		draw_colored_polygon(PackedVector2Array([Vector2(ex - 10.0, -10.0), Vector2(ex - 1.0, -5.0),
+			Vector2(ex - 1.0, -2.0), Vector2(ex - 10.0, -6.0)]), PUPIL)
+		draw_colored_polygon(PackedVector2Array([Vector2(ex + 10.0, -10.0), Vector2(ex + 1.0, -5.0),
+			Vector2(ex + 1.0, -2.0), Vector2(ex + 10.0, -6.0)]), PUPIL)
+		draw_rect(Rect2(ex - 5.0 + _dir, -3.0, 2.0, 3.0), PUPIL)
+		draw_rect(Rect2(ex + 4.0 + _dir, -3.0, 2.0, 3.0), PUPIL)
+		# Mouth: dark slot with zigzag teeth, corners turned down.
+		draw_rect(Rect2(ex - 6.0, 3.0, 12.0, 5.0), PUPIL)
+		for i in 3:
+			draw_rect(Rect2(ex - 5.0 + i * 4.0, 3.0, 2.0, 2.0), EYES)
+			draw_rect(Rect2(ex - 3.0 + i * 4.0, 6.0, 2.0, 2.0), EYES)
+		draw_rect(Rect2(ex - 8.0, 7.0, 2.0, 3.0), PUPIL)
+		draw_rect(Rect2(ex + 6.0, 7.0, 2.0, 3.0), PUPIL)
 	if _slow > 0.0:
 		CardFx.draw_slow(self, half_size(), _slow)
 	if _stun > 0.0:

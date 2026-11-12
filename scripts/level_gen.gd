@@ -36,6 +36,7 @@ const VERTICAL_CHANCE := 0.4
 ## Share of seeds that make a diagonal level: the same climb, but every step also heads right.
 const DIAGONAL_CHANCE := 0.2
 const D_MAX_WIDTH := 320
+const D_FLOOR := 8           # diagonal levels: floor columns under the start
 const V_WIDTH := 30          # columns, including the stone wall on each side
 const V_MAX_ROWS := 220
 
@@ -336,6 +337,7 @@ static func _pick(rng: RandomNumberGenerator, weights: Dictionary) -> String:
 ##   - Teleporter pairs warp you 9 rows up, past a gap too tall to jump.
 ##   - Obstacles (S, V, T) and Bad Blocks sit on wide platforms you cross from one end to the other.
 ##   - Falling just drops you to a lower platform or the floor; you never fall out.
+##     (Diagonal levels: the floor is only under the start, so falling off the climb is a fall.)
 ##   - Same required groups as horizontal levels: 1–4 obstacles, 1–2 teleporter pairs and 3–15
 ##     basic special blocks (rubber pads, rubber wall bumps, one-way block platforms).
 ## Diagonal levels use the same rules in a wide space, with every step heading right.
@@ -355,8 +357,13 @@ static func generate_vertical(seed_value: int, diagonal := false) -> String:
 	var st := {"cur": {"x": 1, "w": V_WIDTH - 2, "y": floor_y, "exit": 0}, "hearts": 0, "bad": 0,
 		"pixel_spots": [], "wide": []}
 	if diagonal:
+		# The floor only runs under the start, so you can't wander off along the bottom: the
+		# way on is up. Below the climb is a pit, and falling in costs a heart like any fall.
+		for y in range(floor_y, V_MAX_ROWS):
+			for x in range(D_FLOOR, gw - 1):
+				g[y][x] = "."
 		st.dir = 1
-		st.cur = {"x": 1, "w": 6, "y": floor_y, "exit": 1}
+		st.cur = {"x": 1, "w": D_FLOOR - 1, "y": floor_y, "exit": 1}
 
 	var pieces := []
 	for i in rng.randi_range(1, 4):
