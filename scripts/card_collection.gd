@@ -11,7 +11,7 @@ const FILES := 3
 const MAX_EQUIPPED := 3
 const STARTER := "heart_box"
 ## Every card, grouped by type, in the order the collection screen shows them.
-const ALL := ["dash", "pound", "double_jump", "glide", "quick", "tele_hop", "air_brake", "momentum", "heart_box"]
+const ALL := ["dash", "pound", "double_jump", "glide", "quick", "tele_hop", "shockwave", "stun_landing", "air_brake", "momentum", "heart_box"]
 
 ## The save file in use, 1 to 3.
 static var file := 1

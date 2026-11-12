@@ -2,17 +2,17 @@ class_name AbilityCard
 extends Area2D
 ## An ability card floating in the level. Touch it to gain its ability for this run.
 ##   D = Dash, Q = Ground Pound, J = Double Jump, L = Glide, K = Quick, E = Tele-hop,
-##   A = Air Brake, M = Momentum, X = Heart Box (in a text map)
+##   Z = Shockwave, U = Stunning Landing, A = Air Brake, M = Momentum, X = Heart Box (in a text map)
 
 signal collected(ability: String)
 
 const LETTERS := {"D": "dash", "Q": "pound", "J": "double_jump", "L": "glide", "K": "quick",
-	"E": "tele_hop", "A": "air_brake", "M": "momentum", "X": "heart_box"}
+	"E": "tele_hop", "Z": "shockwave", "U": "stun_landing", "A": "air_brake", "M": "momentum", "X": "heart_box"}
 const NAMES := {"dash": "Dash", "pound": "Ground Pound", "double_jump": "Double Jump", "glide": "Glide",
-	"quick": "Quick", "tele_hop": "Tele-hop", "air_brake": "Air Brake", "momentum": "Momentum", "heart_box": "Heart Box"}
+	"quick": "Quick", "tele_hop": "Tele-hop", "shockwave": "Shockwave", "stun_landing": "Stunning Landing", "air_brake": "Air Brake", "momentum": "Momentum", "heart_box": "Heart Box"}
 ## Card types, color coded: attacks are red, jumps are blue, movement is yellow, misc is gray.
 const TYPES := {"dash": "attack", "pound": "attack", "double_jump": "jump", "glide": "jump",
-	"quick": "movement", "tele_hop": "movement", "air_brake": "movement", "momentum": "movement", "heart_box": "misc"}
+	"quick": "movement", "tele_hop": "movement", "shockwave": "attack", "stun_landing": "attack", "air_brake": "movement", "momentum": "movement", "heart_box": "misc"}
 const TYPE_NAMES := {"attack": "Attack card", "jump": "Jump card", "movement": "Movement card", "misc": "Misc card"}
 const TYPE_COLORS := {"attack": Color("e5484d"), "jump": Color("3d7be0"), "movement": Color("e0a400"),
 	"misc": Color("7d8597")}
@@ -29,6 +29,10 @@ const DESCRIPTIONS := {
 	"quick": "Passive: you run 25% faster while this card is equipped.",
 	"tele_hop": "Passive: when you come out of a teleporter, you hop straight up, half as high "
 		+ "as a full jump.",
+	"shockwave": "Passive: when you land a Ground Pound, a shockwave rolls along the floor and "
+		+ "pushes nearby spike squares 2 tiles away. Needs Ground Pound; recharges in 2.5 seconds.",
+	"stun_landing": "Passive: land on a spike square, or within 1 tile of one, to stun it. "
+		+ "It stops moving for 3 seconds.",
 	"air_brake": "Passive: you steer much more sharply in the air, and stop almost at once when "
 		+ "you let go.",
 	"momentum": "Passive: keep running without stopping or turning to build up speed, up to "
@@ -38,7 +42,7 @@ const DESCRIPTIONS := {
 const PAPER := Color("eef1fa")
 const EDGE := Color("1b2440")
 
-@export_enum("dash", "pound", "double_jump", "glide", "quick", "tele_hop", "air_brake", "momentum", "heart_box") var ability := "dash"
+@export_enum("dash", "pound", "double_jump", "glide", "quick", "tele_hop", "shockwave", "stun_landing", "air_brake", "momentum", "heart_box") var ability := "dash"
 
 var _t := 0.0
 
@@ -146,6 +150,22 @@ static func _draw_symbol(ci: CanvasItem, ability_name: String, o: Vector2, c: Co
 			ci.draw_rect(Rect2(o + Vector2(-8, 4), Vector2(7, b)), c)
 			ci.draw_rect(Rect2(o + Vector2(1, 6), Vector2(b, b)), c)
 			ci.draw_rect(Rect2(o + Vector2(5, 6), Vector2(b, b)), c)
+		"shockwave":
+			# A block on the ground with waves rolling out both ways.
+			ci.draw_rect(Rect2(o + Vector2(-3, -6), Vector2(6, 6)), c)
+			ci.draw_rect(Rect2(o + Vector2(-9, 2), Vector2(18, b)), c)
+			for side in [-1.0, 1.0]:
+				ci.draw_rect(Rect2(o + Vector2(side * 6.0 - 1.0, -2), Vector2(b, 3)), c)
+				ci.draw_rect(Rect2(o + Vector2(side * 9.0 - 1.0, -4), Vector2(b, 5)), c)
+			ci.draw_rect(Rect2(o + Vector2(-7, 6), Vector2(14, b)), c)
+		"stun_landing":
+			# A lightning bolt striking a ground line.
+			for p in [Vector2(1, -9), Vector2(-1, -7), Vector2(-3, -5), Vector2(-1, -3), Vector2(1, -3),
+					Vector2(3, -3), Vector2(1, -1), Vector2(-1, 1), Vector2(-3, 3)]:
+				ci.draw_rect(Rect2(o + p, Vector2(b, b)), c)
+			ci.draw_rect(Rect2(o + Vector2(-9, 7), Vector2(18, b)), c)
+			ci.draw_rect(Rect2(o + Vector2(-8, 4), Vector2(b, b)), c)
+			ci.draw_rect(Rect2(o + Vector2(6, 4), Vector2(b, b)), c)
 		"air_brake":
 			# A block stopped short against a wall, with brake marks behind it.
 			ci.draw_rect(Rect2(o + Vector2(-3, -4), Vector2(7, 7)), c)

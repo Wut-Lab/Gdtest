@@ -65,6 +65,11 @@ const SIZE := 24.0
 @export var glide_fall_speed := 150.0
 ## Holding jump as a ground pound lands bounces you up this many times a normal jump.
 @export var pound_rebound := 0.75
+## Shockwave: a ground pound landing shoves spike squares this far away (px) 2 tiles back.
+@export var shockwave_reach := 160.0
+@export var shockwave_cooldown := 2.5
+## Stunning Landing: landing on or within 1 tile of a spike square freezes it this long.
+@export var stun_time := 3.0
 
 @export_group("Look")
 @export var color := Color("ff6b5e")
@@ -86,6 +91,7 @@ var _squash := Vector2.ONE
 var _was_on_floor := true
 var _bouncing := false
 var _stun := 0.0
+var _shock_cd := 0.0
 ## Momentum card: seconds spent running one way without stopping or turning.
 var _momentum := 0.0
 var _dash := 0.0          # time left in the current dash
@@ -267,6 +273,8 @@ func _physics_process(delta: float) -> void:
 		_pounding = false
 		if not bounced_now:
 			_squash = Vector2(1.6, 0.5)
+			if "shockwave" in abilities and _shock_cd == 0.0:
+				_shockwave()
 			if Input.is_action_pressed("jump"):
 				velocity.y = -jump_velocity * pound_rebound   # pound rebound: hold jump to spring back up
 				_puff()
@@ -278,6 +286,8 @@ func _physics_process(delta: float) -> void:
 		_puff()
 		_land_sfx.volume_db = lerpf(-14.0, -4.0, amount)   # harder landings are louder
 		_play(_land_sfx)
+	if "stun_landing" in abilities and is_on_floor() and not _was_on_floor:
+		_stun_landing()
 	_was_on_floor = is_on_floor() and not bounced_now
 
 	if position.y > fall_limit_y:
@@ -286,6 +296,7 @@ func _physics_process(delta: float) -> void:
 
 func _update_dash_and_pound(delta: float, on_floor: bool) -> void:
 	_dash_cd = maxf(_dash_cd - delta, 0.0)
+	_shock_cd = maxf(_shock_cd - delta, 0.0)
 	if on_floor:
 		_air_dash_used = false
 	if _dash > 0.0:
@@ -313,6 +324,42 @@ func _update_dash_and_pound(delta: float, on_floor: bool) -> void:
 		velocity = Vector2(0.0, pound_speed)
 		_squash = Vector2(0.7, 1.4)
 		_play(_jump_sfx, 0.7)
+
+
+## Shockwave card: shove spike squares near the floor around you 2 tiles away from you.
+func _shockwave() -> void:
+	_shock_cd = shockwave_cooldown
+	var feet := global_position.y + SIZE / 2.0
+	CardFx.spawn(get_parent(), Vector2(global_position.x, feet), "shock", shockwave_reach)
+	_play(_land_sfx, 0.6)
+	for s in get_tree().get_nodes_in_group("spike_squares"):
+		var sq := s as SpikeSquare
+		if not sq.visible:
+			continue
+		var d := sq.global_position - global_position
+		var bottom := sq.global_position.y + SpikeSquare.T / 2.0
+		if absf(d.x) <= shockwave_reach and bottom > feet - 2.0 * SpikeSquare.T and bottom < feet + 6.0:
+			sq.shove(signf(d.x) if d.x != 0.0 else _face)
+
+
+## Stunning Landing card: landing on a spike square, or within 1 tile of one, stuns it.
+func _stun_landing() -> void:
+	var feet := global_position.y + SIZE / 2.0
+	var reach := SIZE / 2.0 + SpikeSquare.T * 1.5 + 4.0   # half of each, a 1-tile gap, a little slack
+	var hit := false
+	for s in get_tree().get_nodes_in_group("spike_squares"):
+		var sq := s as SpikeSquare
+		if not sq.visible:
+			continue
+		var d := sq.global_position - global_position
+		var top := sq.global_position.y - SpikeSquare.T / 2.0
+		var bottom := top + SpikeSquare.T
+		if absf(d.x) <= reach and top < feet + SpikeSquare.T and bottom > feet - 2.0 * SpikeSquare.T:
+			sq.stun(stun_time)
+			hit = true
+	if hit:
+		CardFx.spawn(get_parent(), Vector2(global_position.x, feet), "zap")
+		_play(_jump_sfx, 2.2)
 
 
 ## Dashing into an obstacle, or pounding onto one, deals it 1 damage (if it can take that kind).
