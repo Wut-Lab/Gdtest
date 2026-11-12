@@ -29,20 +29,20 @@ const DESCRIPTIONS := {
 		+ "It recharges when you land.",
 	"glide": "Hold jump while falling to drift down slowly and steer farther across gaps. "
 		+ "Let go to fall normally.",
-	"quick": "Passive: you run 25% faster while this card is equipped.",
+	"quick": "Passive: you run 15% faster while this card is equipped.",
 	"tele_hop": "Passive: when you come out of a teleporter, you hop straight up, half as high "
 		+ "as a full jump.",
 	"high_jump": "Passive: your jumps go 20% higher.",
 	"phase_jump": "Passive: at the top of every jump you phase out for a split second, and "
 		+ "nothing can hurt you until you phase back in.",
-	"shockwave": "Passive: when you land a Ground Pound, a shockwave rolls along the floor and "
-		+ "pushes nearby spike squares and spiked platforms 2 tiles away. Needs Ground Pound; recharges in 2.5 seconds.",
-	"stun_landing": "Passive: land on a spike square or spiked platform, or within 1 tile of one, "
+	"shockwave": "Passive: when you land hard (a Ground Pound, or a drop of about 5 tiles), a shockwave "
+		+ "rolls along the floor and pushes nearby spike squares, spiked platforms and Bad Blocks 2 tiles away. Recharges in 2.5 seconds.",
+	"stun_landing": "Passive: land on a spike square, spiked platform or Bad Block, or within 1 tile of one, "
 		+ "to stun it. It stops moving for 3 seconds.",
 	"grip_and_go": "Passive: land after moving at least 2 tiles sideways in the air, and you "
 		+ "dash on for 75% of that distance.",
-	"lucky_charm": "Passive: you have a 20% chance to shrug off a hit from a spike square or "
-		+ "spiked platform and keep your heart.",
+	"lucky_charm": "Passive: you have a 20% chance to shrug off a hit from a spike square, "
+		+ "spiked platform or Bad Block and keep your heart.",
 	"bounce_house": "Passive: rubber bounces you 25% higher, and landing on normal ground from "
 		+ "a big fall gives you a little bounce.",
 	"secret_helper": "Passive: unopened chests glow so they're easier to spot, and levels with "

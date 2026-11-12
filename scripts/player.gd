@@ -68,6 +68,9 @@ const SIZE := 24.0
 ## Shockwave: a ground pound landing shoves spike squares this far away (px) 2 tiles back.
 @export var shockwave_reach := 160.0
 @export var shockwave_cooldown := 2.5
+## Shockwave also fires on any landing falling faster than this (about a 5-tile drop; a jump onto
+## flat ground lands slower).
+@export var shockwave_fall_speed := 860.0
 ## Stunning Landing: landing on or within 1 tile of a spike square freezes it this long.
 @export var stun_time := 3.0
 ## High Jump: jumps go this many times as high (speed scales by the square root).
@@ -260,9 +263,9 @@ func teleport_to(pos: Vector2) -> void:
 	teleported.emit()
 
 
-## Running speed, 25% faster with the Quick card. Momentum builds up to 25% more over 2 seconds.
+## Running speed, 15% faster with the Quick card. Momentum builds up to 25% more over 2 seconds.
 func _run_speed() -> float:
-	var s := run_speed * (1.0 + _pct(0.25) if "quick" in abilities else 1.0)
+	var s := run_speed * (1.0 + _pct(0.15) if "quick" in abilities else 1.0)
 	if "momentum" in abilities:
 		s *= 1.0 + _pct(0.25) * clampf(_momentum / 2.0, 0.0, 1.0)
 	return s
@@ -398,6 +401,9 @@ func _physics_process(delta: float) -> void:
 		_puff()
 		_land_sfx.volume_db = lerpf(-14.0, -4.0, amount)   # harder landings are louder
 		_play(_land_sfx)
+	if "shockwave" in abilities and _shock_cd == 0.0 and not bounced_now and is_on_floor() \
+			and not _was_on_floor and before.y > shockwave_fall_speed:
+		_shockwave()   # Shockwave: any hard landing, not just a Ground Pound
 	if "stun_landing" in abilities and is_on_floor() and not _was_on_floor:
 		_stun_landing()
 	if "bounce_house" in abilities and is_on_floor() and not _was_on_floor and not bounced_now \
@@ -484,7 +490,7 @@ func _update_dash_and_pound(delta: float, on_floor: bool) -> void:
 		_play(_jump_sfx, 0.7)
 
 
-## Shockwave card: shove spike squares and spiked platforms near the floor 2 tiles away from you.
+## Shockwave card: shove spike squares, spiked platforms and Bad Blocks near the floor 2 tiles away from you.
 func _shockwave() -> void:
 	_shock_cd = shockwave_cooldown
 	var feet := global_position.y + SIZE / 2.0
@@ -500,7 +506,7 @@ func _shockwave() -> void:
 			t.shove(signf(d.x) if d.x != 0.0 else _face)
 
 
-## Stunning Landing card: landing on a spike square or spiked platform, or within 1 tile of
+## Stunning Landing card: landing on a spike square, spiked platform or Bad Block, or within 1 tile of
 ## one, stuns it.
 func _stun_landing() -> void:
 	var feet := global_position.y + SIZE / 2.0
