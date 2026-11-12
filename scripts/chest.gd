@@ -52,6 +52,8 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
+	if not is_open and "secret_helper" in CardCollection.equipped:
+		_draw_glow()
 	draw_chest(self, Vector2.ZERO, is_open, _t)
 	if _flash > 0.0:
 		# A burst of light blocks rising out of the chest.
@@ -59,6 +61,24 @@ func _draw() -> void:
 			var x := -10.0 + i * 4.0
 			var y := -14.0 - (1.0 - _flash) * (18.0 + (i % 3) * 8.0)
 			draw_rect(Rect2(x, y, 3, 3), Color(GOLD, _flash))
+
+
+## Secret Helper card: a soft, blocky golden glow around the chest that slowly breathes.
+func _draw_glow() -> void:
+	var pulse := 0.75 + 0.25 * sin(_t * 2.5)
+	var b := 4.0   # glow block size
+	for gy in range(-12, 4):
+		for gx in range(-10, 10):
+			var p := Vector2(gx * b + b / 2.0, gy * b + b / 2.0 - 4.0)
+			var d := p.length() / 40.0
+			if d >= 1.0:
+				continue
+			# Stepped falloff so it reads as pixels, with a little checker dither at the edge.
+			var a := snappedf((1.0 - d) * (1.0 - d), 0.15) * 0.45 * pulse
+			if d > 0.7 and (gx + gy) % 2 == 0:
+				a *= 0.5
+			if a > 0.0:
+				draw_rect(Rect2(gx * b, gy * b - 4.0, b, b), Color(GOLD, a))
 
 
 ## Draws a chest whose bottom center is at o (26×22 closed). Shared with menus.

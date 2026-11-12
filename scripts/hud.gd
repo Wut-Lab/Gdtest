@@ -122,6 +122,28 @@ func show_out(time: float, falls: int) -> void:
 
 
 ## A short message that floats in near the top of the screen and fades away.
+## A big message in the middle of the screen: fades in, stays 3 seconds, fades out.
+func banner(text: String) -> void:
+	var l := Label.new()
+	l.text = text
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	l.offset_left = -260
+	l.offset_right = 260
+	l.offset_top = 120
+	l.add_theme_font_size_override("font_size", 30)
+	l.add_theme_color_override("font_color", Color("f2c230"))
+	l.add_theme_color_override("font_outline_color", Color("1b2440"))
+	l.add_theme_constant_override("outline_size", 8)
+	l.modulate.a = 0.0
+	add_child(l)
+	var tw := create_tween()
+	tw.tween_property(l, "modulate:a", 1.0, 0.5)
+	tw.tween_interval(3.0)
+	tw.tween_property(l, "modulate:a", 0.0, 0.6)
+	tw.tween_callback(l.queue_free)
+
+
 func toast(text: String) -> void:
 	var l := Label.new()
 	l.text = text

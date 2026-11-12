@@ -11,7 +11,7 @@ const FILES := 3
 const MAX_EQUIPPED := 3
 const STARTER := "heart_box"
 ## Every card, grouped by type, in the order the collection screen shows them.
-const ALL := ["dash", "pound", "double_jump", "glide", "quick", "tele_hop", "high_jump", "phase_jump", "shockwave", "stun_landing", "grip_and_go", "lucky_charm", "bounce_house", "wall_cling", "brick_drop", "slow_burst", "portion_booster", "air_brake", "momentum", "heart_box"]
+const ALL := ["dash", "pound", "double_jump", "glide", "quick", "tele_hop", "high_jump", "phase_jump", "shockwave", "stun_landing", "grip_and_go", "lucky_charm", "bounce_house", "secret_helper", "wall_cling", "brick_drop", "slow_burst", "portion_booster", "air_brake", "momentum", "heart_box"]
 
 ## Where each card can come from (its drop group, as on the blueprint):
 ##   shop = Shop Only, drop = Drop Only (earned in levels, never sold), chest = Chest Only,
@@ -25,7 +25,7 @@ const DROP_GROUPS := {
 	"quick": "shop", "tele_hop": "drop", "air_brake": "drop", "grip_and_go": "shop",
 	"momentum": "both",
 	"heart_box": "starter", "lucky_charm": "shop", "bounce_house": "shop", "slow_burst": "drop",
-	"portion_booster": "drop",
+	"portion_booster": "drop", "secret_helper": "chest",
 }
 ## The shop: every card costs the same for now, 3 on display, new stock every 3 wins.
 const PRICE := 30

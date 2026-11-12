@@ -172,6 +172,9 @@ func new_run() -> void:
 	if _level_key == "custom":
 		_sync_chests()   # editor test levels refill their chests every run
 	hud.set_pixels(CardCollection.pixels)
+	if "secret_helper" in player.abilities \
+			and level.get_chests().any(func(c: Node) -> bool: return not c.is_open):
+		hud.banner("Secrets to be Found!")   # Secret Helper card
 	state = State.PLAY
 	hud.hide_menus()
 	$TouchControls.show()
