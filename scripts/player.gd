@@ -62,7 +62,9 @@ const SIZE := 24.0
 ## Ground pound: in the air, slam straight down (Down, S or J).
 @export var pound_speed := 1000.0
 ## Glide: hold jump while falling to drift down at this speed.
-@export var glide_fall_speed := 110.0
+@export var glide_fall_speed := 150.0
+## Holding jump as a ground pound lands bounces you up this many times a normal jump.
+@export var pound_rebound := 0.75
 
 @export_group("Look")
 @export var color := Color("ff6b5e")
@@ -256,6 +258,10 @@ func _physics_process(delta: float) -> void:
 		_pounding = false
 		if not bounced_now:
 			_squash = Vector2(1.6, 0.5)
+			if Input.is_action_pressed("jump"):
+				velocity.y = -jump_velocity * pound_rebound   # pound rebound: hold jump to spring back up
+				_puff()
+				_play(_jump_sfx, 0.9)
 
 	if not bounced_now and is_on_floor() and not _was_on_floor and before.y > 250.0:
 		var amount := clampf((before.y - 200.0) / 700.0, 0.0, 1.0)

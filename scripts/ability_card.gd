@@ -21,7 +21,7 @@ const DESCRIPTIONS := {
 	"dash": "Press Dash (Shift, X or K) to burst forward the way you're facing. You get one dash "
 		+ "per jump in the air. Dashing into an up-down spike square breaks it.",
 	"pound": "Press Ground Pound (Down, S or J) in the air to slam straight down. Pounding onto "
-		+ "a spike square breaks it, and you bounce off.",
+		+ "a spike square breaks it, and you bounce off. Hold jump as you land to spring back up.",
 	"double_jump": "Press jump again in the air for one extra jump, 75% as high as a full jump. "
 		+ "It recharges when you land.",
 	"glide": "Hold jump while falling to drift down slowly and steer farther across gaps. "
