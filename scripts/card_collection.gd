@@ -42,6 +42,11 @@ static var opened_chests: Array[String] = []
 ## The cards on display in the shop ("" = sold), and wins since it last restocked.
 static var shop_stock: Array[String] = []
 static var shop_wins := 0
+## Levels this file has beaten (level keys): a win only pays the first time.
+static var beaten: Array[String] = []
+## Up to 10 random levels (seeds) the player liked, replayable from the Replay Room.
+const MAX_LIKED := 10
+static var liked: Array[int] = []
 static var _loaded := false
 
 
@@ -72,6 +77,8 @@ static func use_file(n: int) -> void:
 		opened_chests.assign(cfg.get_value("progress", "opened_chests", []))
 		shop_stock.assign(cfg.get_value("shop", "stock", []))
 		shop_wins = int(cfg.get_value("shop", "wins", 0))
+		beaten.assign(cfg.get_value("progress", "beaten", []))
+		liked.assign(cfg.get_value("replay", "liked", []))
 	else:
 		# A fresh file: written to disk the first time something changes.
 		owned.assign([STARTER])
@@ -80,6 +87,8 @@ static func use_file(n: int) -> void:
 		opened_chests.clear()
 		shop_stock.clear()
 		shop_wins = 0
+		beaten.clear()
+		liked.clear()
 	var settings := ConfigFile.new()
 	settings.load(SETTINGS)
 	settings.set_value("game", "last_file", n)
@@ -95,6 +104,8 @@ static func save() -> void:
 	cfg.set_value("progress", "opened_chests", opened_chests)
 	cfg.set_value("shop", "stock", shop_stock)
 	cfg.set_value("shop", "wins", shop_wins)
+	cfg.set_value("progress", "beaten", beaten)
+	cfg.set_value("replay", "liked", liked)
 	cfg.save(path(file))
 
 
@@ -215,5 +226,35 @@ static func toggle_equip(ability: String) -> bool:
 		equipped.append(ability)
 	else:
 		return false
+	save()
+	return true
+
+
+static func is_beaten(key: String) -> bool:
+	return key in beaten
+
+
+## The Replay Room opens (quietly) once 3 random levels are beaten.
+const REPLAY_UNLOCK := 3
+
+
+static func replay_unlocked() -> bool:
+	return beaten.filter(func(k: String) -> bool: return k.begins_with("seed")).size() >= REPLAY_UNLOCK
+
+
+static func mark_beaten(key: String) -> void:
+	if key not in beaten:
+		beaten.append(key)
+		save()
+
+
+## Saves or forgets a liked level. Returns false if the Replay Room is full.
+static func toggle_like(seed_value: int) -> bool:
+	if seed_value in liked:
+		liked.erase(seed_value)
+	elif liked.size() >= MAX_LIKED:
+		return false
+	else:
+		liked.append(seed_value)
 	save()
 	return true

@@ -27,6 +27,8 @@ var level: Level
 var seed_value := 0
 ## Names the level for the save file's opened-chest list: "main", "seed123" or "custom".
 var _level_key := "main"
+## Which town door the last run started from, so Back to Town returns there.
+var _came_from := "dungeon"
 var player: Player
 ## The town building the player is standing at ("" = none).
 var _near_door := ""
@@ -64,7 +66,9 @@ func _ready() -> void:
 	_ding.bus = AudioSettings.SOUNDS_BUS
 	add_child(_ding)
 	hud.enter_pressed.connect(_enter_door)
-	hud.town_requested.connect(enter_town.bind("dungeon"))
+	hud.town_requested.connect(func() -> void: enter_town(_came_from))
+	hud.like_pressed.connect(_on_like_pressed)
+	hud.main_menu.replay_requested.connect(_play_replay)
 	hud.main_menu.closed.connect(_leave_building)
 	hud.play_requested.connect(new_run)
 	hud.main_level_requested.connect(play_main_level)
@@ -162,6 +166,7 @@ func load_level_text(text: String) -> void:
 
 ## The hand-made level (levels/level_01.txt).
 func play_main_level() -> void:
+	_came_from = "dungeon"
 	seed_value = 0
 	_level_key = "main"
 	hud.set_seed(0)
@@ -170,6 +175,7 @@ func play_main_level() -> void:
 
 ## A random level from a seed; a seed below 1 picks a new one.
 func play_random_level(s: int) -> void:
+	_came_from = "dungeon"
 	seed_value = s if s > 0 else LevelGen.random_seed()
 	_level_key = "seed%d" % seed_value
 	hud.set_seed(seed_value)
@@ -188,7 +194,10 @@ func enter_town(at_door := "") -> void:
 	_level_key = "town"
 	_near_door = ""
 	hud.set_seed(0)
-	level.load_map_text(FileAccess.get_file_as_string(TOWN_MAP))
+	var town := FileAccess.get_file_as_string(TOWN_MAP)
+	if not CardCollection.replay_unlocked():
+		town = town.replace("%", ".").replace("^", ".")   # the Replay Room and its ledge
+	level.load_map_text(town)
 	_sync_chests()
 	_fit_to_level()
 	get_tree().paused = false
@@ -234,6 +243,7 @@ func _enter_door() -> void:
 		"dungeon": hud.show_start()
 		"shop": hud.main_menu.open_page("Shop")
 		"cards": hud.main_menu.open_page("Cards")
+		"replay": hud.main_menu.open_page("Replay")
 
 
 ## Back out of a shop or card hall visit.
@@ -304,7 +314,7 @@ func resume() -> void:
 func go_to_start() -> void:
 	resume()
 	if state != State.TOWN:
-		enter_town("dungeon")
+		enter_town(_came_from)
 		return
 	state = State.READY
 	player.active = false
@@ -464,11 +474,25 @@ func _on_card_collected(ability: String) -> void:
 			hud.toast("New card: %s! Equipped." % card_name)
 		else:
 			hud.toast("New card: %s! Added to your collection." % card_name)
-	elif _level_key != "custom":
+	elif _level_key != "custom" and not CardCollection.is_beaten(_level_key):
 		CardCollection.add_pixels(DUPLICATE_PIXELS)
 		hud.set_pixels(CardCollection.pixels)
 		hud.toast("Duplicate %s: +%d pixels" % [AbilityCard.NAMES[ability], DUPLICATE_PIXELS])
 	_show_abilities()
+
+
+## Win screen's Like button: save this level to the Replay Room (or take it out).
+func _on_like_pressed() -> void:
+	if not CardCollection.toggle_like(seed_value):
+		hud.toast("Replay Room is full (%d levels)" % CardCollection.MAX_LIKED)
+	hud.set_like(true, seed_value in CardCollection.liked)
+
+
+## Replay Room: play a liked level again (already beaten, so no rewards).
+func _play_replay(s: int) -> void:
+	hud.main_menu.hide()
+	play_random_level(s)
+	_came_from = "replay"
 
 
 func _show_abilities() -> void:
@@ -484,17 +508,21 @@ func _on_goal_reached() -> void:
 	player.active = false
 	player.velocity = Vector2.ZERO
 	var reward := win_reward()
+	if _level_key != "custom":
+		CardCollection.mark_beaten(_level_key)
 	if reward > 0:
 		CardCollection.record_win()
 		CardCollection.add_pixels(reward)
 		hud.set_pixels(CardCollection.pixels)
 	hud.show_win(run_time, falls, hearts, seed_value, reward)
+	hud.set_like(seed_value > 0 and CardCollection.replay_unlocked(), seed_value in CardCollection.liked)
 	$TouchControls.hide()
 
 
-## Winning pays 3 pixels, or 4 for a fast run (editor test levels pay nothing).
+## Winning pays 3 pixels, or 4 for a fast run, the first time only: replays and editor
+## test levels pay nothing, so a level can't be farmed.
 func win_reward() -> int:
-	if _level_key == "custom":
+	if _level_key == "custom" or CardCollection.is_beaten(_level_key):
 		return 0
 	return FAST_REWARD if run_time <= par_time() else WIN_REWARD
 

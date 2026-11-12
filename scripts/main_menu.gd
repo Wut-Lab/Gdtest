@@ -9,6 +9,7 @@ extends Control
 ##   Card:    one card up close, with what it does and Equip / Unequip
 ##   Shop:    3 cards on display for pixels, restocked every few wins
 ##   Buy:     one shop card up close, with what it does and Buy
+##   Replay:  the Replay Room: up to 10 liked levels to play again (no rewards)
 ##   Credits: who and what made the game, and the engine's license
 ## Options opens the same Options page as the pause menu.
 
@@ -16,6 +17,8 @@ signal play_pressed
 signal options_pressed
 ## A Shop or Cards visit from town is over.
 signal closed
+## Replay Room: play this liked level.
+signal replay_requested(seed_value: int)
 
 const BUTTON_SIZE := Vector2(240, 44)
 const DIM := Color("a9b3d1")
@@ -44,6 +47,8 @@ var _buy_type: Label
 var _buy_text: Label
 var _buy: Button
 var _buy_sfx: AudioStreamPlayer
+var _replay_list: VBoxContainer
+var _replay_info: Label
 
 
 func _ready() -> void:
@@ -196,6 +201,24 @@ func _ready() -> void:
 		_shop_prices.append(price)
 	_button(shop, "Back", _back_out)
 
+	var replay := _page("Replay")
+	replay.add_child(_title("Replay Room"))
+	_replay_info = Label.new()
+	_replay_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_replay_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_replay_info.custom_minimum_size = Vector2(320, 0)
+	_replay_info.add_theme_color_override("font_color", DIM)
+	replay.add_child(_replay_info)
+	var replay_scroll := ScrollContainer.new()
+	replay_scroll.custom_minimum_size = Vector2(340, 300)
+	replay_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	replay.add_child(replay_scroll)
+	_replay_list = VBoxContainer.new()
+	_replay_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_replay_list.add_theme_constant_override("separation", 8)
+	replay_scroll.add_child(_replay_list)
+	_button(replay, "Back", _back_out)
+
 	var buy := _page("Buy")
 	_buy_big = CardIcon.new()
 	_buy_big.card_scale = 4.0
@@ -246,6 +269,7 @@ func _ready() -> void:
 	panel.add_child(card)
 	panel.add_child(shop)
 	panel.add_child(buy)
+	panel.add_child(replay)
 	panel.add_child(credits)
 	open()
 
@@ -268,7 +292,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif _pages["Buy"].visible:
 		get_viewport().set_input_as_handled()
 		_open_shop()
-	elif _pages["Shop"].visible or _pages["Cards"].visible:
+	elif _pages["Shop"].visible or _pages["Cards"].visible or _pages["Replay"].visible:
 		get_viewport().set_input_as_handled()
 		_back_out()
 	elif _pages["Credits"].visible or _pages["Cards"].visible or _pages["Files"].visible:
@@ -283,6 +307,8 @@ func open_page(page_name: String) -> void:
 	show()
 	if page_name == "Shop":
 		_open_shop()
+	elif page_name == "Replay":
+		_open_replay()
 	else:
 		_open_collection()
 
@@ -404,6 +430,39 @@ func _open_shop() -> void:
 			_shop_slots[i].grab_focus()
 			return
 	_pages["Shop"].get_child(-1).grab_focus()
+
+
+## Lists the liked levels, each with Play and Remove.
+func _open_replay() -> void:
+	for c in _replay_list.get_children():
+		_replay_list.remove_child(c)
+		c.queue_free()
+	var liked := CardCollection.liked
+	_replay_info.text = ("Levels you liked: %d / %d. Replays give no rewards." % [liked.size(), CardCollection.MAX_LIKED]) \
+		if liked.size() > 0 else "No saved levels yet. Win a random level and tap Save to Replay Room."
+	for sv in liked:
+		var row := HBoxContainer.new()
+		row.alignment = BoxContainer.ALIGNMENT_CENTER
+		row.add_theme_constant_override("separation", 8)
+		var shape := "Vertical" if LevelGen.is_vertical(sv) else ("Diagonal" if LevelGen.is_diagonal(sv) else "Horizontal")
+		var play := Button.new()
+		play.text = "▶ Seed %d · %s" % [sv, shape]
+		play.custom_minimum_size = Vector2(250, 44)
+		play.pressed.connect(func() -> void: replay_requested.emit(sv))
+		row.add_child(play)
+		var remove := Button.new()
+		remove.text = "✕"
+		remove.custom_minimum_size = Vector2(44, 44)
+		remove.pressed.connect(func() -> void:
+			CardCollection.toggle_like(sv)
+			_open_replay())
+		row.add_child(remove)
+		_replay_list.add_child(row)
+	_show("Replay")
+	if liked.size() > 0:
+		_replay_list.get_child(0).get_child(0).grab_focus()
+	else:
+		_pages["Replay"].get_child(-1).grab_focus()
 
 
 func _open_buy(a: String) -> void:

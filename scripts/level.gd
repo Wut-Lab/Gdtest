@@ -143,7 +143,7 @@ func load_map_text(text: String) -> void:
 					bad_blocks.append(Vector2i(x, y))
 				"@":
 					checkpoints.append(Vector2i(x, y))
-				"!", "$", "&":
+				"!", "$", "&", "%":
 					doors[Vector2i(x, y)] = ch
 				"T", "B":
 					platforms[Vector2i(x, y)] = ch == "T"

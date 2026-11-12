@@ -13,6 +13,7 @@ signal player_color_changed(color: Color)
 signal town_requested
 ## Town: the Enter button by a building's door.
 signal enter_pressed
+signal like_pressed
 
 @onready var time_label: Label = %TimeLabel
 @onready var falls_label: Label = %FallsLabel
@@ -28,6 +29,7 @@ signal enter_pressed
 @onready var cards_label: Label = %CardsLabel
 var pixel_counter: PixelCounter
 var enter_button: Button
+var like_button: Button
 @onready var out_menu: Control = %OutMenu
 @onready var out_label: Label = %OutLabel
 @onready var retry_button: Button = %RetryButton
@@ -80,6 +82,13 @@ func _ready() -> void:
 		town.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		town.pressed.connect(town_requested.emit)
 		menu.get_node("Panel/Box").add_child(town)
+	like_button = Button.new()
+	like_button.custom_minimum_size = Vector2(200, 44)
+	like_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	like_button.pressed.connect(like_pressed.emit)
+	var box := win_menu.get_node("Panel/Box")
+	box.add_child(like_button)
+	box.move_child(like_button, new_level_button.get_index() + 1)
 	play_button.pressed.connect(main_level_requested.emit)
 	random_button.pressed.connect(func() -> void:
 		random_level_requested.emit(seed_edit.text.strip_edges().to_int()))
@@ -119,6 +128,12 @@ func set_town_mode(on: bool) -> void:
 		seed_label.hide()
 		cards_label.hide()
 	enter_button.hide()
+
+
+## The win screen's Like button (shown once the Replay Room is open, on random levels).
+func set_like(shown: bool, liked: bool) -> void:
+	like_button.visible = shown
+	like_button.text = "♥ Saved to Replay Room" if liked else "♡ Save to Replay Room"
 
 
 ## Shows the Enter button for a building ("" hides it).

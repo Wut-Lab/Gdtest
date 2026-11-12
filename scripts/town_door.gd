@@ -1,14 +1,15 @@
 class_name TownDoor
 extends Area2D
 ## A building's door in Square Hub Town: stand in front of it and press Enter (Up key or the
-## on-screen button) to go in. ! = the dungeon gate, $ = the shop, & = the card hall.
+## on-screen button) to go in. ! = the dungeon gate, $ = the shop, & = the card hall,
+## % = the Replay Room (a small house, shown once it's unlocked).
 ## It sits on the floor of its cell; the building is drawn around it, 3 tiles wide.
 
 signal near_changed(door: TownDoor, near: bool)
 
-const KINDS := {"!": "dungeon", "$": "shop", "&": "cards"}
-const NAMES := {"dungeon": "the Dungeon", "shop": "the Shop", "cards": "the Card Hall"}
-const SIGNS := {"dungeon": "DUNGEON", "shop": "SHOP", "cards": "CARDS"}
+const KINDS := {"!": "dungeon", "$": "shop", "&": "cards", "%": "replay"}
+const NAMES := {"dungeon": "the Dungeon", "shop": "the Shop", "cards": "the Card Hall", "replay": "the Replay Room"}
+const SIGNS := {"dungeon": "DUNGEON", "shop": "SHOP", "cards": "CARDS", "replay": "REPLAY"}
 const EDGE := Color("1b2440")
 
 var kind := "shop"
@@ -36,6 +37,7 @@ func _draw() -> void:
 		"dungeon": _draw_dungeon()
 		"shop": _draw_shop()
 		"cards": _draw_cards()
+		"replay": _draw_replay()
 	var font := ThemeDB.fallback_font
 	var text: String = SIGNS[kind]
 	var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
@@ -106,3 +108,25 @@ func _draw_cards() -> void:
 	draw_rect(Rect2(-18, -58, 36, 58), EDGE)
 	draw_rect(Rect2(-16, -56, 32, 56), Color("1f2d5c"))
 	draw_rect(Rect2(-1, -56, 2, 56), EDGE)
+
+
+## A small purple house with a peaked roof, a round window with a heart, and a replay arrow.
+func _draw_replay() -> void:
+	var roof := PackedVector2Array([Vector2(-48, -70), Vector2(0, -104), Vector2(48, -70)])
+	draw_colored_polygon(roof, EDGE)
+	draw_colored_polygon(PackedVector2Array([Vector2(-42, -72), Vector2(0, -100), Vector2(42, -72)]), Color("5a3d8c"))
+	draw_rect(Rect2(-40, -72, 80, 72), EDGE)
+	draw_rect(Rect2(-38, -70, 76, 70), Color("8a63c9"))
+	draw_rect(Rect2(-38, -70, 76, 4), Color("a585dc"))
+	# Window with a beating heart.
+	draw_circle(Vector2(20, -42), 12.0, EDGE)
+	draw_circle(Vector2(20, -42), 10.0, Color("2a3150"))
+	var b := 1.0 + 0.12 * sin(_t * 4.0)
+	draw_circle(Vector2(17, -44), 3.0 * b, Color("e5484d"))
+	draw_circle(Vector2(23, -44), 3.0 * b, Color("e5484d"))
+	draw_colored_polygon(PackedVector2Array([Vector2(13.5, -43), Vector2(26.5, -43), Vector2(20, -36 + 1.5 * (b - 1.0) * 10.0)]), Color("e5484d"))
+	# Door with a circular replay arrow.
+	draw_rect(Rect2(-30, -48, 30, 48), EDGE)
+	draw_rect(Rect2(-28, -46, 26, 46), Color("3a2a66"))
+	draw_arc(Vector2(-15, -30), 7.0, 0.6, TAU - 0.3, 16, Color("f2c230"), 2.0)
+	draw_colored_polygon(PackedVector2Array([Vector2(-6, -36), Vector2(-6, -29), Vector2(-11, -33)]), Color("f2c230"))
