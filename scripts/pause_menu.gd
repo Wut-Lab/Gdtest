@@ -36,6 +36,8 @@ var _big_card: CardIcon
 var _card_type: Label
 var _card_text: Label
 var _cards_count: Label
+## The Card page was opened from a card in the HUD: Back goes straight back to the game.
+var _direct := false
 
 
 func _ready() -> void:
@@ -105,7 +107,7 @@ func _ready() -> void:
 	_card_text.custom_minimum_size = Vector2(280, 0)
 	_card_text.add_theme_color_override("font_color", Color("a9b3d1"))
 	card.add_child(_card_text)
-	_button(card, "Back", func() -> void: _show("Cards"))
+	_button(card, "Back", _card_back)
 
 	var options := _page_box("Options")
 	_button(options, "Sound", func() -> void: _show("Sound"))
@@ -147,6 +149,7 @@ func set_quit_text(text: String) -> void:
 
 func open() -> void:
 	_from_main = false
+	_direct = false
 	_sync()
 	show()
 	_show("Paused")
@@ -185,6 +188,20 @@ func _open_card(i: int) -> void:
 	_show("Card")
 
 
+## Opened by tapping an equipped card in the HUD: just that card; Back resumes the game.
+func open_card(i: int) -> void:
+	open()
+	_direct = true
+	_open_card(i)
+
+
+func _card_back() -> void:
+	if _direct:
+		continue_pressed.emit()
+	else:
+		_show("Cards")
+
+
 func _options_back() -> void:
 	if _from_main:
 		hide()
@@ -202,7 +219,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			"Sound": _show("Options")
 			"Options": _options_back()
 			"Cards": _show("Paused")
-			"Card": _show("Cards")
+			"Card": _card_back()
 			_: continue_pressed.emit()
 
 

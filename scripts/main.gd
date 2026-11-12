@@ -74,6 +74,10 @@ func _ready() -> void:
 	hud.main_level_requested.connect(play_main_level)
 	hud.random_level_requested.connect(play_random_level)
 	hud.pause_requested.connect(pause)
+	hud.card_pressed.connect(func(i: int) -> void:
+		pause()
+		if get_tree().paused:
+			hud.pause_menu.open_card(i))
 	hud.pause_menu.continue_pressed.connect(resume)
 	hud.pause_menu.quit_pressed.connect(go_to_start)
 	hud.tuning_panel.closed.connect(func() -> void: hud.pause_button.visible = state == State.PLAY)

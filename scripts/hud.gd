@@ -14,6 +14,8 @@ signal town_requested
 ## Town: the Enter button by a building's door.
 signal enter_pressed
 signal like_pressed
+## One of the small equipped cards in the corner was tapped (slot 0–2).
+signal card_pressed(slot: int)
 
 @onready var time_label: Label = %TimeLabel
 @onready var falls_label: Label = %FallsLabel
@@ -30,6 +32,10 @@ signal like_pressed
 var pixel_counter: PixelCounter
 var enter_button: Button
 var like_button: Button
+## Small equipped cards under the timer (dotted outlines for empty slots).
+var card_row: HBoxContainer
+var _card_icons: Array[CardIcon] = []
+var _card_buttons: Array[Button] = []
 @onready var out_menu: Control = %OutMenu
 @onready var out_label: Label = %OutLabel
 @onready var retry_button: Button = %RetryButton
@@ -60,6 +66,28 @@ func _ready() -> void:
 	pixel_counter.alignment = BoxContainer.ALIGNMENT_END
 	add_child(pixel_counter)
 	move_child(pixel_counter, 0)   # under the menus
+	# The equipped cards, small, under the timer. Tap one to see it (pauses the game).
+	cards_label.hide()
+	card_row = HBoxContainer.new()
+	card_row.position = cards_label.position
+	card_row.add_theme_constant_override("separation", 6)
+	for i in 3:
+		var b := Button.new()
+		b.flat = true
+		b.focus_mode = Control.FOCUS_NONE
+		var icon := CardIcon.new()
+		icon.card_scale = 1.25
+		b.custom_minimum_size = icon.custom_minimum_size
+		icon.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		b.add_child(icon)
+		b.pressed.connect(func() -> void:
+			if icon.ability != "":
+				card_pressed.emit(i))
+		card_row.add_child(b)
+		_card_icons.append(icon)
+		_card_buttons.append(b)
+	$Root.add_child(card_row)
+	$Root.move_child(card_row, cards_label.get_index())
 	# Town: an Enter button that shows up while standing at a building's door.
 	enter_button = Button.new()
 	enter_button.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
@@ -126,7 +154,6 @@ func set_town_mode(on: bool) -> void:
 		n.visible = not on
 	if on:
 		seed_label.hide()
-		cards_label.hide()
 	enter_button.hide()
 
 
@@ -224,13 +251,13 @@ func set_pixels(n: int) -> void:
 	pixel_counter.set_pixels(n)
 
 
-## Lists the ability cards equipped for this run.
+## Shows the ability cards equipped for this run as small cards (empty slots are dotted).
 func set_cards(abilities: Array[String]) -> void:
-	var names := PackedStringArray()
-	for a in abilities:
-		names.append(AbilityCard.NAMES[a])
-	cards_label.text = "Cards: " + ", ".join(names)
-	cards_label.visible = not abilities.is_empty()
+	for i in 3:
+		var a := abilities[i] if i < abilities.size() else ""
+		_card_icons[i].ability = a
+		_card_buttons[i].mouse_default_cursor_shape = \
+			Control.CURSOR_POINTING_HAND if a != "" else Control.CURSOR_ARROW
 
 
 ## Shows the random level's seed in the corner (hidden for the hand-made level).
