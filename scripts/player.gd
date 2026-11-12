@@ -86,6 +86,8 @@ var _squash := Vector2.ONE
 var _was_on_floor := true
 var _bouncing := false
 var _stun := 0.0
+## Momentum card: seconds spent running one way without stopping or turning.
+var _momentum := 0.0
 var _dash := 0.0          # time left in the current dash
 var _dash_cd := 0.0
 var _air_dash_used := false
@@ -165,9 +167,12 @@ func teleport_to(pos: Vector2) -> void:
 	teleported.emit()
 
 
-## Running speed, 25% faster with the Quick card.
+## Running speed, 25% faster with the Quick card. Momentum builds up to 25% more over 2 seconds.
 func _run_speed() -> float:
-	return run_speed * (1.25 if "quick" in abilities else 1.0)
+	var s := run_speed * (1.25 if "quick" in abilities else 1.0)
+	if "momentum" in abilities:
+		s *= 1.0 + 0.25 * clampf(_momentum / 2.0, 0.0, 1.0)
+	return s
 
 
 func is_dashing() -> bool:
@@ -196,11 +201,15 @@ func _physics_process(delta: float) -> void:
 	if _stun > 0.0:
 		_stun = maxf(_stun - delta, 0.0)   # just bounced off a rubber wall: no steering yet
 	elif dir != 0.0:
+		if signf(dir) != _face:
+			_momentum = 0.0
 		_face = signf(dir)
-		var acc := ground_accel if on_floor else air_accel
+		_momentum += delta
+		var acc := ground_accel if on_floor else air_accel * (2.5 if "air_brake" in abilities else 1.0)
 		velocity.x = move_toward(velocity.x, dir * _run_speed(), acc * delta)
 	else:
-		var dec := ground_decel if on_floor else air_decel
+		_momentum = 0.0
+		var dec := ground_decel if on_floor else air_decel * (4.0 if "air_brake" in abilities else 1.0)
 		velocity.x = move_toward(velocity.x, 0.0, dec * delta)
 
 	if on_floor:
