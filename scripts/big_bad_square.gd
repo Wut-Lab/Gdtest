@@ -37,6 +37,8 @@ var _flash := 0.0
 var _bolts: Array = []
 var _next_bolts := 0.0
 var _t := 0.0
+var _stun := 0.0
+var _slow := 0.0
 var _was_on_floor := true
 var _hit_sfx := _sfx("boss_hit", 0.0)
 var _charge_sfx := _sfx("boss_charge", -6.0)
@@ -53,6 +55,7 @@ static func _sfx(name: String, db: float) -> AudioStreamPlayer:
 
 
 func _ready() -> void:
+	add_to_group("card_targets")
 	_origin = position
 	collision_layer = 4
 	collision_mask = 1
@@ -77,12 +80,47 @@ func reset() -> void:
 	velocity = Vector2.ZERO
 	hp = MAX_HP
 	_charge_sfx.stop()
+	_stun = 0.0
+	_slow = 0.0
 	_mode = "hop"
 	_mode_t = 0.0
 	_wait = 1.0
 	_flash = 0.0
 	show()
 	process_mode = Node.PROCESS_MODE_INHERIT
+
+
+## Card effects: stuns, slows and pushes work on him, but only jumps on his head hurt him.
+func stun(seconds: float) -> void:
+	if _mode in ["tell", "dash"]:
+		_charge_sfx.stop()   # a stun cancels his charge; he winds up again afterwards
+		_set_mode("hop")
+		_wait = 0.4
+	_stun = maxf(_stun, seconds)
+
+
+func is_stunned() -> bool:
+	return _stun > 0.0 or _mode == "dazed"
+
+
+func slow(seconds: float) -> void:
+	_slow = maxf(_slow, seconds)
+
+
+func shove(dir: float, tiles := 2) -> void:
+	position.x += CardFx.clear_shift(self, global_position, half_size(), dir, tiles)
+
+
+## Angry Block Dash ran into him: knocked back a tile and stunned, but not hurt.
+func smash() -> void:
+	if _stun > 0.0:
+		return
+	var away := signf(global_position.x - _player.global_position.x) if _player else -_dir
+	shove(away if away != 0.0 else -_dir, 1)
+	stun(0.8)
+	_crash_sfx.play()
+	if _player:
+		_player.shake(5.0, 0.2)
 
 
 ## Big Bad Square only takes jumps on his head.
@@ -99,8 +137,21 @@ func _physics_process(delta: float) -> void:
 		_player = get_tree().get_first_node_in_group("player") as Player
 	_t += delta
 	_flash = maxf(_flash - delta, 0.0)
-	_mode_t += delta
+	_slow = maxf(_slow - delta, 0.0)
 	velocity.y = minf(velocity.y + GRAVITY * delta, 900.0)
+	_hit_by_brick()
+	if _stun > 0.0:
+		_stun = maxf(_stun - delta, 0.0)
+		velocity.x = 0.0
+		_next_bolts -= delta
+		if _next_bolts <= 0.0:
+			_next_bolts = 0.07
+			_bolts = CardFx.stun_bolts(half_size())
+		_move()
+		return
+	var pace := 0.5 if _slow > 0.0 else 1.0   # Slow Burst: half speed
+	delta *= pace
+	_mode_t += delta
 	var to_player := 0.0
 	if _player:
 		to_player = signf(_player.global_position.x - global_position.x)
@@ -116,7 +167,7 @@ func _physics_process(delta: float) -> void:
 				else:
 					_wait -= delta
 					if _wait <= 0.0:
-						velocity = Vector2(_dir * HOP_SIDE, -HOP_SPEED)
+						velocity = Vector2(_dir * HOP_SIDE * pace, -HOP_SPEED)
 						_wait = randf_range(0.7, 1.3)
 						_hopped = hp == 1
 		"tell":
@@ -126,7 +177,7 @@ func _physics_process(delta: float) -> void:
 			if _mode_t >= TELL:
 				_set_mode("dash")
 		"dash":
-			velocity.x = _dir * DASH_SPEED
+			velocity.x = _dir * DASH_SPEED * pace
 			if (is_on_wall() and _mode_t > 0.1) or _mode_t > 2.5:
 				velocity.x = 0.0
 				_set_mode("dazed")
@@ -143,6 +194,10 @@ func _physics_process(delta: float) -> void:
 			if _mode_t >= DAZE:
 				_set_mode("hop")
 				_wait = 0.6
+	_move()
+
+
+func _move() -> void:
 	move_and_slide()
 	if is_on_floor() and not _was_on_floor:
 		_land_sfx.pitch_scale = randf_range(0.55, 0.65)   # a heavy landing
@@ -152,6 +207,17 @@ func _physics_process(delta: float) -> void:
 	_was_on_floor = is_on_floor()
 	_check_player()
 	queue_redraw()
+
+
+## Brick Drop: a brick falling onto him stuns him for a moment (and breaks).
+func _hit_by_brick() -> void:
+	for b in _hit_area.get_overlapping_bodies():
+		if b is Brick and b.velocity.y > 0.0 and b.global_position.y < global_position.y - SIZE * 0.3:
+			CardFx.spawn(get_parent(), b.global_position, "pop")
+			b.queue_free()
+			stun(1.5)
+			_land_sfx.pitch_scale = 1.3
+			_land_sfx.play()
 
 
 func _set_mode(m: String) -> void:
@@ -225,7 +291,7 @@ func _draw() -> void:
 	var top := body_rect.position.y
 	var ex := _dir * 5.0
 	var ey := top + 16.0
-	if _mode == "dazed":
+	if _mode == "dazed" or _stun > 0.0:
 		draw_rect(Rect2(ex - 15.0, ey + 4.0, 10.0, 3.0), EYES)
 		draw_rect(Rect2(ex + 5.0, ey + 4.0, 10.0, 3.0), EYES)
 	else:
@@ -248,6 +314,10 @@ func _draw() -> void:
 	draw_rect(Rect2(ex + 12.0, my + 7.0, 3.0, 5.0), PUPIL)
 	if _mode == "dazed":
 		CardFx.draw_stun(self, _bolts, DAZE - _mode_t)
+	elif _stun > 0.0:
+		CardFx.draw_stun(self, _bolts, _stun)
+	if _slow > 0.0:
+		CardFx.draw_slow(self, half_size(), _slow)
 	# His hearts, above his head.
 	var hs := HeartArt.size(3.0)
 	var gap := 4.0
