@@ -18,6 +18,10 @@ var state := State.READY
 var run_time := 0.0
 const WIN_REWARD := 3
 ## Terry, the lazy yellow block in town, says one of these when you talk to him.
+const _WALKER_LINES := ["Hi!", "It's a good day to dungeon dive!", "Have a great dive!"]
+const TOWNSFOLK_LINES := {"paula": _WALKER_LINES, "tim": _WALKER_LINES}
+## How many times you've talked to each townsfolk (their lines go in order).
+var _talks := {}
 const TERRY_LINES := ["Terry: \"Mmh... five more minutes.\"", "Terry: \"Paul's up there? Good for him. I'm good down here.\"",
 	"Terry: \"Jumping? Sounds exhausting.\"", "Terry: \"Zzz...\"", "Terry: \"Wake me when it's lunch.\""]
 ## First Hard or Scramble clear of a liked level.
@@ -290,6 +294,11 @@ func _on_door_near(kind: String, near: bool) -> void:
 ## Go into the building you're standing at.
 func _enter_door() -> void:
 	if state != State.TOWN or _near_door == "" or get_tree().paused:
+		return
+	if _near_door in TOWNSFOLK_LINES:
+		var n: int = _talks.get(_near_door, 0)
+		_talks[_near_door] = n + 1
+		hud.toast("%s: \"%s\"" % [TownDoor.NAMES[_near_door], TOWNSFOLK_LINES[_near_door][n % 3]])
 		return
 	if _near_door == "terry":
 		hud.toast(TERRY_LINES[randi() % TERRY_LINES.size()])

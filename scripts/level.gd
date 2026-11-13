@@ -148,7 +148,7 @@ func load_map_text(text: String) -> void:
 						_hard_cells[Vector2i(x, y)] = true
 				"@":
 					checkpoints.append(Vector2i(x, y))
-				"!", "$", "&", "%", "(", ")":
+				"!", "$", "&", "%", "(", ")", "{", "}":
 					doors[Vector2i(x, y)] = ch
 				"T", "B":
 					platforms[Vector2i(x, y)] = ch == "T"

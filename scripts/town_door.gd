@@ -4,25 +4,32 @@ extends Area2D
 ## on-screen button) to go in. ! = the dungeon gate, $ = the shop, & = the card hall,
 ## % = the Replay Room (a small house, shown once it's unlocked).
 ## ( = Paul, a pink block with a mini card shop; ) = Terry, a lazy yellow block (milestones).
+## { = Paula (purple) and } = Tim (green), who walk back and forth.
 ## It sits on the floor of its cell; the building is drawn around it, 3 tiles wide.
 
 signal near_changed(door: TownDoor, near: bool)
 
-const KINDS := {"!": "dungeon", "$": "shop", "&": "cards", "%": "replay", "(": "paul", ")": "terry"}
+const KINDS := {"!": "dungeon", "$": "shop", "&": "cards", "%": "replay", "(": "paul", ")": "terry", "{": "paula", "}": "tim"}
 const NAMES := {"dungeon": "the Dungeon", "shop": "the Shop", "cards": "the Card Hall", "replay": "the Replay Room",
-	"paul": "Paul", "terry": "Terry"}
+	"paul": "Paul", "terry": "Terry", "paula": "Paula", "tim": "Tim"}
 const SIGNS := {"dungeon": "DUNGEON", "shop": "SHOP", "cards": "CARDS", "replay": "REPLAY"}
 ## Townsfolk: you talk to them instead of entering.
-const PEOPLE := ["paul", "terry"]
+const PEOPLE := ["paul", "terry", "paula", "tim"]
+## Townsfolk who stroll back and forth (body colour, highlight).
+const WALKERS := {"paula": [Color("9b5de5"), Color("c19bf2")], "tim": [Color("3dbb5c"), Color("7fdc95")]}
+const WALK_RANGE := 36.0
 const EDGE := Color("1b2440")
 
 var kind := "shop"
 ## Paul's shutter is down (his shop isn't open yet).
 var closed := false
 var _t := 0.0
+var _home := Vector2.ZERO
 
 
 func _ready() -> void:
+	_home = position
+	_t = randf() * 10.0
 	var col := CollisionShape2D.new()
 	var shape := RectangleShape2D.new()
 	shape.size = Vector2(40, 40)
@@ -35,6 +42,8 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	_t += delta
+	if WALKERS.has(kind):
+		position.x = _home.x + WALK_RANGE * sin(_t * 0.7)
 	queue_redraw()
 
 
@@ -46,6 +55,7 @@ func _draw() -> void:
 		"replay": _draw_replay()
 		"paul": _draw_paul()
 		"terry": _draw_terry()
+		"paula", "tim": _draw_walker()
 	if not SIGNS.has(kind):
 		return
 	var font := ThemeDB.fallback_font
@@ -184,3 +194,23 @@ func _draw_terry() -> void:
 		var k := fmod(_t * 0.5 + i / 3.0, 1.0)
 		draw_string(font, Vector2(12 + k * 14, -24 - k * 26), "z", HORIZONTAL_ALIGNMENT_LEFT, -1,
 			10 + int(k * 6), Color(1, 1, 1, 1.0 - k))
+
+
+## Paula / Tim: a square strolling back and forth, bobbing, eyes looking the way it walks.
+func _draw_walker() -> void:
+	var cols: Array = WALKERS[kind]
+	var dir := 1.0 if cos(_t * 0.7) >= 0.0 else -1.0
+	var y := -2.0 * absf(sin(_t * 6.0))
+	draw_rect(Rect2(-13, -26 + y, 26, 26), EDGE)
+	draw_rect(Rect2(-11, -24 + y, 22, 22), cols[0])
+	draw_rect(Rect2(-11, -24 + y, 22, 4), cols[1])
+	var blink := fmod(_t + 1.3, 3.6) < 0.12
+	for ex in [-6, 2]:
+		draw_rect(Rect2(ex + dir * 2, -17 + y, 3, 1 if blink else 4), EDGE)
+	if kind == "paula":
+		# A little bow on top.
+		draw_colored_polygon(PackedVector2Array([Vector2(-6, -30 + y), Vector2(0, -27 + y), Vector2(-6, -24 + y)]), Color("f27bb5"))
+		draw_colored_polygon(PackedVector2Array([Vector2(6, -30 + y), Vector2(0, -27 + y), Vector2(6, -24 + y)]), Color("f27bb5"))
+	else:
+		# A small backpack, ready for a dive.
+		draw_rect(Rect2(-dir * 13 - (4 if dir > 0 else 0), -20 + y, 4, 12), Color("8a5a2b"))
