@@ -25,11 +25,16 @@ var kind := "shop"
 var closed := false
 var _t := 0.0
 var _home := Vector2.ZERO
+## Drawn in a dialogue box: no door area, no walking, animates while paused.
+var portrait := false
 
 
 func _ready() -> void:
 	_home = position
 	_t = randf() * 10.0
+	if portrait:
+		process_mode = Node.PROCESS_MODE_ALWAYS
+		return
 	var col := CollisionShape2D.new()
 	var shape := RectangleShape2D.new()
 	shape.size = Vector2(40, 40)
@@ -42,7 +47,7 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	_t += delta
-	if WALKERS.has(kind):
+	if WALKERS.has(kind) and not portrait:
 		position.x = _home.x + WALK_RANGE * sin(_t * 0.7)
 	queue_redraw()
 

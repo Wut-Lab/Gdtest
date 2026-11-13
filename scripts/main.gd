@@ -22,8 +22,9 @@ const _WALKER_LINES := ["Hi!", "It's a good day to dungeon dive!", "Have a great
 const TOWNSFOLK_LINES := {"paula": _WALKER_LINES, "tim": _WALKER_LINES}
 ## How many times you've talked to each townsfolk (their lines go in order).
 var _talks := {}
-const TERRY_LINES := ["Terry: \"Mmh... five more minutes.\"", "Terry: \"Paul's up there? Good for him. I'm good down here.\"",
-	"Terry: \"Jumping? Sounds exhausting.\"", "Terry: \"Zzz...\"", "Terry: \"Wake me when it's lunch.\""]
+var dialog: DialogBox
+const TERRY_LINES := ["Mmh... five more minutes.", "Paul's up there? Good for him. I'm good down here.",
+	"Jumping? Sounds exhausting.", "Zzz...", "Wake me when it's lunch."]
 ## First Hard or Scramble clear of a liked level.
 const REPLAY_REWARD := 3
 const FAST_REWARD := 4
@@ -84,6 +85,9 @@ func _ready() -> void:
 	_ding.bus = AudioSettings.SOUNDS_BUS
 	add_child(_ding)
 	hud.enter_pressed.connect(_enter_door)
+	dialog = DialogBox.new()
+	hud.get_node("Root").add_child(dialog)
+	dialog.closed.connect(_end_talk)
 	hud.town_requested.connect(func() -> void: enter_town(_came_from))
 	hud.like_pressed.connect(_on_like_pressed)
 	hud.main_menu.replay_requested.connect(_play_replay)
@@ -298,13 +302,13 @@ func _enter_door() -> void:
 	if _near_door in TOWNSFOLK_LINES:
 		var n: int = _talks.get(_near_door, 0)
 		_talks[_near_door] = n + 1
-		hud.toast("%s: \"%s\"" % [TownDoor.NAMES[_near_door], TOWNSFOLK_LINES[_near_door][n % 3]])
+		_talk(_near_door, [TOWNSFOLK_LINES[_near_door][n % 3]])
 		return
 	if _near_door == "terry":
-		hud.toast(TERRY_LINES[randi() % TERRY_LINES.size()])
+		_talk("terry", [TERRY_LINES[randi() % TERRY_LINES.size()]])
 		return
 	if _near_door == "paul" and not CardCollection.milestone(10):
-		hud.toast("Paul: \"Still unpacking. Please come back later!\"")
+		_talk("paul", ["Still unpacking. Please come back later!"])
 		return
 	state = State.MENU
 	player.active = false
@@ -360,6 +364,26 @@ func new_run() -> void:
 	hud.hide_menus()
 	$TouchControls.show()
 	hud.pause_button.show()
+
+
+## Pause the game and open the dialogue box: [param who] says each of [param pages] in turn.
+func _talk(who: String, pages: Array) -> void:
+	get_tree().paused = true
+	hud.pause_button.hide()
+	hud.tune_button.hide()
+	hud.show_enter("")
+	$TouchControls.hide()
+	dialog.say(who, pages)
+
+
+func _end_talk() -> void:
+	get_tree().paused = false
+	hud.pause_button.show()
+	hud.tune_button.show()
+	$TouchControls.show()
+	hud.show_enter(TownDoor.NAMES[_near_door] if _near_door != "" else "",
+		"Talk to" if _near_door in TownDoor.PEOPLE else "Enter")
+	get_viewport().gui_release_focus()
 
 
 ## Pause the game and open the pause menu (Pause button, Esc or P).
