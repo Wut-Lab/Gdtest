@@ -229,6 +229,33 @@ func reset_to(pos: Vector2) -> void:
 	camera.reset_smoothing()
 
 
+## Dashed into something too big to break (Big Bad Square): bounce back off it, unhurt.
+## Chain Dash gives the dash straight back.
+func dash_bounce(side: float) -> void:
+	_dash = 0.0
+	velocity = Vector2(side * 320.0, -360.0)
+	_bouncing = true
+	_squash = Vector2(0.7, 1.3)
+	_puff()
+	if "chain_dash" in abilities:
+		_dash_cd = 0.0
+		_air_dash_used = false
+
+
+## Chain Dash card: a dash that knocks out an enemy or breaks an obstacle gives the dash
+## straight back and a small hop, so you can chain through groups of them.
+func chain_dash() -> void:
+	if not "chain_dash" in abilities:
+		return
+	_dash = 0.0
+	_dash_cd = 0.0
+	_air_dash_used = false
+	velocity = Vector2(_face * run_speed, -jump_velocity * 0.45)
+	_squash = Vector2(0.75, 1.3)
+	CardFx.spawn(get_parent(), global_position, "plus", 0.0, "Chain!")
+	_play(_jump_sfx, 1.7)
+
+
 ## Knocked back by a hazard (push.x: -1 left, 1 right; push.y: -1 up, 1 down), then a
 ## moment of safety.
 func knock_back(push: Vector2) -> void:
@@ -689,7 +716,8 @@ func _hit_obstacles() -> void:
 		if other == null or not other.has_method("take_hit"):
 			continue
 		if _dash > 0.0 and absf(col.get_normal().x) > 0.7:
-			other.take_hit("dash")
+			if other.take_hit("dash"):
+				chain_dash()
 		elif _pounding and col.get_normal().y < -0.7:
 			if other.take_hit("pound"):
 				velocity.y = -jump_velocity * 0.6   # a little hop off the smashed obstacle

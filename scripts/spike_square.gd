@@ -157,7 +157,8 @@ func _physics_process(delta: float) -> void:
 		for b in area.get_overlapping_bodies():
 			if b is Player:
 				if vertical and b.is_dashing():
-					take_hit("dash")   # dashing through a V breaks it instead of hurting
+					if take_hit("dash"):   # dashing through a V breaks it instead of hurting
+						b.chain_dash()
 					return
 				# Knock the player away sideways, toward whichever side they're on; down if
 				# they hit the bottom spikes from below.

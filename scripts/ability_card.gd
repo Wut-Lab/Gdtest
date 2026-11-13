@@ -14,11 +14,11 @@ const NAMES := {"dash": "Dash", "pound": "Ground Pound", "double_jump": "Double 
 	"quick": "Quick", "tele_hop": "Tele-hop", "high_jump": "High Jump", "phase_jump": "Phase Jump", "shockwave": "Shockwave", "stun_landing": "Stunning Landing", "grip_and_go": "Grip and Go", "lucky_charm": "Lucky Charm", "bounce_house": "Bounce House", "secret_helper": "Secret Helper", "magnet": "Magnet", "wall_cling": "Wall Cling", "brick_drop": "Brick Drop", "slow_burst": "Slow Burst",
 	"portion_booster": "Portion Booster", "air_brake": "Air Brake", "momentum": "Momentum", "heart_box": "Heart Box",
 	"angry_dash": "Angry Block Dash", "personal_space": "Personal Space", "safety_bubble": "Safety Bubble",
-	"guard_block": "Guard Block", "long_blink": "Long Blink"}
+	"guard_block": "Guard Block", "long_blink": "Long Blink", "chain_dash": "Chain Dash"}
 ## Card types, color coded: attacks are red, jumps are blue, movement is yellow, misc is gray.
 const TYPES := {"dash": "attack", "pound": "attack", "double_jump": "jump", "glide": "jump",
 	"quick": "movement", "tele_hop": "movement", "high_jump": "jump", "phase_jump": "jump", "shockwave": "attack", "stun_landing": "attack", "grip_and_go": "movement", "lucky_charm": "misc", "bounce_house": "misc", "secret_helper": "misc", "magnet": "misc", "wall_cling": "jump", "brick_drop": "attack", "slow_burst": "misc", "portion_booster": "misc", "air_brake": "movement", "momentum": "movement", "heart_box": "misc",
-	"angry_dash": "attack", "personal_space": "misc", "safety_bubble": "misc", "guard_block": "misc", "long_blink": "misc"}
+	"angry_dash": "attack", "personal_space": "misc", "safety_bubble": "misc", "guard_block": "misc", "long_blink": "misc", "chain_dash": "attack"}
 const TYPE_NAMES := {"attack": "Attack card", "jump": "Jump card", "movement": "Movement card", "misc": "Misc card"}
 const TYPE_COLORS := {"attack": Color("e5484d"), "jump": Color("3d7be0"), "movement": Color("e0a400"),
 	"misc": Color("7d8597")}
@@ -76,11 +76,14 @@ const DESCRIPTIONS := {
 		+ "Block in each level, with no heart lost. You can see it around you while it's up. Refills at the checkpoint.",
 	"long_blink": "Passive: after you get hurt, you stay safe twice as long (2.4 seconds instead of 1.2) "
 		+ "and get knocked back half as far.",
+	"chain_dash": "Passive (needs Dash): when a dash knocks out an enemy or breaks a spike square, "
+		+ "you get your dash straight back and a small hop, so you can chain dashes through a group. "
+		+ "Big Bad Square's reward.",
 }
 const PAPER := Color("eef1fa")
 const EDGE := Color("1b2440")
 
-@export_enum("dash", "pound", "double_jump", "glide", "quick", "tele_hop", "high_jump", "phase_jump", "shockwave", "stun_landing", "grip_and_go", "lucky_charm", "bounce_house", "secret_helper", "magnet", "wall_cling", "brick_drop", "slow_burst", "portion_booster", "air_brake", "momentum", "heart_box", "angry_dash", "personal_space", "safety_bubble", "guard_block", "long_blink") var ability := "dash"
+@export_enum("dash", "pound", "double_jump", "glide", "quick", "tele_hop", "high_jump", "phase_jump", "shockwave", "stun_landing", "grip_and_go", "lucky_charm", "bounce_house", "secret_helper", "magnet", "wall_cling", "brick_drop", "slow_burst", "portion_booster", "air_brake", "momentum", "heart_box", "angry_dash", "personal_space", "safety_bubble", "guard_block", "long_blink", "chain_dash") var ability := "dash"
 
 var _t := 0.0
 
@@ -188,6 +191,14 @@ static func _draw_symbol(ci: CanvasItem, ability_name: String, o: Vector2, c: Co
 			for i in 3:
 				ci.draw_rect(Rect2(o + Vector2(-9 + i * 6, -3), Vector2(5, 5)), Color(c, 1.0 - i * 0.3))
 			ci.draw_rect(Rect2(o + Vector2(-9, 5), Vector2(18, b)), c)
+		"chain_dash":
+			# A chevron, a block, then another chevron: dash, hit, dash again.
+			for cx in [-9.0, 5.0]:
+				for i in 5:
+					var cdx: float = (2.0 - absf(i - 2.0)) * b * 0.5
+					ci.draw_rect(Rect2(o + Vector2(cx + cdx, -5.0 + i * b), Vector2(b, b)), c)
+			ci.draw_rect(Rect2(o + Vector2(-3, -3), Vector2(6, 6)), c)
+			ci.draw_rect(Rect2(o + Vector2(-9, 6), Vector2(18, 1)), c)
 		"dash":
 			# Two right-pointing chevrons.
 			for cx in [-5.0, 1.0]:

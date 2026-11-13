@@ -153,6 +153,10 @@ func _check_player() -> void:
 		var p: Player = b
 		var feet := p.global_position.y + Player.SIZE / 2.0
 		if p.is_dashing() or p.is_pounding() or (p.velocity.y > 0.0 and feet < global_position.y):
+			if p.is_dashing():
+				_die()
+				p.chain_dash()   # Chain Dash card
+				return
 			if not p.is_pounding():
 				p.velocity.y = -p.jump_velocity * 0.6   # bounce off its squashed head
 			_die()

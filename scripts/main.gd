@@ -51,10 +51,14 @@ var _came_from := "dungeon"
 ## Dungeon areas, in order. Each is a run of 5 fixed levels (hearts carry over), then its boss.
 ## An area shows at the gate once the boss of the area before it is beaten.
 const AREAS := [
-	{"id": "basic", "name": "Basic", "first": 1, "seeds": [18, 25, 3, 34, 1]},
+	{"id": "basic", "name": "Basic", "first": 1, "seeds": [18, 25, 3, 34, 1],
+		"boss": "res://levels/boss_basic.txt", "boss_name": "Big Bad Square"},
 	{"id": "moss", "name": "Mossy Cave", "first": 6, "seeds": [29, 56, 49, 10, 8]},
 ]
 const FLOOR_CLEAR_REWARD := 10
+## Beating a boss the first time: these pixels plus its card (Dash first, if you lack it).
+const BOSS_REWARD := 25
+const BOSS_CARDS := {"basic": "chain_dash"}
 var _floor := ""   # the area being played ("" = none)
 var _floor_step := 0
 var _floor_seeds: Array[int] = []
@@ -98,6 +102,7 @@ func _ready() -> void:
 	level.player_hurt.connect(_on_player_hurt)
 	level.door_near.connect(_on_door_near)
 	level.checkpoint_reached.connect(_on_checkpoint)
+	level.boss_defeated.connect(_on_boss_defeated)
 	_ding = AudioStreamPlayer.new()
 	_ding.stream = load("res://audio/ding.wav")
 	_ding.bus = AudioSettings.SOUNDS_BUS
@@ -579,8 +584,8 @@ func _lose_heart(from_fall := false) -> void:
 		hud.show_out(run_time, falls)
 		if _floor != "":
 			var ar := _area(_floor)
-			hud.out_label.text = "Out of hearts on Level %d. Start again from Level %d?" % [
-				ar.first + _floor_step - 1, ar.first]
+			var where := "the boss" if _floor_step > ar.seeds.size() else "Level %d" % (ar.first + _floor_step - 1)
+			hud.out_label.text = "Out of hearts on %s. Start again from Level %d?" % [where, ar.first]
 		$TouchControls.hide()
 
 
@@ -760,10 +765,14 @@ func _play_floor_level() -> void:
 	var step := _floor_step
 	var carry := _carry_hearts
 	_came_from = "dungeon"
-	seed_value = _floor_seeds[step - 1]
+	seed_value = _floor_seeds[step - 1] if step <= _floor_seeds.size() else 0
 	_level_key = _area_key(id, seed_value)
 	_replay_mode = ""
 	set_music("music_level")
+	var ar := _area(id)
+	if step > ar.seeds.size():
+		_play_boss(ar, carry)
+		return
 	hud.set_seed(seed_value)
 	var text := LevelGen.generate(seed_value)
 	if id == "moss":
@@ -774,8 +783,28 @@ func _play_floor_level() -> void:
 	_floor_step = step
 	_carry_hearts = carry
 	load_level_text(text)
-	var ar := _area(id)
 	hud.banner("Level %d  ·  %s" % [ar.first + step - 1, ar.name])
+
+
+## The area's boss room, after its 5 levels. Hearts carry in.
+func _play_boss(ar: Dictionary, carry: int) -> void:
+	seed_value = 0
+	_level_key = "boss_" + ar.id
+	hud.set_seed(0)
+	_floor = ar.id
+	_floor_step = ar.seeds.size() + 1
+	_carry_hearts = carry
+	load_level_text(FileAccess.get_file_as_string(ar.boss))
+	hud.banner("Boss: %s!" % ar.boss_name)
+
+
+## The boss is down: a short pause to see him pop, then the win.
+func _on_boss_defeated() -> void:
+	if state != State.PLAY:
+		return
+	Haptics.hurt()
+	await get_tree().create_timer(0.8).timeout
+	_on_goal_reached()
 
 
 ## Mossy Cave: most floating platforms become crumbling blocks.
@@ -794,18 +823,31 @@ func _floor_level_won() -> void:
 	if _floor_step < total:
 		hud.set_floor_win("Next: Level %d" % (ar.first + _floor_step))
 		return
-	# All 5 levels done. The bosses aren't built yet, so for now this stands in for the boss.
+	if _floor_step == total and ar.has("boss"):
+		hud.set_floor_win("Next: Boss!")
+		return
+	# The boss is beaten (areas without a boss yet: clearing level 5 stands in for it).
 	var key: String = "boss:" + _floor
 	if not CardCollection.is_beaten(key):
 		CardCollection.mark_beaten(key)
-		CardCollection.add_pixels(FLOOR_CLEAR_REWARD)
+		var px := FLOOR_CLEAR_REWARD
+		var news := "%s cleared!" % ar.name
+		if ar.has("boss"):
+			px += BOSS_REWARD
+			news = "%s beaten!" % ar.boss_name
+			var card: String = "dash" if not CardCollection.owns("dash") else BOSS_CARDS.get(ar.id, "")
+			if card != "" and not CardCollection.owns(card):
+				_on_card_collected(card)
+		CardCollection.add_pixels(px)
 		hud.set_pixels(CardCollection.pixels)
+		news += " +%d pixels" % px
 		var i := AREAS.find(ar)
-		var news := "%s cleared! +%d pixels" % [ar.name, FLOOR_CLEAR_REWARD]
 		if i + 1 < AREAS.size():
 			news += ". %s is open!" % AREAS[i + 1].name
-		hud.toast(news)
-	hud.banner("The boss's lair is still being dug...")
+		hud.result_label.text += "\n" + news
+		hud.banner(news)
+	elif not ar.has("boss"):
+		hud.banner("The boss's lair is still being dug...")
 	hud.set_floor_win("")
 
 
@@ -830,8 +872,8 @@ func win_reward() -> int:
 	var clear_key := _replay_clear_key()
 	if clear_key != "":
 		return 0 if CardCollection.is_beaten(clear_key) else REPLAY_REWARD
-	if _level_key == "custom" or CardCollection.is_beaten(_level_key):
-		return 0
+	if _level_key == "custom" or _level_key.begins_with("boss_") or CardCollection.is_beaten(_level_key):
+		return 0   # bosses pay through _floor_level_won
 	return FAST_REWARD if run_time <= par_time() else WIN_REWARD
 
 

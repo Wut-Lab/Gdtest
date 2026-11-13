@@ -32,6 +32,8 @@ signal obstacle_broken(pos: Vector2, kind: String)
 signal door_near(kind: String, near: bool)
 ## The player touched a checkpoint. spot is where to respawn.
 signal checkpoint_reached(spot: Vector2)
+## A boss (Big Bad Square) was beaten.
+signal boss_defeated
 
 const T := 32
 ## Bad Blocks marked k in the map (Hard Replay).
@@ -129,6 +131,7 @@ func load_map_text(text: String) -> void:
 	var checkpoints: Array[Vector2i] = []
 	var water_cells: Array[Vector2i] = []
 	var crumbles: Array[Vector2i] = []
+	var bosses: Array[Vector2i] = []
 	var lines := text.replace("\r", "").split("\n")
 	for y in lines.size():
 		var line: String = lines[y]
@@ -161,6 +164,8 @@ func load_map_text(text: String) -> void:
 					checkpoints.append(Vector2i(x, y))
 				"c":
 					crumbles.append(Vector2i(x, y))
+				"m":
+					bosses.append(Vector2i(x, y))
 				"~":
 					water_cells.append(Vector2i(x, y))
 				"!", "$", "&", "%", "(", ")", "{", "}", "[", "]", "f", "l":
@@ -195,6 +200,12 @@ func load_map_text(text: String) -> void:
 		var cb := CrumbleBlock.new()
 		cb.position = Vector2(cell.x * T + T / 2.0, cell.y * T + T / 2.0)
 		_obstacles.add_child(cb)
+	for cell in bosses:
+		var boss := BigBadSquare.new()
+		boss.position = Vector2(cell.x * T + T / 2.0, (cell.y + 1) * T - BigBadSquare.SIZE / 2.0)
+		boss.hurt_player.connect(func(push: Vector2) -> void: player_hurt.emit(push))
+		boss.defeated.connect(func(_pos: Vector2) -> void: boss_defeated.emit())
+		_obstacles.add_child(boss)
 	water.setup(water_cells)
 	_update_walls()
 	queue_redraw()
