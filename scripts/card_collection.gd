@@ -42,6 +42,9 @@ static var opened_chests: Array[String] = []
 ## The cards on display in the shop ("" = sold), and wins since it last restocked.
 static var shop_stock: Array[String] = []
 static var shop_wins := 0
+## Bonus hearts waiting for the next dungeon run (from first Hard / Scramble replay clears).
+const MAX_BONUS_HEARTS := 1
+static var bonus_hearts := 0
 ## Levels this file has beaten (level keys): a win only pays the first time.
 static var beaten: Array[String] = []
 ## Up to 10 random levels (seeds) the player liked, replayable from the Replay Room.
@@ -77,6 +80,7 @@ static func use_file(n: int) -> void:
 		opened_chests.assign(cfg.get_value("progress", "opened_chests", []))
 		shop_stock.assign(cfg.get_value("shop", "stock", []))
 		shop_wins = int(cfg.get_value("shop", "wins", 0))
+		bonus_hearts = int(cfg.get_value("replay", "bonus_hearts", 0))
 		beaten.assign(cfg.get_value("progress", "beaten", []))
 		liked.assign(cfg.get_value("replay", "liked", []))
 	else:
@@ -87,6 +91,7 @@ static func use_file(n: int) -> void:
 		opened_chests.clear()
 		shop_stock.clear()
 		shop_wins = 0
+		bonus_hearts = 0
 		beaten.clear()
 		liked.clear()
 	var settings := ConfigFile.new()
@@ -104,6 +109,7 @@ static func save() -> void:
 	cfg.set_value("progress", "opened_chests", opened_chests)
 	cfg.set_value("shop", "stock", shop_stock)
 	cfg.set_value("shop", "wins", shop_wins)
+	cfg.set_value("replay", "bonus_hearts", bonus_hearts)
 	cfg.set_value("progress", "beaten", beaten)
 	cfg.set_value("replay", "liked", liked)
 	cfg.save(path(file))
@@ -258,3 +264,21 @@ static func toggle_like(seed_value: int) -> bool:
 		liked.append(seed_value)
 	save()
 	return true
+
+
+## Banks a bonus heart for the next run. Returns false if one is already waiting.
+static func add_bonus_heart() -> bool:
+	if bonus_hearts >= MAX_BONUS_HEARTS:
+		return false
+	bonus_hearts += 1
+	save()
+	return true
+
+
+## Uses up the waiting bonus hearts (for a run that's starting).
+static func take_bonus_hearts() -> int:
+	var n := bonus_hearts
+	if n > 0:
+		bonus_hearts = 0
+		save()
+	return n

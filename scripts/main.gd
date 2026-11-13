@@ -31,6 +31,8 @@ var seed_value := 0
 var _level_key := "main"
 ## Replay Room mode of the level being played: "", "true", "hard" or "scramble".
 var _replay_mode := ""
+## Extra hearts this run from a banked bonus heart.
+var _run_bonus := 0
 ## Which town door the last run started from, so Back to Town returns there.
 var _came_from := "dungeon"
 var player: Player
@@ -232,6 +234,7 @@ func enter_town(at_door := "") -> void:
 	player.reset_to(spot)
 	player.active = true
 	player.abilities.assign(CardCollection.equipped)
+	_run_bonus = 0
 	hearts = _start_hearts()
 	_show_abilities()
 	hud.set_pixels(CardCollection.pixels)
@@ -293,6 +296,8 @@ func new_run() -> void:
 	falls = 0
 	hits = 0
 	player.abilities.assign(CardCollection.equipped)   # equipped from the collection
+	# A banked bonus heart (from a Hard / Scramble replay) is used on the next dungeon run.
+	_run_bonus = 0 if _level_key == "custom" or _replay_mode != "" else CardCollection.take_bonus_hearts()
 	hearts = _start_hearts()
 	_show_abilities()
 	hud.set_hearts(hearts, _start_hearts())
@@ -413,7 +418,7 @@ func _on_player_hurt(push: Vector2) -> void:
 
 ## Hearts at the start of a run: 2, plus 1 for the Heart Box card.
 func _start_hearts() -> int:
-	return START_HEARTS + (1 if "heart_box" in player.abilities else 0)
+	return START_HEARTS + (1 if "heart_box" in player.abilities else 0) + _run_bonus
 
 
 func _lose_heart() -> void:
@@ -530,10 +535,13 @@ func _on_goal_reached() -> void:
 	player.active = false
 	player.velocity = Vector2.ZERO
 	var reward := win_reward()
-	var medal := _medal_key()
-	if medal != "" and not CardCollection.is_beaten(medal):
-		hud.toast("%s medal! Shown on this level in the Replay Room." % ("Hard ★" if _replay_mode == "hard" else "Scramble ✦"))
-		CardCollection.mark_beaten(medal)
+	var clear_key := _replay_clear_key()
+	if clear_key != "" and not CardCollection.is_beaten(clear_key):
+		CardCollection.mark_beaten(clear_key)
+		if CardCollection.add_bonus_heart():
+			hud.toast("Bonus heart! Your next dungeon run starts with an extra heart.")
+		else:
+			hud.toast("A bonus heart is already waiting for your next run.")
 	if _level_key != "custom":
 		CardCollection.mark_beaten(_level_key)
 	if reward > 0:
@@ -547,18 +555,18 @@ func _on_goal_reached() -> void:
 
 ## Winning pays 3 pixels, or 4 for a fast run, the first time only: replays and editor
 ## test levels pay nothing, so a level can't be farmed. Hard and Scramble replays pay 3 pixels
-## and a medal the first time each is cleared on a level (also once only, so no farming).
+## and bank a bonus heart for the next run, the first time each is cleared on a level (once only).
 func win_reward() -> int:
-	var medal := _medal_key()
-	if medal != "":
-		return 0 if CardCollection.is_beaten(medal) else REPLAY_REWARD
+	var clear_key := _replay_clear_key()
+	if clear_key != "":
+		return 0 if CardCollection.is_beaten(clear_key) else REPLAY_REWARD
 	if _level_key == "custom" or CardCollection.is_beaten(_level_key):
 		return 0
 	return FAST_REWARD if run_time <= par_time() else WIN_REWARD
 
 
-## The save key for a Hard or Scramble replay's medal ("hard:seed7"), or "" for other levels.
-func _medal_key() -> String:
+## The save key for a Hard or Scramble replay's first clear ("hard:seed7"), or "" for other levels.
+func _replay_clear_key() -> String:
 	return "%s:%s" % [_replay_mode, _level_key] if _replay_mode in ["hard", "scramble"] else ""
 
 

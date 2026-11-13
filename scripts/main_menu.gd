@@ -244,6 +244,8 @@ func _ready() -> void:
 			var note := Label.new()
 			note.theme_type_variation = "SmallLabel"
 			note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			note.custom_minimum_size = Vector2(300, 0)
 			mode.add_child(note)
 			_mode_notes[key] = note
 	_button(mode, "Back", _open_replay)
@@ -479,17 +481,15 @@ func _open_replay() -> void:
 		row.add_theme_constant_override("separation", 8)
 		var shape := "Vertical" if LevelGen.is_vertical(sv) else ("Diagonal" if LevelGen.is_diagonal(sv) else "Horizontal")
 		var play := Button.new()
-		var medals := ("  ★" if CardCollection.is_beaten("hard:seed%d" % sv) else "") \
-			+ ("  ✦" if CardCollection.is_beaten("scramble:seed%d" % sv) else "")
-		play.text = "▶ Seed %d · %s%s" % [sv, shape, medals]
+		play.text = "▶ Seed %d · %s" % [sv, shape]
 		play.custom_minimum_size = Vector2(250, 44)
 		play.pressed.connect(func() -> void:
 			_mode_seed = sv
 			_mode_title.text = "Seed %d" % sv
 			for k in _mode_notes:
 				var done := CardCollection.is_beaten("%s:seed%d" % [k, sv])
-				_mode_notes[k].text = ("%s Medal earned" % ("★" if k == "hard" else "✦")) if done \
-					else "First clear: +3 pixels and a medal"
+				_mode_notes[k].text = "Cleared" if done \
+					else "First clear: +3 pixels and a bonus heart for your next run"
 				_mode_notes[k].add_theme_color_override("font_color", Color("ffd166") if done else Color("79e2c2"))
 			_show("Mode"))
 		row.add_child(play)
