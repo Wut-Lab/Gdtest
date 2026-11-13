@@ -156,7 +156,7 @@ func load_map_text(text: String) -> void:
 					checkpoints.append(Vector2i(x, y))
 				"~":
 					water_cells.append(Vector2i(x, y))
-				"!", "$", "&", "%", "(", ")", "{", "}", "[", "]":
+				"!", "$", "&", "%", "(", ")", "{", "}", "[", "]", "f", "l":
 					doors[Vector2i(x, y)] = ch
 				"T", "B":
 					platforms[Vector2i(x, y)] = ch == "T"

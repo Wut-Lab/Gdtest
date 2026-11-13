@@ -20,7 +20,9 @@ const WIN_REWARD := 3
 ## Terry, the lazy yellow block in town, says one of these when you talk to him.
 const _WALKER_LINES := ["Hi!", "It's a good day to dungeon dive!", "Have a great dive!"]
 const TOWNSFOLK_LINES := {"paula": _WALKER_LINES, "tim": _WALKER_LINES,
-	"romeo": ["I like the view from up here!"]}
+	"romeo": ["I like the view from up here!"],
+	"larry": ["Oh, hey! I'm Larry. Heard there was a nice pond out here.",
+		"I'm still unpacking my fishing gear... come back once I've found my good hooks!"]}
 ## How many times you've talked to each townsfolk (their lines go in order).
 var _talks := {}
 var dialog: DialogBox
@@ -259,6 +261,8 @@ func enter_town(at_door := "") -> void:
 	town = town.replace("r", "R" if CardCollection.milestone(10) else "#")
 	if not CardCollection.milestone(10):
 		town = town.replace(")", ".")
+	if not CardCollection.larry_here():
+		town = town.replace("f", ".").replace("l", ".")   # Larry's hut: 30 s floating in the pond
 	# Romeo sits on the right hill, then the left, switching every 2 levels you complete.
 	town = town.replace("[" if CardCollection.clears / 2 % 2 == 0 else "]", ".")
 	level.load_map_text(town)
@@ -306,7 +310,8 @@ func _enter_door() -> void:
 	if _near_door in TOWNSFOLK_LINES:
 		var n: int = _talks.get(_near_door, 0)
 		_talks[_near_door] = n + 1
-		_talk(_near_door, [TOWNSFOLK_LINES[_near_door][n % TOWNSFOLK_LINES[_near_door].size()]])
+		_talk(_near_door, TOWNSFOLK_LINES[_near_door] if _near_door == "larry" \
+			else [TOWNSFOLK_LINES[_near_door][n % TOWNSFOLK_LINES[_near_door].size()]])
 		return
 	if _near_door == "terry":
 		_talk("terry", [TERRY_LINES[randi() % TERRY_LINES.size()]])
@@ -368,6 +373,17 @@ func new_run() -> void:
 	hud.hide_menus()
 	$TouchControls.show()
 	hud.pause_button.show()
+
+
+## The unusual milestone: you've floated in the pond long enough that Larry shows up with a hut.
+func _larry_arrives() -> void:
+	CardCollection.save()
+	var pos := player.position
+	var vel := player.velocity
+	enter_town("pond")   # rebuild the town with the hut, keeping you where you are
+	player.reset_to(pos)
+	player.velocity = vel
+	hud.toast("Someone's setting up a fishing hut by the pond!")
 
 
 ## Pause the game and open the dialogue box: [param who] says each of [param pages] in turn.
@@ -444,6 +460,11 @@ func _process(delta: float) -> void:
 	if state == State.PLAY:
 		run_time += delta
 	hud.set_stats(run_time, falls)
+	if state == State.TOWN and not get_tree().paused and not CardCollection.larry_here() \
+			and player.in_water() > 0.3:
+		CardCollection.pond_time += delta
+		if CardCollection.larry_here():
+			_larry_arrives()
 	$TouchControls.set_ready("angry", player.angry_ready() and (hearts > 1 or state != State.PLAY))
 	$TouchControls.set_ready("push", player.push_ready())
 

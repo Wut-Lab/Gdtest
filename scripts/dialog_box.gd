@@ -40,6 +40,7 @@ func _ready() -> void:
 	row.add_child(frame)
 	var holder := Control.new()
 	holder.custom_minimum_size = Vector2(56, 56)
+	holder.clip_contents = true
 	frame.add_child(holder)
 	_portrait = TownDoor.new()
 	_portrait.portrait = true

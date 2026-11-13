@@ -5,17 +5,20 @@ extends Area2D
 ## % = the Replay Room (a small house, shown once it's unlocked).
 ## ( = Paul, a pink block with a mini card shop; ) = Terry, a lazy yellow block (milestones).
 ## { = Paula (purple) and } = Tim (green), who walk back and forth.
+## f = a small fishing hut and l = Larry (after 30 seconds floating in the pond).
 ## [ / ] = Romeo (dark red) on the left / right hill: paces a tile each way and hops now and then.
 ## It sits on the floor of its cell; the building is drawn around it, 3 tiles wide.
 
 signal near_changed(door: TownDoor, near: bool)
 
-const KINDS := {"!": "dungeon", "$": "shop", "&": "cards", "%": "replay", "(": "paul", ")": "terry", "{": "paula", "}": "tim", "[": "romeo", "]": "romeo"}
+const KINDS := {"!": "dungeon", "$": "shop", "&": "cards", "%": "replay", "(": "paul", ")": "terry", "{": "paula", "}": "tim", "[": "romeo", "]": "romeo", "f": "hut", "l": "larry"}
 const NAMES := {"dungeon": "the Dungeon", "shop": "the Shop", "cards": "the Card Hall", "replay": "the Replay Room",
-	"paul": "Paul", "terry": "Terry", "paula": "Paula", "tim": "Tim", "romeo": "Romeo"}
+	"paul": "Paul", "terry": "Terry", "paula": "Paula", "tim": "Tim", "romeo": "Romeo", "hut": "the Fishing Hut", "larry": "Larry"}
 const SIGNS := {"dungeon": "DUNGEON", "shop": "SHOP", "cards": "CARDS", "replay": "REPLAY"}
 ## Townsfolk: you talk to them instead of entering.
-const PEOPLE := ["paul", "terry", "paula", "tim", "romeo"]
+const PEOPLE := ["paul", "terry", "paula", "tim", "romeo", "larry"]
+## Scenery only: no door to walk up to.
+const DECOR := ["hut"]
 ## Townsfolk who stroll back and forth (body colour, highlight).
 const WALKERS := {"paula": [Color("9b5de5"), Color("c19bf2")], "tim": [Color("3dbb5c"), Color("7fdc95")]}
 const WALK_RANGE := 36.0
@@ -41,6 +44,8 @@ func _ready() -> void:
 	_t = randf() * 10.0
 	if portrait:
 		process_mode = Node.PROCESS_MODE_ALWAYS
+		return
+	if kind in DECOR:
 		return
 	var col := CollisionShape2D.new()
 	var shape := RectangleShape2D.new()
@@ -71,6 +76,8 @@ func _draw() -> void:
 		"terry": _draw_terry()
 		"paula", "tim": _draw_walker()
 		"romeo": _draw_romeo()
+		"hut": _draw_hut()
+		"larry": _draw_larry()
 	if not SIGNS.has(kind):
 		return
 	var font := ThemeDB.fallback_font
@@ -275,3 +282,50 @@ func _draw_romeo() -> void:
 	# A big open grin.
 	draw_rect(Rect2(-5 + dir * 1.5, top + 17, 10, 5), EDGE)
 	draw_rect(Rect2(-3 + dir * 1.5, top + 20, 6, 2), Color("f27bb5"))
+
+
+## A small, makeshift fishing hut: patchy planks, a tarp roof tied down at the corners, a crate.
+func _draw_hut() -> void:
+	draw_rect(Rect2(-34, -58, 60, 58), EDGE)
+	var planks := [Color("9a7b55"), Color("8a6c48"), Color("a8875f"), Color("7f6342")]
+	for i in 7:
+		draw_rect(Rect2(-32 + i * 8, -54 + (i % 2) * 2, 7, 54 - (i % 2) * 2), planks[i % 4])
+	# The tarp roof, a bit saggy, with ropes.
+	draw_colored_polygon(PackedVector2Array([Vector2(-42, -52), Vector2(-4, -76), Vector2(34, -52),
+		Vector2(18, -55), Vector2(-4, -58), Vector2(-26, -55)]), Color("3f8fd6"))
+	draw_polyline(PackedVector2Array([Vector2(-42, -52), Vector2(-4, -76), Vector2(34, -52)]), EDGE, 2.0)
+	draw_line(Vector2(-42, -52), Vector2(-38, 0), Color("d9c9a3"), 1.0)
+	draw_line(Vector2(34, -52), Vector2(30, 0), Color("d9c9a3"), 1.0)
+	# A dark doorway with a cloth flap, and a crate out front.
+	draw_rect(Rect2(-18, -34, 16, 34), Color("2a2238"))
+	draw_rect(Rect2(-18, -34, 7, 26), Color("c95c4a"))
+	draw_rect(Rect2(8, -14, 16, 14), EDGE)
+	draw_rect(Rect2(9, -13, 14, 12), Color("b58b52"))
+	draw_line(Vector2(9, -7), Vector2(23, -7), EDGE, 1.0)
+	# A hand-painted sign, slightly crooked.
+	var font := ThemeDB.fallback_font
+	draw_set_transform(Vector2(0, -46), -0.06)
+	draw_rect(Rect2(-24, -8, 44, 13), Color("e9dcb8"))
+	draw_string(font, Vector2(-21, 2), "BAIT?", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, EDGE)
+	draw_set_transform(Vector2.ZERO)
+
+
+## Larry: a white block holding a fishing rod out over the pond, line bobbing.
+func _draw_larry() -> void:
+	var y := -1.0 * absf(sin(_t * 1.2))
+	draw_rect(Rect2(-13, -26 + y, 26, 26), EDGE)
+	draw_rect(Rect2(-11, -24 + y, 22, 22), Color("f2f4fa"))
+	draw_rect(Rect2(-11, -24 + y, 22, 4), Color.WHITE)
+	var blink := fmod(_t, 4.1) < 0.12
+	for ex in [-7, 2]:
+		draw_rect(Rect2(ex, -17 + y, 3, 1 if blink else 4), EDGE)
+	draw_rect(Rect2(-3, -9 + y, 6, 1.5), EDGE)   # a calm little smile
+	# A bucket hat.
+	draw_rect(Rect2(-15, -29 + y, 30, 4), Color("6b8f5e"))
+	draw_rect(Rect2(-10, -34 + y, 20, 6), Color("6b8f5e"))
+	# The rod and its line, out toward the water on the right.
+	var tip := Vector2(30, -46)
+	draw_line(Vector2(8, -10 + y), tip, Color("7a5230"), 2.0)
+	var bob := Vector2(tip.x + 10, 4 + 2.0 * sin(_t * 2.0))
+	draw_line(tip, bob, Color(1, 1, 1, 0.7), 1.0)
+	draw_rect(Rect2(bob.x - 2, bob.y - 3, 4, 4), Color("e5484d"))

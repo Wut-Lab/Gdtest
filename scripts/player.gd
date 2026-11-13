@@ -185,6 +185,10 @@ func _play(p: AudioStreamPlayer, pitch := 1.0) -> void:
 	p.play()
 
 
+func in_water() -> float:
+	return _submerged()
+
+
 ## How much of the player is under water, 0 (none) to 1 (all).
 func _submerged() -> float:
 	if water == null or water.is_empty():
