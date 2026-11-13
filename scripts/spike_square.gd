@@ -96,6 +96,14 @@ func take_hit(kind: String) -> bool:
 	return true
 
 
+## Angry Block Dash ran into it: broken whatever kind it is.
+func smash() -> void:
+	health = 0
+	broken.emit(global_position)
+	hide()
+	process_mode = Node.PROCESS_MODE_DISABLED
+
+
 ## Stunning Landing card: freeze in place for this many seconds.
 func stun(seconds: float) -> void:
 	_stun = maxf(_stun, seconds)

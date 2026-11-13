@@ -34,6 +34,8 @@ var seed_value := 0
 var _level_key := "main"
 ## Replay Room mode of the level being played: "", "true", "hard" or "scramble".
 var _replay_mode := ""
+## Safety Bubble card: already caught you this level (until the checkpoint).
+var _bubble_used := false
 ## Which town door the last run started from, so Back to Town returns there.
 var _came_from := "dungeon"
 var player: Player
@@ -59,6 +61,7 @@ func _ready() -> void:
 
 	player.reset_to(level.start.position)
 	player.fell.connect(_on_player_fell)
+	player.pay_heart = _pay_angry_heart
 	get_tree().node_added.connect(_hook_button_haptics)
 	for n in find_children("*", "BaseButton", true, false):
 		_hook_button_haptics(n)
@@ -247,6 +250,9 @@ func enter_town(at_door := "") -> void:
 	if not CardCollection.milestone(10):
 		town = town.replace(")", ".")
 	level.load_map_text(town)
+	for d in level.get_doors():
+		if d.kind == "paul":
+			d.closed = not CardCollection.milestone(10)   # his shutter stays down until 10 levels
 	_sync_chests()
 	_fit_to_level()
 	get_tree().paused = false
@@ -288,6 +294,9 @@ func _enter_door() -> void:
 	if _near_door == "terry":
 		hud.toast(TERRY_LINES[randi() % TERRY_LINES.size()])
 		return
+	if _near_door == "paul" and not CardCollection.milestone(10):
+		hud.toast("Paul: \"Still unpacking. Please come back later!\"")
+		return
 	state = State.MENU
 	player.active = false
 	player.velocity = Vector2.ZERO
@@ -321,6 +330,7 @@ func new_run() -> void:
 	hud.pause_menu.set_quit_text("Back to Town")
 	player.reset_to(level.start.position)
 	_respawn = level.start.position
+	_bubble_used = false
 	player.active = true
 	run_time = 0.0
 	falls = 0
@@ -396,6 +406,22 @@ func _process(delta: float) -> void:
 	if state == State.PLAY:
 		run_time += delta
 	hud.set_stats(run_time, falls)
+	$TouchControls.set_ready("angry", player.angry_ready() and (hearts > 1 or state != State.PLAY))
+	$TouchControls.set_ready("push", player.push_ready())
+
+
+## Angry Block Dash costs a heart, but never your last one (and only in a level).
+func _pay_angry_heart() -> bool:
+	if state != State.PLAY:
+		return state == State.TOWN   # free to try out in town
+	if hearts <= 1:
+		hud.toast("Too angry to risk your last heart!")
+		return false
+	hearts -= 1
+	hud.set_hearts(hearts, _start_hearts())
+	hud.hearts_display.flash()
+	Haptics.hurt()
+	return true
 
 
 ## The player color picked on the start screen is saved on this device.
@@ -415,7 +441,16 @@ func _load_player_color(fallback: Color) -> Color:
 
 
 func _on_player_fell() -> void:
+	if state == State.PLAY and "safety_bubble" in player.abilities and not _bubble_used:
+		_bubble_used = true   # Safety Bubble: caught once per level (refills at the checkpoint)
+		player.bubble_to(player.last_ground)
+		hud.toast("Safety Bubble!")
+		return
 	falls += 1
+	# Spiked platforms smashed by Angry Block Dash come back, so no bridge is lost for good.
+	for t in get_tree().get_nodes_in_group("card_targets"):
+		if t is SpikePlatform and t.get_meta("smashed", false):
+			t.reset()
 	if state != State.PLAY:
 		player.reset_to(level.start.position)
 		return
@@ -428,6 +463,7 @@ func _on_checkpoint(spot: Vector2) -> void:
 	if state != State.PLAY:
 		return
 	_respawn = spot
+	_bubble_used = false
 	_ding.play()
 	hud.toast("Checkpoint!")
 

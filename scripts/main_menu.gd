@@ -480,7 +480,7 @@ func _open_shop() -> void:
 		_shop_slots[i].disabled = a == ""
 		if a != "":
 			_shop_icons[i].ability = a
-		_shop_prices[i].text = ("%d px" % CardCollection.PRICE) if a != "" else ("Sold" if i < stock.size() else "")
+		_shop_prices[i].text = ("%d px" % CardCollection.price_of(a)) if a != "" else ("Sold" if i < stock.size() else "")
 	_show("Shop")
 	for i in _shop_slots.size():
 		if not _shop_slots[i].disabled:
@@ -539,8 +539,9 @@ func _open_buy(a: String) -> void:
 	_buy_type.text = AbilityCard.TYPE_NAMES[type_name]
 	_buy_type.add_theme_color_override("font_color", AbilityCard.TYPE_COLORS[type_name].lightened(0.25))
 	_buy_text.text = AbilityCard.DESCRIPTIONS[a]
-	var short := CardCollection.PRICE - CardCollection.pixels
-	_buy.text = ("Buy (%d pixels)" % CardCollection.PRICE) if short <= 0 else ("Need %d more pixels" % short)
+	var cost := CardCollection.price_of(a)
+	var short := cost - CardCollection.pixels
+	_buy.text = ("Buy (%d pixels)" % cost) if short <= 0 else ("Need %d more pixels" % short)
 	_buy.disabled = short > 0
 	_show("Buy")
 	if _buy.disabled:
@@ -587,7 +588,7 @@ func _open_paul() -> void:
 		b.pressed.connect(_open_buy.bind(a))
 		col.add_child(b)
 		var price := Label.new()
-		price.text = "%d px" % CardCollection.PRICE
+		price.text = "%d px" % CardCollection.PAUL_PRICE
 		price.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		price.add_theme_color_override("font_color", Color("f2c230"))
 		col.add_child(price)

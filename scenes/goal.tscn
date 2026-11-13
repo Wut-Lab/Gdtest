@@ -5,8 +5,8 @@
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_sx1j4"]
 size = Vector2(24, 24)
 
-[node name="Goal" type="Area2D" unique_id=1204330668]
+[node name="Goal" type="Area2D" unique_id=1268612970]
 script = ExtResource("1_jbojv")
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1974418248]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1116036131]
 shape = SubResource("RectangleShape2D_sx1j4")

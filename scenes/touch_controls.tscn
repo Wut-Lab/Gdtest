@@ -24,13 +24,19 @@ radius = 38.0
 [sub_resource type="CircleShape2D" id="CircleShape2D_4wpbc"]
 radius = 38.0
 
-[node name="TouchControls" type="CanvasLayer" unique_id=733045329]
+[sub_resource type="CircleShape2D" id="CircleShape2D_s570s"]
+radius = 38.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_7qoim"]
+radius = 38.0
+
+[node name="TouchControls" type="CanvasLayer" unique_id=2050866854]
 layer = 2
 script = ExtResource("1_c1tq5")
 
-[node name="Pad" type="Node2D" parent="." unique_id=1500049734]
+[node name="Pad" type="Node2D" parent="." unique_id=1471018755]
 
-[node name="Left" type="TouchScreenButton" parent="Pad" unique_id=371457880]
+[node name="Left" type="TouchScreenButton" parent="Pad" unique_id=997098432]
 position = Vector2(18, 450)
 texture_normal = ExtResource("2_pefoi")
 texture_pressed = ExtResource("3_mc04f")
@@ -38,11 +44,11 @@ shape = SubResource("CircleShape2D_j2vku")
 passby_press = true
 action = "move_left"
 
-[node name="Arrow" type="Polygon2D" parent="Pad/Left" unique_id=1554476181]
+[node name="Arrow" type="Polygon2D" parent="Pad/Left" unique_id=993375962]
 color = Color(0.93333334, 0.94509804, 0.98039216, 1)
 polygon = PackedVector2Array(29, 38, 45, 24, 45, 52)
 
-[node name="Right" type="TouchScreenButton" parent="Pad" unique_id=1296144186]
+[node name="Right" type="TouchScreenButton" parent="Pad" unique_id=1199358370]
 position = Vector2(106, 450)
 texture_normal = ExtResource("2_pefoi")
 texture_pressed = ExtResource("3_mc04f")
@@ -50,11 +56,11 @@ shape = SubResource("CircleShape2D_4wk4v")
 passby_press = true
 action = "move_right"
 
-[node name="Arrow" type="Polygon2D" parent="Pad/Right" unique_id=1588679280]
+[node name="Arrow" type="Polygon2D" parent="Pad/Right" unique_id=1493128114]
 color = Color(0.93333334, 0.94509804, 0.98039216, 1)
 polygon = PackedVector2Array(47, 38, 31, 24, 31, 52)
 
-[node name="Jump" type="TouchScreenButton" parent="Pad" unique_id=179303347]
+[node name="Jump" type="TouchScreenButton" parent="Pad" unique_id=1190679187]
 position = Vector2(850, 434)
 texture_normal = ExtResource("4_i7au1")
 texture_pressed = ExtResource("5_lkmae")
@@ -62,7 +68,7 @@ shape = SubResource("CircleShape2D_tve8x")
 passby_press = true
 action = "jump"
 
-[node name="Label" type="Label" parent="Pad/Jump" unique_id=2143826352]
+[node name="Label" type="Label" parent="Pad/Jump" unique_id=1647834460]
 offset_right = 92.0
 offset_bottom = 92.0
 theme_override_font_sizes/font_size = 18
@@ -71,7 +77,7 @@ text = "JUMP"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="Dash" type="TouchScreenButton" parent="Pad" unique_id=437314192]
+[node name="Dash" type="TouchScreenButton" parent="Pad" unique_id=956999162]
 position = Vector2(762, 450)
 texture_normal = ExtResource("2_pefoi")
 texture_pressed = ExtResource("3_mc04f")
@@ -79,7 +85,7 @@ shape = SubResource("CircleShape2D_j3oes")
 passby_press = true
 action = "dash"
 
-[node name="Label" type="Label" parent="Pad/Dash" unique_id=1452054923]
+[node name="Label" type="Label" parent="Pad/Dash" unique_id=256036082]
 offset_right = 76.0
 offset_bottom = 76.0
 theme_override_font_sizes/font_size = 15
@@ -88,7 +94,7 @@ text = "DASH"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="Pound" type="TouchScreenButton" parent="Pad" unique_id=1563814797]
+[node name="Pound" type="TouchScreenButton" parent="Pad" unique_id=1529425726]
 position = Vector2(858, 346)
 texture_normal = ExtResource("2_pefoi")
 texture_pressed = ExtResource("3_mc04f")
@@ -96,7 +102,7 @@ shape = SubResource("CircleShape2D_pvbyl")
 passby_press = true
 action = "pound"
 
-[node name="Label" type="Label" parent="Pad/Pound" unique_id=1420080220]
+[node name="Label" type="Label" parent="Pad/Pound" unique_id=1905589526]
 offset_right = 76.0
 offset_bottom = 76.0
 theme_override_font_sizes/font_size = 15
@@ -105,7 +111,7 @@ text = "POUND"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="Brick" type="TouchScreenButton" parent="Pad" unique_id=167851353]
+[node name="Brick" type="TouchScreenButton" parent="Pad" unique_id=1481745468]
 position = Vector2(762, 346)
 texture_normal = ExtResource("2_pefoi")
 texture_pressed = ExtResource("3_mc04f")
@@ -113,11 +119,45 @@ shape = SubResource("CircleShape2D_4wpbc")
 passby_press = true
 action = "brick"
 
-[node name="Label" type="Label" parent="Pad/Brick" unique_id=346145324]
+[node name="Label" type="Label" parent="Pad/Brick" unique_id=1497890159]
 offset_right = 76.0
 offset_bottom = 76.0
 theme_override_font_sizes/font_size = 15
 theme_override_colors/font_color = Color(0.93333334, 0.94509804, 0.98039216, 1)
 text = "BRICK"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Angry" type="TouchScreenButton" parent="Pad" unique_id=1928371792]
+position = Vector2(666, 450)
+texture_normal = ExtResource("2_pefoi")
+texture_pressed = ExtResource("3_mc04f")
+shape = SubResource("CircleShape2D_s570s")
+passby_press = true
+action = "angry"
+
+[node name="Label" type="Label" parent="Pad/Angry" unique_id=227954096]
+offset_right = 76.0
+offset_bottom = 76.0
+theme_override_font_sizes/font_size = 15
+theme_override_colors/font_color = Color(0.93333334, 0.94509804, 0.98039216, 1)
+text = "ANGRY"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Push" type="TouchScreenButton" parent="Pad" unique_id=1571996975]
+position = Vector2(666, 346)
+texture_normal = ExtResource("2_pefoi")
+texture_pressed = ExtResource("3_mc04f")
+shape = SubResource("CircleShape2D_7qoim")
+passby_press = true
+action = "push"
+
+[node name="Label" type="Label" parent="Pad/Push" unique_id=725181366]
+offset_right = 76.0
+offset_bottom = 76.0
+theme_override_font_sizes/font_size = 15
+theme_override_colors/font_color = Color(0.93333334, 0.94509804, 0.98039216, 1)
+text = "PUSH"
 horizontal_alignment = 1
 vertical_alignment = 1

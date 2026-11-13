@@ -17,6 +17,8 @@ const PEOPLE := ["paul", "terry"]
 const EDGE := Color("1b2440")
 
 var kind := "shop"
+## Paul's shutter is down (his shop isn't open yet).
+var closed := false
 var _t := 0.0
 
 
@@ -158,6 +160,15 @@ func _draw_paul() -> void:
 		var p := Vector2(16 + i * 3, -20 + y + i)
 		draw_rect(Rect2(p, Vector2(7, 10)), EDGE)
 		draw_rect(Rect2(p + Vector2(1, 1), Vector2(5, 8)), [Color("e5484d"), Color("f2c230"), Color("4a8fe7")][i])
+	if closed:
+		# A little striped shutter pulled down in front of him, with a sign.
+		draw_rect(Rect2(-22, -18, 44, 18), EDGE)
+		for i in 4:
+			draw_rect(Rect2(-20, -16 + i * 4, 40, 3), Color("c9cfe0") if i % 2 == 0 else Color("9aa3bd"))
+		var font := ThemeDB.fallback_font
+		var w := font.get_string_size("SOON", HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x
+		draw_rect(Rect2(-w / 2.0 - 3, -15, w + 6, 11), Color("f2c230"))
+		draw_string(font, Vector2(-w / 2.0, -7), "SOON", HORIZONTAL_ALIGNMENT_LEFT, -1, 9, EDGE)
 
 
 ## Terry: a yellow block flopped on the ground, eyes shut, with Zzz floating up.

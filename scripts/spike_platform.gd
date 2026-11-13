@@ -74,6 +74,14 @@ func take_hit(_kind: String) -> bool:
 	return true
 
 
+## Angry Block Dash ran into it: broken even if it's normally unbreakable. It comes back if
+## you fall, so a smashed bridge can't leave a level unbeatable.
+func smash() -> void:
+	set_meta("smashed", true)
+	hide()
+	process_mode = Node.PROCESS_MODE_DISABLED
+
+
 ## Back to the start of its path at full health, for a new run.
 func reset() -> void:
 	_t = 0.0
@@ -83,6 +91,7 @@ func reset() -> void:
 	_shift_to = Vector2.ZERO
 	position = _origin
 	health = max_health
+	set_meta("smashed", false)
 	show()
 	process_mode = Node.PROCESS_MODE_INHERIT
 

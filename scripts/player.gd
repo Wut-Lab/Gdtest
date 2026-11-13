@@ -93,6 +93,15 @@ const SIZE := 24.0
 @export var cling_kick := 1.3
 ## Brick Drop: seconds between bricks.
 @export var brick_cooldown := 3.0
+## Angry Block Dash (rare): seconds of rage, the speed boost, and the recharge after it ends.
+@export var angry_time := 3.0
+@export var angry_speed := 1.5
+@export var angry_cooldown := 5.0
+## Personal Space (rare): reach in px, how many tiles it shoves, the stun, and its recharge.
+@export var push_reach := 128.0
+@export var push_tiles := 3
+@export var push_stun := 1.0
+@export var push_cooldown := 3.0
 ## Bounce House: rubber bounces go this many times as high (speed scales by the square root),
 ## and landing on normal ground faster than house_fall_speed bounces back at house_hop of it.
 @export var house_height := 1.25
@@ -126,6 +135,14 @@ var _shock_cd := 0.0
 var _cling_left := 1.0   # Wall Cling: hang time left this jump
 var _cling_dir := 0.0    # which way the wall you're clinging to faces (0 = not clinging)
 var _brick_cd := 0.0
+var _angry := 0.0
+var _angry_cd := 0.0
+var _push_cd := 0.0
+## Angry Block Dash costs a heart: Main sets this; it returns false if you can't pay.
+var pay_heart: Callable = func() -> bool: return true
+## Safety Bubble: the last plain ground you stood on, and the bubble's float-back time.
+var last_ground := Vector2.ZERO
+var _bubble := 0.0
 var _brick: Node = null
 var _takeoff_x := 0.0   # Grip and Go: where you left the ground
 ## Momentum card: seconds spent running one way without stopping or turning.
@@ -169,6 +186,11 @@ func reset_to(pos: Vector2) -> void:
 	_cling_dir = 0.0
 	_cling_left = cling_time
 	_brick_cd = 0.0
+	_angry = 0.0
+	_angry_cd = 0.0
+	_push_cd = 0.0
+	_bubble = 0.0
+	last_ground = pos
 	if is_instance_valid(_brick):
 		_brick.queue_free()
 	velocity = Vector2.ZERO
@@ -266,6 +288,8 @@ func teleport_to(pos: Vector2) -> void:
 ## Running speed, 15% faster with the Quick card. Momentum builds up to 25% more over 2 seconds.
 func _run_speed() -> float:
 	var s := run_speed * (1.0 + _pct(0.15) if "quick" in abilities else 1.0)
+	if _angry > 0.0:
+		s *= angry_speed
 	if "momentum" in abilities:
 		s *= 1.0 + _pct(0.25) * clampf(_momentum / 2.0, 0.0, 1.0)
 	return s
@@ -278,7 +302,32 @@ func _jump_speed() -> float:
 
 ## Nothing can hurt you: blinking after a hit, or phased out by Phase Jump.
 func is_safe() -> bool:
-	return invincible > 0.0 or phased
+	return invincible > 0.0 or phased or _angry > 0.0
+
+
+func is_angry() -> bool:
+	return _angry > 0.0
+
+
+## Angry Block Dash can be started now (not raging or recharging).
+func angry_ready() -> bool:
+	return _angry == 0.0 and _angry_cd == 0.0
+
+
+func push_ready() -> bool:
+	return _push_cd == 0.0
+
+
+## Safety Bubble card: float back to pos inside a bubble instead of falling.
+func bubble_to(pos: Vector2) -> void:
+	global_position = pos + Vector2(0.0, -4.0)
+	velocity = Vector2.ZERO
+	_dash = 0.0
+	_pounding = false
+	_bubble = 1.0
+	invincible = 1.0
+	camera.reset_smoothing()
+	_play(_jump_sfx, 1.6)
 
 
 func is_dashing() -> bool:
@@ -384,6 +433,12 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	var bounced_now := _apply_rubber(before, on_floor)
 	_hit_obstacles()
+	if _angry > 0.0:
+		_angry_smash()
+	if is_on_floor() and get_slide_collision_count() > 0 and _floor_is_ground():
+		last_ground = global_position
+	if _bubble > 0.0:
+		_bubble = maxf(_bubble - delta, 0.0)
 	if _pounding and (bounced_now or is_on_floor()):
 		_pounding = false
 		if not bounced_now:
@@ -461,6 +516,20 @@ func _update_dash_and_pound(delta: float, on_floor: bool) -> void:
 	if Input.is_action_just_pressed("brick") and "brick_drop" in abilities and not on_floor \
 			and _brick_cd == 0.0:
 		_drop_brick()
+	_push_cd = maxf(_push_cd - delta, 0.0)
+	_angry_cd = maxf(_angry_cd - delta, 0.0)
+	if _angry > 0.0:
+		_angry = maxf(_angry - delta, 0.0)
+		if _angry == 0.0:
+			_angry_cd = angry_cooldown   # recharge starts when the rage ends
+	elif Input.is_action_just_pressed("angry") and "angry_dash" in abilities and _angry_cd == 0.0 \
+			and pay_heart.call():
+		_angry = angry_time
+		_squash = Vector2(1.3, 0.75)
+		_puff()
+		_play(_land_sfx, 0.5)
+	if Input.is_action_just_pressed("push") and "personal_space" in abilities and _push_cd == 0.0:
+		_personal_space()
 	_shock_cd = maxf(_shock_cd - delta, 0.0)
 	if on_floor:
 		_air_dash_used = false
@@ -489,6 +558,47 @@ func _update_dash_and_pound(delta: float, on_floor: bool) -> void:
 		velocity = Vector2(0.0, pound_speed)
 		_squash = Vector2(0.7, 1.4)
 		_play(_jump_sfx, 0.7)
+
+
+## Standing on the level's tiles (not a brick, spike square or moving platform).
+func _floor_is_ground() -> bool:
+	for i in get_slide_collision_count():
+		var col := get_slide_collision(i)
+		if col.get_normal().y < -0.7 and col.get_collider() is TileMapLayer:
+			return true
+	return false
+
+
+## Angry Block Dash: smash every Bad Block, spike square and spiked platform you touch.
+## You can still stand on a spiked platform's top without breaking it.
+func _angry_smash() -> void:
+	var me := Rect2(global_position - Vector2.ONE * (SIZE / 2.0 + 6.0), Vector2.ONE * (SIZE + 12.0))
+	var feet := global_position.y + SIZE / 2.0
+	for t in get_tree().get_nodes_in_group("card_targets"):
+		if not t.visible or not t.has_method("smash"):
+			continue
+		var half: Vector2 = t.half_size()
+		if not me.intersects(Rect2(t.global_position - half, half * 2.0)):
+			continue
+		if t is SpikePlatform and feet <= t.global_position.y - half.y + 3.0:
+			continue
+		t.smash()
+		Haptics.land()
+
+
+## Personal Space card: shove everything within reach 3 tiles away from you and stun it.
+func _personal_space() -> void:
+	_push_cd = push_cooldown
+	CardFx.spawn(get_parent(), global_position, "slow", push_reach)
+	_play(_land_sfx, 0.8)
+	for t in get_tree().get_nodes_in_group("card_targets"):
+		if not t.visible:
+			continue
+		var half: Vector2 = t.half_size()
+		var d: Vector2 = t.global_position - global_position
+		if absf(d.x) - half.x <= push_reach and absf(d.y) - half.y <= push_reach:
+			t.shove(signf(d.x) if absf(d.x) > 1.0 else _face, push_tiles)
+			t.stun(push_stun)
 
 
 ## Shockwave card: shove spike squares, spiked platforms and Bad Blocks near the floor 2 tiles away from you.
@@ -625,7 +735,18 @@ func _draw() -> void:
 		var wob := sin(Time.get_ticks_msec() * 0.03) * 3.0 * k
 		draw_rect(rect.grow(2.0 + wob), Color(0.62, 0.95, 1.0, 0.6 * k), false, 2.0)
 		draw_rect(rect.grow(5.0 - wob), Color(0.62, 0.95, 1.0, 0.25 * k), false, 2.0)
-	draw_rect(rect, Color(color, _phase_look))
+	if _angry > 0.0:
+		# Angry Block Dash: a pulsing red glow.
+		var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.02)
+		draw_rect(rect.grow(4.0 + 2.0 * pulse), Color(1.0, 0.2, 0.15, 0.35))
+		draw_rect(rect.grow(2.0), Color(1.0, 0.25, 0.2, 0.6), false, 2.0)
+	if _bubble > 0.0:
+		# Safety Bubble: a shimmering bubble that pops as it fades.
+		var r := SIZE * (0.95 + 0.15 * (1.0 - _bubble))
+		draw_circle(Vector2.ZERO, r, Color(0.6, 0.9, 1.0, 0.18 * _bubble))
+		draw_arc(Vector2.ZERO, r, 0.0, TAU, 24, Color(0.75, 0.95, 1.0, 0.8 * _bubble), 2.0)
+		draw_rect(Rect2(-r * 0.5, -r * 0.6, 4, 4), Color(1, 1, 1, 0.7 * _bubble))
+	draw_rect(rect, Color(color, _phase_look) if _angry == 0.0 else Color(color, _phase_look).lerp(Color("e5484d"), 0.45))
 	var ex := _face * 4.0
 	var ey := rect.position.y + s.y * 0.3
 	# Dark eyes on light colors, light eyes on dark colors, so they always show.
@@ -633,3 +754,8 @@ func _draw() -> void:
 	eyes.a = _phase_look
 	draw_rect(Rect2(ex - 5.0, ey, 3.0, 5.0), eyes)
 	draw_rect(Rect2(ex + 2.0, ey, 3.0, 5.0), eyes)
+	if _angry > 0.0:
+		# Angry brows slanting down toward the middle.
+		for side in [-1.0, 1.0]:
+			var bx: float = ex + side * 4.0
+			draw_line(Vector2(bx + side * 3.0, ey - 4.0), Vector2(bx - side * 2.0, ey - 1.0), eyes, 2.0)

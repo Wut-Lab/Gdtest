@@ -84,8 +84,24 @@ func slow(seconds: float) -> void:
 	_slow = maxf(_slow, seconds)
 
 
+## Shoved sideways (Shockwave, Personal Space), but never past the edge of its platform.
 func shove(dir: float, tiles := 2) -> void:
-	position.x += CardFx.clear_shift(self, global_position, half_size(), dir, tiles)
+	var shift := CardFx.clear_shift(self, global_position, half_size(), dir, tiles)
+	while shift != 0.0 and not _floor_under(global_position.x + shift):
+		shift -= signf(shift) * 32.0
+	position.x += shift
+
+
+func _floor_under(x: float) -> bool:
+	var from := Vector2(x, global_position.y)
+	var q := PhysicsRayQueryParameters2D.create(from, from + Vector2(0.0, SIZE / 2.0 + 8.0), 1)
+	q.exclude = [get_rid()]
+	return not get_world_2d().direct_space_state.intersect_ray(q).is_empty()
+
+
+## Angry Block Dash ran into it.
+func smash() -> void:
+	_die()
 
 
 func _die() -> void:

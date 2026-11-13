@@ -21,6 +21,10 @@ const BIG := Vector2(96, 72)
 @onready var dash: TouchScreenButton = $Pad/Dash
 @onready var pound: TouchScreenButton = $Pad/Pound
 @onready var brick: TouchScreenButton = $Pad/Brick
+@onready var angry: TouchScreenButton = $Pad/Angry
+@onready var push: TouchScreenButton = $Pad/Push
+## Card buttons, in the order their cards were equipped (the first sits next to Jump).
+var _card_buttons: Array[TouchScreenButton] = []
 
 var _bar: ColorRect
 var _keys := {}   # button -> TouchKey
@@ -38,6 +42,8 @@ func _ready() -> void:
 	_setup_key(dash, SMALL, "DASH", 0.0, Color("e5484d"))
 	_setup_key(pound, SMALL, "POUND", 0.0, Color("e5484d"))
 	_setup_key(brick, SMALL, "BRICK", 0.0, Color("e5484d"))
+	_setup_key(angry, SMALL, "ANGRY", 0.0, Color("b8323a"))
+	_setup_key(push, SMALL, "PUSH", 0.0, Color("7d8597"))
 	pad.visible = DisplayServer.is_touchscreen_available()
 	set_abilities([])
 	get_viewport().size_changed.connect(_layout)
@@ -71,6 +77,12 @@ func _setup_key(b: TouchScreenButton, key_size: Vector2, text: String, arrow: fl
 	_keys[b] = key
 
 
+## Dims a card's button while it can't be used (recharging, or Angry at your last heart).
+func set_ready(button_name: String, ready: bool) -> void:
+	var b: TouchScreenButton = get(button_name)
+	b.modulate.a = 1.0 if ready else 0.4
+
+
 ## Height the black bar covers at the bottom of the screen (with the border under it), or 0
 ## when the controls are hidden.
 func bar_height() -> float:
@@ -79,9 +91,14 @@ func bar_height() -> float:
 
 ## Dash, Pound and Brick buttons show only when their cards are equipped.
 func set_abilities(abilities: Array[String]) -> void:
-	dash.visible = "dash" in abilities
-	pound.visible = "pound" in abilities
-	brick.visible = "brick_drop" in abilities
+	var by_card := {"dash": dash, "pound": pound, "brick_drop": brick, "angry_dash": angry,
+		"personal_space": push}
+	_card_buttons.clear()
+	for a in abilities:
+		if by_card.has(a):
+			_card_buttons.append(by_card[a])
+	for b in by_card.values():
+		b.visible = b in _card_buttons
 	if is_node_ready():
 		_layout()
 
@@ -100,13 +117,13 @@ func _layout() -> void:
 	jump.position = Vector2(x, cy)
 	# Card buttons fill in leftward from Jump, only the ones showing. On narrow screens the gaps
 	# between them shrink so they never reach the arrows.
-	var shown := [dash, pound, brick].filter(func(b: TouchScreenButton) -> bool: return b.visible)
+	var shown := _card_buttons
 	var room := x - BIG.x / 2.0 - (right.position.x + SMALL.x / 2.0 + GAP)
 	var gap := GAP
 	if shown.size() > 0:
 		gap = clampf((room - shown.size() * SMALL.x) / shown.size(), 2.0, GAP)
 	x -= BIG.x / 2.0 + gap + SMALL.x / 2.0
-	for b in [dash, pound, brick]:
+	for b in _card_buttons:
 		b.position = Vector2(x, cy)
 		if b.visible:
 			x -= SMALL.x + gap

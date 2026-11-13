@@ -12,10 +12,12 @@ const LETTERS := {"D": "dash", "Q": "pound", "J": "double_jump", "L": "glide", "
 	"E": "tele_hop", "I": "high_jump", "F": "phase_jump", "Z": "shockwave", "U": "stun_landing", "O": "grip_and_go", "Y": "lucky_charm", "N": "bounce_house", "h": "secret_helper", "w": "wall_cling", "b": "brick_drop", "s": "slow_burst", "p": "portion_booster", "A": "air_brake", "M": "momentum", "g": "magnet", "X": "heart_box"}
 const NAMES := {"dash": "Dash", "pound": "Ground Pound", "double_jump": "Double Jump", "glide": "Glide",
 	"quick": "Quick", "tele_hop": "Tele-hop", "high_jump": "High Jump", "phase_jump": "Phase Jump", "shockwave": "Shockwave", "stun_landing": "Stunning Landing", "grip_and_go": "Grip and Go", "lucky_charm": "Lucky Charm", "bounce_house": "Bounce House", "secret_helper": "Secret Helper", "magnet": "Magnet", "wall_cling": "Wall Cling", "brick_drop": "Brick Drop", "slow_burst": "Slow Burst",
-	"portion_booster": "Portion Booster", "air_brake": "Air Brake", "momentum": "Momentum", "heart_box": "Heart Box"}
+	"portion_booster": "Portion Booster", "air_brake": "Air Brake", "momentum": "Momentum", "heart_box": "Heart Box",
+	"angry_dash": "Angry Block Dash", "personal_space": "Personal Space", "safety_bubble": "Safety Bubble"}
 ## Card types, color coded: attacks are red, jumps are blue, movement is yellow, misc is gray.
 const TYPES := {"dash": "attack", "pound": "attack", "double_jump": "jump", "glide": "jump",
-	"quick": "movement", "tele_hop": "movement", "high_jump": "jump", "phase_jump": "jump", "shockwave": "attack", "stun_landing": "attack", "grip_and_go": "movement", "lucky_charm": "misc", "bounce_house": "misc", "secret_helper": "misc", "magnet": "misc", "wall_cling": "jump", "brick_drop": "attack", "slow_burst": "misc", "portion_booster": "misc", "air_brake": "movement", "momentum": "movement", "heart_box": "misc"}
+	"quick": "movement", "tele_hop": "movement", "high_jump": "jump", "phase_jump": "jump", "shockwave": "attack", "stun_landing": "attack", "grip_and_go": "movement", "lucky_charm": "misc", "bounce_house": "misc", "secret_helper": "misc", "magnet": "misc", "wall_cling": "jump", "brick_drop": "attack", "slow_burst": "misc", "portion_booster": "misc", "air_brake": "movement", "momentum": "movement", "heart_box": "misc",
+	"angry_dash": "attack", "personal_space": "misc", "safety_bubble": "misc"}
 const TYPE_NAMES := {"attack": "Attack card", "jump": "Jump card", "movement": "Movement card", "misc": "Misc card"}
 const TYPE_COLORS := {"attack": Color("e5484d"), "jump": Color("3d7be0"), "movement": Color("e0a400"),
 	"misc": Color("7d8597")}
@@ -61,11 +63,19 @@ const DESCRIPTIONS := {
 	"momentum": "Passive: keep running without stopping or turning to build up speed, up to "
 		+ "25% faster after 2 seconds.",
 	"heart_box": "Passive: you start every run with one extra heart (3 instead of 2).",
+	"angry_dash": "Rare. Press Angry (V or U) to rage for 3 seconds: you glow red, run 50% faster "
+		+ "and smash straight through Bad Blocks, spike squares and spiked platforms without getting hurt. "
+		+ "Costs 1 heart (never your last). Recharges 5 seconds after the rage ends.",
+	"personal_space": "Rare. Press Push (B or I) to shove every Bad Block, spike square and spiked "
+		+ "platform within 4 tiles 3 tiles away from you (Bad Blocks stop at their platform's edge) "
+		+ "and stun them for 1 second. Recharges in 3 seconds.",
+	"safety_bubble": "Passive: the first time you fall into a pit in a level, a bubble catches you "
+		+ "and floats you back to the last ground you stood on, with no heart lost. Refills at the checkpoint.",
 }
 const PAPER := Color("eef1fa")
 const EDGE := Color("1b2440")
 
-@export_enum("dash", "pound", "double_jump", "glide", "quick", "tele_hop", "high_jump", "phase_jump", "shockwave", "stun_landing", "grip_and_go", "lucky_charm", "bounce_house", "secret_helper", "magnet", "wall_cling", "brick_drop", "slow_burst", "portion_booster", "air_brake", "momentum", "heart_box") var ability := "dash"
+@export_enum("dash", "pound", "double_jump", "glide", "quick", "tele_hop", "high_jump", "phase_jump", "shockwave", "stun_landing", "grip_and_go", "lucky_charm", "bounce_house", "secret_helper", "magnet", "wall_cling", "brick_drop", "slow_burst", "portion_booster", "air_brake", "momentum", "heart_box", "angry_dash", "personal_space", "safety_bubble") var ability := "dash"
 
 var _t := 0.0
 
@@ -137,6 +147,28 @@ static func draw_card(ci: CanvasItem, ability_name: String, o: Vector2, scale :=
 static func _draw_symbol(ci: CanvasItem, ability_name: String, o: Vector2, c: Color) -> void:
 	var b := 2.0   # symbol block size
 	match ability_name:
+		"angry_dash":
+			# An angry block face: slanted brows over eyes, with speed lines behind.
+			ci.draw_rect(Rect2(o + Vector2(-3, -6), Vector2(10, 10)), c)
+			ci.draw_rect(Rect2(o + Vector2(-1, -3), Vector2(b, b)), PAPER)
+			ci.draw_rect(Rect2(o + Vector2(3, -3), Vector2(b, b)), PAPER)
+			for p in [Vector2(-2, -6), Vector2(0, -5), Vector2(4, -5), Vector2(6, -6)]:
+				ci.draw_rect(Rect2(o + p, Vector2(b, 1)), EDGE)
+			ci.draw_rect(Rect2(o + Vector2(-9, -4), Vector2(4, b)), c)
+			ci.draw_rect(Rect2(o + Vector2(-8, 0), Vector2(3, b)), c)
+			ci.draw_rect(Rect2(o + Vector2(-9, 4), Vector2(4, b)), c)
+		"personal_space":
+			# A block in the middle pushing arrows out both ways.
+			ci.draw_rect(Rect2(o + Vector2(-2, -2), Vector2(4, 4)), c)
+			for side in [-1.0, 1.0]:
+				ci.draw_rect(Rect2(o + Vector2(side * 4.0 - (b if side < 0 else 0.0), -1), Vector2(b * 2.0, b)), c)
+				for i in 3:
+					ci.draw_rect(Rect2(o + Vector2(side * (7.0 + i) - 1.0, -1.0 - (2 - i) * b), Vector2(b, (2 - i) * 4.0 + b)), c)
+		"safety_bubble":
+			# A block floating inside a bubble, with a shine.
+			ci.draw_arc(o, 8.0, 0.0, TAU, 20, c, 2.0)
+			ci.draw_rect(Rect2(o + Vector2(-3, -3), Vector2(6, 6)), c)
+			ci.draw_rect(Rect2(o + Vector2(-6, -6), Vector2(b, b)), Color(c, 0.6))
 		"dash":
 			# Two right-pointing chevrons.
 			for cx in [-5.0, 1.0]:
