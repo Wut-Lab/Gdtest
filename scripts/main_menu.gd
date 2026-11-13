@@ -53,6 +53,10 @@ var _replay_list: VBoxContainer
 var _replay_info: Label
 var _mode_title: Label
 var _mode_seed := 0
+var _paul_info: Label
+var _paul_row: HBoxContainer
+## Where the Buy page goes back to: "Shop" or "Paul".
+var _buy_from := "Shop"
 var _mode_notes := {}   # "hard"/"scramble" -> Label under its button
 
 
@@ -206,6 +210,20 @@ func _ready() -> void:
 		_shop_prices.append(price)
 	_button(shop, "Back", _back_out)
 
+	var paul := _page("Paul")
+	paul.add_child(_title("Paul's Cards"))
+	_paul_info = Label.new()
+	_paul_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_paul_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_paul_info.custom_minimum_size = Vector2(300, 0)
+	_paul_info.add_theme_color_override("font_color", DIM)
+	paul.add_child(_paul_info)
+	_paul_row = HBoxContainer.new()
+	_paul_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	_paul_row.add_theme_constant_override("separation", 12)
+	paul.add_child(_paul_row)
+	_button(paul, "Back", _back_out)
+
 	var replay := _page("Replay")
 	replay.add_child(_title("Replay Room"))
 	_replay_info = Label.new()
@@ -265,7 +283,7 @@ func _ready() -> void:
 	_buy_text.add_theme_color_override("font_color", DIM)
 	buy.add_child(_buy_text)
 	_buy = _button(buy, "Buy", _buy_card)
-	_button(buy, "Back", func() -> void: _open_shop())
+	_button(buy, "Back", _buy_back)
 	_buy_sfx = AudioStreamPlayer.new()
 	_buy_sfx.stream = load("res://audio/buy.wav")
 	_buy_sfx.bus = AudioSettings.SOUNDS_BUS
@@ -300,6 +318,7 @@ func _ready() -> void:
 	panel.add_child(card)
 	panel.add_child(shop)
 	panel.add_child(buy)
+	panel.add_child(paul)
 	panel.add_child(replay)
 	panel.add_child(mode)
 	panel.add_child(credits)
@@ -326,8 +345,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		_open_collection()
 	elif _pages["Buy"].visible:
 		get_viewport().set_input_as_handled()
-		_open_shop()
-	elif _pages["Shop"].visible or _pages["Cards"].visible or _pages["Replay"].visible:
+		_buy_back()
+	elif _pages["Shop"].visible or _pages["Cards"].visible or _pages["Replay"].visible or _pages["Paul"].visible:
 		get_viewport().set_input_as_handled()
 		_back_out()
 	elif _pages["Credits"].visible or _pages["Cards"].visible or _pages["Files"].visible:
@@ -344,6 +363,8 @@ func open_page(page_name: String) -> void:
 		_open_shop()
 	elif page_name == "Replay":
 		_open_replay()
+	elif page_name == "Paul":
+		_open_paul()
 	else:
 		_open_collection()
 
@@ -447,6 +468,7 @@ func _toggle_equip() -> void:
 
 
 func _open_shop() -> void:
+	_buy_from = "Shop"
 	CardCollection.setup()
 	var stock := CardCollection.get_shop()
 	var left := CardCollection.RESTOCK_WINS - CardCollection.shop_wins
@@ -526,9 +548,55 @@ func _open_buy(a: String) -> void:
 
 
 func _buy_card() -> void:
-	if CardCollection.buy(_shop_pick):
+	var ok := CardCollection.buy_from_paul(_shop_pick) if _buy_from == "Paul" else CardCollection.buy(_shop_pick)
+	if ok:
 		_buy_sfx.play()
+		_buy_back()
+
+
+func _buy_back() -> void:
+	if _buy_from == "Paul":
+		_open_paul()
+	else:
 		_open_shop()
+
+
+## Paul's mini shop: the Paul-only cards you don't have yet.
+func _open_paul() -> void:
+	_buy_from = "Paul"
+	for c in _paul_row.get_children():
+		_paul_row.remove_child(c)
+		c.queue_free()
+	var stock := CardCollection.paul_stock()
+	if CardCollection.pool("paul").is_empty():
+		_paul_info.text = "Paul: \"Oh, hi! I'm still unpacking my cards. Come back soon!\""
+	elif stock.is_empty():
+		_paul_info.text = "Paul: \"You've got every card I have. Nice!\""
+	else:
+		_paul_info.text = "Paul: \"Cards you won't find anywhere else!\"  ·  You have %d pixels" % CardCollection.pixels
+	for a in stock:
+		var col := VBoxContainer.new()
+		var b := Button.new()
+		b.flat = true
+		b.custom_minimum_size = Vector2(92, 96)
+		var icon := CardIcon.new()
+		icon.card_scale = 2.2
+		icon.ability = a
+		icon.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		b.add_child(icon)
+		b.pressed.connect(_open_buy.bind(a))
+		col.add_child(b)
+		var price := Label.new()
+		price.text = "%d px" % CardCollection.PRICE
+		price.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		price.add_theme_color_override("font_color", Color("f2c230"))
+		col.add_child(price)
+		_paul_row.add_child(col)
+	_show("Paul")
+	if not stock.is_empty():
+		_paul_row.get_child(0).get_child(0).grab_focus()
+	else:
+		_pages["Paul"].get_child(-1).grab_focus()
 
 
 ## Wooden stands under each slot and a blocky counter along the bottom.

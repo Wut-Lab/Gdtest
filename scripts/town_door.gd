@@ -3,13 +3,17 @@ extends Area2D
 ## A building's door in Square Hub Town: stand in front of it and press Enter (Up key or the
 ## on-screen button) to go in. ! = the dungeon gate, $ = the shop, & = the card hall,
 ## % = the Replay Room (a small house, shown once it's unlocked).
+## ( = Paul, a pink block with a mini card shop; ) = Terry, a lazy yellow block (milestones).
 ## It sits on the floor of its cell; the building is drawn around it, 3 tiles wide.
 
 signal near_changed(door: TownDoor, near: bool)
 
-const KINDS := {"!": "dungeon", "$": "shop", "&": "cards", "%": "replay"}
-const NAMES := {"dungeon": "the Dungeon", "shop": "the Shop", "cards": "the Card Hall", "replay": "the Replay Room"}
+const KINDS := {"!": "dungeon", "$": "shop", "&": "cards", "%": "replay", "(": "paul", ")": "terry"}
+const NAMES := {"dungeon": "the Dungeon", "shop": "the Shop", "cards": "the Card Hall", "replay": "the Replay Room",
+	"paul": "Paul", "terry": "Terry"}
 const SIGNS := {"dungeon": "DUNGEON", "shop": "SHOP", "cards": "CARDS", "replay": "REPLAY"}
+## Townsfolk: you talk to them instead of entering.
+const PEOPLE := ["paul", "terry"]
 const EDGE := Color("1b2440")
 
 var kind := "shop"
@@ -38,6 +42,10 @@ func _draw() -> void:
 		"shop": _draw_shop()
 		"cards": _draw_cards()
 		"replay": _draw_replay()
+		"paul": _draw_paul()
+		"terry": _draw_terry()
+	if not SIGNS.has(kind):
+		return
 	var font := ThemeDB.fallback_font
 	var text: String = SIGNS[kind]
 	var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
@@ -130,3 +138,38 @@ func _draw_replay() -> void:
 	draw_rect(Rect2(-28, -46, 26, 46), Color("3a2a66"))
 	draw_arc(Vector2(-15, -30), 7.0, 0.6, TAU - 0.3, 16, Color("f2c230"), 2.0)
 	draw_colored_polygon(PackedVector2Array([Vector2(-6, -36), Vector2(-6, -29), Vector2(-11, -33)]), Color("f2c230"))
+
+
+## Paul: a pink block with a bow tie, a fan of cards in hand and a little bob.
+func _draw_paul() -> void:
+	var y := -2.0 * absf(sin(_t * 2.0))
+	draw_rect(Rect2(-14, -28 + y, 28, 28), EDGE)
+	draw_rect(Rect2(-12, -26 + y, 24, 24), Color("f27bb5"))
+	draw_rect(Rect2(-12, -26 + y, 24, 4), Color("f9a8d0"))
+	# Eyes that blink now and then.
+	var blink := fmod(_t, 3.2) < 0.12
+	for ex in [-6, 4]:
+		draw_rect(Rect2(ex, -19 + y, 3, 1 if blink else 4), EDGE)
+	# Bow tie.
+	draw_colored_polygon(PackedVector2Array([Vector2(-5, -10 + y), Vector2(0, -8 + y), Vector2(-5, -6 + y)]), Color("7a3cc0"))
+	draw_colored_polygon(PackedVector2Array([Vector2(5, -10 + y), Vector2(0, -8 + y), Vector2(5, -6 + y)]), Color("7a3cc0"))
+	# A fan of three cards.
+	for i in 3:
+		var p := Vector2(16 + i * 3, -20 + y + i)
+		draw_rect(Rect2(p, Vector2(7, 10)), EDGE)
+		draw_rect(Rect2(p + Vector2(1, 1), Vector2(5, 8)), [Color("e5484d"), Color("f2c230"), Color("4a8fe7")][i])
+
+
+## Terry: a yellow block flopped on the ground, eyes shut, with Zzz floating up.
+func _draw_terry() -> void:
+	var breathe := 1.0 + 0.6 * sin(_t * 1.5)
+	draw_rect(Rect2(-16, -20 - breathe, 32, 20 + breathe), EDGE)
+	draw_rect(Rect2(-14, -18 - breathe, 28, 18 + breathe), Color("f2c230"))
+	draw_rect(Rect2(-14, -18 - breathe, 28, 3), Color("f8dc72"))
+	for ex in [-8, 3]:
+		draw_rect(Rect2(ex, -10, 5, 1), EDGE)   # shut eyes
+	var font := ThemeDB.fallback_font
+	for i in 3:
+		var k := fmod(_t * 0.5 + i / 3.0, 1.0)
+		draw_string(font, Vector2(12 + k * 14, -24 - k * 26), "z", HORIZONTAL_ALIGNMENT_LEFT, -1,
+			10 + int(k * 6), Color(1, 1, 1, 1.0 - k))

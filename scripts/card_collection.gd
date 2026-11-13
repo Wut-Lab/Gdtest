@@ -27,6 +27,15 @@ const DROP_GROUPS := {
 	"heart_box": "starter", "lucky_charm": "shop", "bounce_house": "shop", "slow_burst": "drop",
 	"portion_booster": "drop", "secret_helper": "chest", "magnet": "chest",
 }
+## Level milestones (random levels and the training level beaten):
+##   5: Paul moves onto the floating platform in town (his mini shop sells Paul cards)
+##   10: rubber blocks under Paul's platform let you reach him, and Terry moves in
+##   15: a rare attack card (RARE_ATTACK) joins your collection
+##   20: a rare misc card (RARE_MISC) shows up in the Shop
+const MILESTONES := [5, 10, 15, 20]
+## The two rare milestone cards ("" until they're designed).
+const RARE_ATTACK := ""
+const RARE_MISC := ""
 ## The shop: every card costs the same for now, 3 on display, new stock every 3 wins.
 const PRICE := 30
 const SHOP_SIZE := 3
@@ -269,3 +278,36 @@ static func toggle_like(seed_value: int) -> bool:
 	save()
 	return true
 
+
+
+## Levels beaten for milestones: random levels and the training level (not replays or tests).
+static func levels_beaten() -> int:
+	return beaten.filter(func(k: String) -> bool: return k == "main" or k.begins_with("seed")).size()
+
+
+static func milestone(n: int) -> bool:
+	return levels_beaten() >= n
+
+
+## Paul's mini shop: Paul-only cards (drop group "paul") this file doesn't own yet.
+static func paul_stock() -> Array:
+	return pool("paul").filter(func(a: String) -> bool: return a not in owned)
+
+
+static func buy_from_paul(ability: String) -> bool:
+	if ability not in paul_stock() or pixels < PRICE:
+		return false
+	pixels -= PRICE
+	add(ability)   # saves
+	return true
+
+
+## Hands out milestone cards that are due. Returns the cards added to the collection.
+static func claim_milestones() -> Array[String]:
+	var got: Array[String] = []
+	if RARE_ATTACK != "" and milestone(15) and add(RARE_ATTACK):
+		got.append(RARE_ATTACK)
+	if RARE_MISC != "" and milestone(20) and RARE_MISC not in owned and RARE_MISC not in get_shop():
+		shop_stock[0] = RARE_MISC
+		save()
+	return got

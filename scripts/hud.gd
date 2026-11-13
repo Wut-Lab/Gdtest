@@ -164,8 +164,8 @@ func set_like(shown: bool, liked: bool) -> void:
 
 
 ## Shows the Enter button for a building ("" hides it).
-func show_enter(place: String) -> void:
-	enter_button.text = "Enter %s" % place
+func show_enter(place: String, verb := "Enter") -> void:
+	enter_button.text = "%s %s" % [verb, place]
 	enter_button.visible = place != ""
 
 

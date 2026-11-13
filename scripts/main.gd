@@ -17,6 +17,9 @@ const START_HEARTS := 2
 var state := State.READY
 var run_time := 0.0
 const WIN_REWARD := 3
+## Terry, the lazy yellow block in town, says one of these when you talk to him.
+const TERRY_LINES := ["Terry: \"Mmh... five more minutes.\"", "Terry: \"Paul's up there? Good for him. I'm good down here.\"",
+	"Terry: \"Jumping? Sounds exhausting.\"", "Terry: \"Zzz...\"", "Terry: \"Wake me when it's lunch.\""]
 ## First Hard or Scramble clear of a liked level.
 const REPLAY_REWARD := 3
 const FAST_REWARD := 4
@@ -237,6 +240,12 @@ func enter_town(at_door := "") -> void:
 	var town := FileAccess.get_file_as_string(TOWN_MAP)
 	if not CardCollection.replay_unlocked():
 		town = town.replace("%", ".").replace("^", ".")   # the Replay Room and its ledge
+	# Milestones: Paul (5 levels), then rubber up to him and Terry (10 levels).
+	if not CardCollection.milestone(5):
+		town = town.replace("(", ".")
+	town = town.replace("r", "R" if CardCollection.milestone(10) else "#")
+	if not CardCollection.milestone(10):
+		town = town.replace(")", ".")
 	level.load_map_text(town)
 	_sync_chests()
 	_fit_to_level()
@@ -259,6 +268,8 @@ func enter_town(at_door := "") -> void:
 	hud.pause_button.show()
 	if at_door == "":
 		hud.banner("Square Hub Town")
+	for a in CardCollection.claim_milestones():
+		hud.toast("Rare card: %s! Added to your collection." % AbilityCard.NAMES[a])
 
 
 func _on_door_near(kind: String, near: bool) -> void:
@@ -266,12 +277,16 @@ func _on_door_near(kind: String, near: bool) -> void:
 		_near_door = kind
 	elif _near_door == kind:
 		_near_door = ""
-	hud.show_enter(TownDoor.NAMES[_near_door] if _near_door != "" and state == State.TOWN else "")
+	hud.show_enter(TownDoor.NAMES[_near_door] if _near_door != "" and state == State.TOWN else "",
+		"Talk to" if _near_door in TownDoor.PEOPLE else "Enter")
 
 
 ## Go into the building you're standing at.
 func _enter_door() -> void:
 	if state != State.TOWN or _near_door == "" or get_tree().paused:
+		return
+	if _near_door == "terry":
+		hud.toast(TERRY_LINES[randi() % TERRY_LINES.size()])
 		return
 	state = State.MENU
 	player.active = false
@@ -284,6 +299,7 @@ func _enter_door() -> void:
 		"shop": hud.main_menu.open_page("Shop")
 		"cards": hud.main_menu.open_page("Cards")
 		"replay": hud.main_menu.open_page("Replay")
+		"paul": hud.main_menu.open_page("Paul")
 
 
 ## Back out of a shop or card hall visit.
@@ -559,8 +575,10 @@ func _on_goal_reached() -> void:
 		CardCollection.mark_beaten(clear_key)
 		if CardCollection.room_size() > before:
 			hud.toast("The Replay Room grew: room for %d levels!" % CardCollection.room_size())
+	var levels_before := CardCollection.levels_beaten()
 	if _level_key != "custom":
 		CardCollection.mark_beaten(_level_key)
+	_announce_milestones(levels_before, CardCollection.levels_beaten())
 	if reward > 0:
 		CardCollection.record_win()
 		CardCollection.add_pixels(reward)
@@ -580,6 +598,20 @@ func win_reward() -> int:
 	if _level_key == "custom" or CardCollection.is_beaten(_level_key):
 		return 0
 	return FAST_REWARD if run_time <= par_time() else WIN_REWARD
+
+
+const MILESTONE_NEWS := {
+	5: "5 levels beaten! Someone pink moved onto the floating platform in town...",
+	10: "10 levels beaten! Rubber blocks popped up in town, and a sleepy neighbor moved in.",
+	15: "15 levels beaten! A rare attack card is waiting for you in town.",
+	20: "20 levels beaten! A rare card showed up in the Shop.",
+}
+
+
+func _announce_milestones(before: int, after: int) -> void:
+	for m in CardCollection.MILESTONES:
+		if before < m and after >= m:
+			hud.toast(MILESTONE_NEWS[m])
 
 
 ## The save key for a Hard or Scramble replay's first clear ("hard:seed7"), or "" for other levels.
