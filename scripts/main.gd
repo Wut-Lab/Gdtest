@@ -31,8 +31,6 @@ var seed_value := 0
 var _level_key := "main"
 ## Replay Room mode of the level being played: "", "true", "hard" or "scramble".
 var _replay_mode := ""
-## Extra hearts this run from a banked bonus heart.
-var _run_bonus := 0
 ## Which town door the last run started from, so Back to Town returns there.
 var _came_from := "dungeon"
 var player: Player
@@ -237,7 +235,6 @@ func enter_town(at_door := "") -> void:
 	player.reset_to(spot)
 	player.active = true
 	player.abilities.assign(CardCollection.equipped)
-	_run_bonus = 0
 	hearts = _start_hearts()
 	_show_abilities()
 	hud.set_pixels(CardCollection.pixels)
@@ -299,8 +296,6 @@ func new_run() -> void:
 	falls = 0
 	hits = 0
 	player.abilities.assign(CardCollection.equipped)   # equipped from the collection
-	# A banked bonus heart (from a Hard / Scramble replay) is used on the next dungeon run.
-	_run_bonus = 0 if _level_key == "custom" or _replay_mode != "" else CardCollection.take_bonus_hearts()
 	hearts = _start_hearts()
 	_show_abilities()
 	hud.set_hearts(hearts, _start_hearts())
@@ -421,7 +416,7 @@ func _on_player_hurt(push: Vector2) -> void:
 
 ## Hearts at the start of a run: 2, plus 1 for the Heart Box card.
 func _start_hearts() -> int:
-	return START_HEARTS + (1 if "heart_box" in player.abilities else 0) + _run_bonus
+	return START_HEARTS + (1 if "heart_box" in player.abilities else 0)
 
 
 func _lose_heart(from_fall := false) -> void:
@@ -521,7 +516,7 @@ func _on_card_collected(ability: String) -> void:
 ## Win screen's Like button: save this level to the Replay Room (or take it out).
 func _on_like_pressed() -> void:
 	if not CardCollection.toggle_like(seed_value):
-		hud.toast("Replay Room is full (%d levels)" % CardCollection.MAX_LIKED)
+		hud.toast("Replay Room is full (%d levels)" % CardCollection.room_size())
 	hud.set_like(true, seed_value in CardCollection.liked)
 
 
@@ -546,11 +541,10 @@ func _on_goal_reached() -> void:
 	var reward := win_reward()
 	var clear_key := _replay_clear_key()
 	if clear_key != "" and not CardCollection.is_beaten(clear_key):
+		var before := CardCollection.room_size()
 		CardCollection.mark_beaten(clear_key)
-		if CardCollection.add_bonus_heart():
-			hud.toast("Bonus heart! Your next dungeon run starts with an extra heart.")
-		else:
-			hud.toast("A bonus heart is already waiting for your next run.")
+		if CardCollection.room_size() > before:
+			hud.toast("The Replay Room grew: room for %d levels!" % CardCollection.room_size())
 	if _level_key != "custom":
 		CardCollection.mark_beaten(_level_key)
 	if reward > 0:
@@ -564,7 +558,7 @@ func _on_goal_reached() -> void:
 
 ## Winning pays 3 pixels, or 4 for a fast run, the first time only: replays and editor
 ## test levels pay nothing, so a level can't be farmed. Hard and Scramble replays pay 3 pixels
-## and bank a bonus heart for the next run, the first time each is cleared on a level (once only).
+## and add a Replay Room space, the first time each is cleared on a level (once only).
 func win_reward() -> int:
 	var clear_key := _replay_clear_key()
 	if clear_key != "":

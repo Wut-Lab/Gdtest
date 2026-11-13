@@ -9,7 +9,7 @@ extends Control
 ##   Card:    one card up close, with what it does and Equip / Unequip
 ##   Shop:    3 cards on display for pixels, restocked every few wins
 ##   Buy:     one shop card up close, with what it does and Buy
-##   Replay:  the Replay Room: up to 10 liked levels to play again (no rewards)
+##   Replay:  the Replay Room: 10–20 liked levels to play again (Hard / Scramble pay once each)
 ##   Mode:    how to replay one: True, Hard or Scramble
 ##   Credits: who and what made the game, and the engine's license
 ## Options opens the same Options page as the pause menu.
@@ -473,7 +473,7 @@ func _open_replay() -> void:
 		_replay_list.remove_child(c)
 		c.queue_free()
 	var liked := CardCollection.liked
-	_replay_info.text = ("Levels you liked: %d / %d. Hard and Scramble pay once each." % [liked.size(), CardCollection.MAX_LIKED]) \
+	_replay_info.text = ("Levels you liked: %d / %d. Hard and Scramble pay once each." % [liked.size(), CardCollection.room_size()]) \
 		if liked.size() > 0 else "No saved levels yet. Win a random level and tap Save to Replay Room."
 	for sv in liked:
 		var row := HBoxContainer.new()
@@ -489,7 +489,7 @@ func _open_replay() -> void:
 			for k in _mode_notes:
 				var done := CardCollection.is_beaten("%s:seed%d" % [k, sv])
 				_mode_notes[k].text = "Cleared" if done \
-					else "First clear: +3 pixels and a bonus heart for your next run"
+					else "First clear: +3 pixels and +1 Replay Room space"
 				_mode_notes[k].add_theme_color_override("font_color", Color("ffd166") if done else Color("79e2c2"))
 			_show("Mode"))
 		row.add_child(play)
