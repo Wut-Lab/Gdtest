@@ -229,6 +229,27 @@ func reset_to(pos: Vector2) -> void:
 	camera.reset_smoothing()
 
 
+var _shake := 0.0
+var _shake_left := 0.0
+var _shake_time := 0.0
+
+
+## Shake the screen: up to [param strength] px, easing off over [param seconds].
+func shake(strength: float, seconds: float) -> void:
+	if strength >= _shake * (_shake_left / maxf(_shake_time, 0.001)):
+		_shake = strength
+		_shake_left = seconds
+		_shake_time = seconds
+
+
+func _process(delta: float) -> void:
+	if _shake_left <= 0.0:
+		return
+	_shake_left = maxf(_shake_left - delta, 0.0)
+	var s := _shake * _shake_left / _shake_time
+	camera.position = Vector2(randf_range(-s, s), randf_range(-s, s)) if _shake_left > 0.0 else Vector2.ZERO
+
+
 ## Dashed into something too big to break (Big Bad Square): bounce back off it, unhurt.
 ## Chain Dash gives the dash straight back.
 func dash_bounce(side: float) -> void:

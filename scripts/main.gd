@@ -799,6 +799,7 @@ func _play_boss(ar: Dictionary, carry: int) -> void:
 	_floor = ar.id
 	_floor_step = ar.seeds.size() + 1
 	_carry_hearts = carry
+	set_music("music_boss")
 	load_level_text(FileAccess.get_file_as_string(ar.boss))
 	_on_screen_changed()
 	hud.banner("Boss: %s!" % ar.boss_name, 5.0, 1.0)

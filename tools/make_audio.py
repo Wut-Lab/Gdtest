@@ -4,7 +4,8 @@
     python3 tools/make_audio.py
 
 Writes audio/music.ogg (a soft, happy loop, exactly 3:00 at 96 BPM) and audio/jump.wav,
-audio/land.wav, audio/hurt.wav, audio/buy.wav, audio/ding.wav. Everything is synthesized here, so edit this file and rerun
+audio/land.wav, audio/hurt.wav, audio/buy.wav, audio/ding.wav, the boss sounds (boss_hit, boss_charge,
+boss_crash, boss_defeat) and the boss track music_boss.ogg. Everything is synthesized here, so edit this file and rerun
 it to change the sound, then run `godot --headless --path . --import`.
 """
 import os
@@ -361,6 +362,100 @@ def sfx_ding():
     return w * 0.55
 
 
+# ---------- Boss: sounds and a tense, driving loop ----------
+
+def sfx_boss_hit():
+    """Landing on the boss: a heavy, low thump with a squashy crunch."""
+    w = sweep(220, 55, 0.25)
+    t = np.arange(len(w)) / SR
+    thump = w * np.minimum(t / 0.002, 1) * np.exp(-t / 0.08)
+    crunch = noise_hit(0.05, bright=False, n_sec=0.25) * 0.5
+    ping = sweep(900, 500, 0.12, shape="square")
+    ping *= np.exp(-np.arange(len(ping)) / SR / 0.04) * 0.25
+    out = thump + crunch
+    out[: len(ping)] += ping
+    return out * 0.8
+
+
+def sfx_boss_charge():
+    """The 1.5 s glow before his dash: a buzzing tone rising and speeding up."""
+    dur = 1.5
+    w = sweep(110, 440, dur, shape="square")
+    t = np.arange(len(w)) / SR
+    trem = 0.6 + 0.4 * np.sign(np.sin(2 * np.pi * (6 + 18 * t / dur) * t))
+    env = np.minimum(t / 0.05, 1) * np.minimum((dur - t) / 0.03, 1)
+    return w * trem * env * (0.25 + 0.35 * t / dur)
+
+
+def sfx_boss_crash():
+    """Slamming into the wall: a deep boom and a rumble."""
+    w = sweep(120, 35, 0.5)
+    t = np.arange(len(w)) / SR
+    boom = w * np.exp(-t / 0.15)
+    rumble = noise_hit(0.18, bright=False, n_sec=0.5) * 0.6
+    return (boom + rumble) * 0.8
+
+
+def sfx_boss_defeat():
+    """Beaten: a falling crash, then a bright three-note fanfare."""
+    out = np.zeros(int(1.4 * SR))
+    w = sweep(400, 60, 0.6, shape="square")
+    t = np.arange(len(w)) / SR
+    w *= np.exp(-t / 0.25) * 0.4
+    out[: len(w)] += w + noise_hit(0.2, n_sec=0.6) * 0.35
+    for start, m in ((0.45, 72), (0.6, 76), (0.75, 79)):
+        b = bell(midi_hz(m + 12), 0.5)
+        i = int(start * SR)
+        out[i:i + len(b)] += b[: len(out) - i] * 0.45
+    return out * 0.8
+
+
+def render_boss_music():
+    """140 BPM in A minor, 16 bars (about 27 s) that loop: pounding kick, driving bass and
+    short stabs."""
+    bpm = 140
+    beat = 60 / bpm
+    slot = beat / 2
+    bar = beat * 4
+    prog = [(57, "min"), (53, "maj"), (55, "maj"), (52, "maj")] * 4   # Am F G E
+    total = int(len(prog) * bar * SR)
+    buf = np.zeros(total + 4 * SR)
+
+    def put(sound, t, gain):
+        i = int(t * SR)
+        x = sound * gain
+        buf[i:i + len(x)] += x[: len(buf) - i]
+
+    riff = [0, 0, 12, 0, 0, 10, 12, 7]
+    for bi, (root, q) in enumerate(prog):
+        t0 = bi * bar
+        tones = [root + x for x in TRIAD[q]]
+        for m in tones:
+            put(pad(midi_hz(m), bar * 0.95), t0, 0.035)
+        for k in range(8):
+            put(bass(midi_hz(root - 12 + riff[k]), slot * 0.7), t0 + k * slot, 0.2)
+        for k in (0, 3, 6):   # syncopated stabs
+            for m in tones:
+                put(pluck(midi_hz(m + 12), slot * 0.6), t0 + k * slot, 0.06)
+        if bi >= 4:
+            for k in range(16):   # a fast arpeggio once it gets going
+                put(pluck(midi_hz(tones[k % 3] + 24), slot / 2), t0 + k * slot / 2, 0.03)
+        if bi % 4 == 3:
+            put(lead(midi_hz(root + 24 + 3), bar * 0.45), t0 + bar / 2, 0.08)
+        for k in range(8):
+            t = t0 + k * slot
+            if k % 2 == 0:
+                put(kick(), t, 0.3)
+            if k in (2, 6):
+                put(clap(), t, 0.09)
+            put(hat(), t + slot / 2, 0.05)
+    tail = buf[total:]
+    buf = buf[:total]
+    buf[: len(tail)] += tail
+    buf *= 0.7 / np.max(np.abs(buf))
+    return buf
+
+
 def write_wav(path, x, rate=SR):
     x = np.clip(x, -1, 1)
     with wave.open(path, "wb") as f:
@@ -391,6 +486,15 @@ def main():
         os.remove(tmp)
         print("AUDIO OK: music_%s %.1fs" % (v, len(m) / SR))
     print("AUDIO OK: music %.1fs" % (len(music) / SR))
+    for name, fn in (("boss_hit", sfx_boss_hit), ("boss_charge", sfx_boss_charge),
+                     ("boss_crash", sfx_boss_crash), ("boss_defeat", sfx_boss_defeat)):
+        write_wav(os.path.join(OUT, name + ".wav"), fn())
+    m = render_boss_music()
+    write_wav(tmp, m)
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", tmp, "-c:a", "libvorbis",
+                    "-q:a", "2", os.path.join(OUT, "music_boss.ogg")], check=True)
+    os.remove(tmp)
+    print("AUDIO OK: music_boss %.1fs" % (len(m) / SR))
 
 
 if __name__ == "__main__":

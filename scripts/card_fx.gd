@@ -5,6 +5,7 @@ extends Node2D
 ##   "zap":   a Stunning Landing burst of electric sparks at the feet.
 ##   "slow":  a Slow Burst ring spreading out to the edge of its square.
 ##   "pop":   a squashed Bad Block bursting into little red blocks.
+##   "boom":  a beaten boss bursting into big red blocks with a white flash.
 ##   "plus":  floating "+N" text for pixels from a broken obstacle (set `text`).
 ##   "lucky": a Lucky Charm gold ring and sparkles when a hit is shrugged off.
 
@@ -29,7 +30,7 @@ static func spawn(parent: Node, at: Vector2, fx_kind: String, fx_reach := 160.0,
 	fx.kind = fx_kind
 	fx.reach = fx_reach
 	fx.text = fx_text
-	fx._life = {"shock": 0.4, "lucky": 0.5, "slow": 0.45, "pop": 0.4, "plus": 0.8}.get(fx_kind, 0.35)
+	fx._life = {"shock": 0.4, "lucky": 0.5, "slow": 0.45, "pop": 0.4, "boom": 0.9, "plus": 0.8}.get(fx_kind, 0.35)
 	fx.z_index = 5
 	parent.add_child(fx)
 	fx.global_position = at
@@ -120,6 +121,17 @@ func _draw() -> void:
 			var a := i * TAU / 8.0
 			var p := Vector2(cos(a), sin(a)) * (6.0 + 26.0 * k) + Vector2(0, 30.0 * k * k)
 			draw_rect(Rect2(p - Vector2(3, 3), Vector2(6, 6)), Color("e5484d", 1.0 - k))
+	elif kind == "boom":
+		if k < 0.25:
+			var r := 20.0 + 140.0 * k
+			draw_rect(Rect2(-r, -r, r * 2.0, r * 2.0), Color(1, 1, 1, 0.7 * (1.0 - k / 0.25)))
+		for i in 18:
+			var a := i * TAU / 18.0 + (0.3 if i % 2 else 0.0)
+			var sp := 50.0 + (i % 3) * 30.0
+			var p := Vector2(cos(a), sin(a)) * (10.0 + sp * k) + Vector2(0, 90.0 * k * k)
+			var sz := 10.0 - (i % 3) * 2.0
+			var c := Color("e5484d") if i % 3 else Color("7a1f26")
+			draw_rect(Rect2(p - Vector2(sz, sz) / 2.0, Vector2(sz, sz)), Color(c, 1.0 - k * k))
 	elif kind == "plus":
 		var font := ThemeDB.fallback_font
 		var p := Vector2(-12.0, -20.0 - 24.0 * k)

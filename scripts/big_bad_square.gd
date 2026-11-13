@@ -37,6 +37,19 @@ var _flash := 0.0
 var _bolts: Array = []
 var _next_bolts := 0.0
 var _t := 0.0
+var _was_on_floor := true
+var _hit_sfx := _sfx("boss_hit", 0.0)
+var _charge_sfx := _sfx("boss_charge", -6.0)
+var _crash_sfx := _sfx("boss_crash", -2.0)
+var _land_sfx := _sfx("land", -2.0)
+
+
+static func _sfx(name: String, db: float) -> AudioStreamPlayer:
+	var p := AudioStreamPlayer.new()
+	p.stream = load("res://audio/%s.wav" % name)
+	p.volume_db = db
+	p.bus = AudioSettings.SOUNDS_BUS
+	return p
 
 
 func _ready() -> void:
@@ -55,12 +68,15 @@ func _ready() -> void:
 	ac.shape = ash
 	_hit_area.add_child(ac)
 	add_child(_hit_area)
+	for p in [_hit_sfx, _charge_sfx, _crash_sfx, _land_sfx]:
+		add_child(p)
 
 
 func reset() -> void:
 	position = _origin
 	velocity = Vector2.ZERO
 	hp = MAX_HP
+	_charge_sfx.stop()
 	_mode = "hop"
 	_mode_t = 0.0
 	_wait = 1.0
@@ -96,6 +112,7 @@ func _physics_process(delta: float) -> void:
 					_dir = to_player
 				if hp == 1 and _hopped:
 					_set_mode("tell")   # last heart: one hop, then glow and dash
+					_charge_sfx.play()
 				else:
 					_wait -= delta
 					if _wait <= 0.0:
@@ -113,6 +130,9 @@ func _physics_process(delta: float) -> void:
 			if (is_on_wall() and _mode_t > 0.1) or _mode_t > 2.5:
 				velocity.x = 0.0
 				_set_mode("dazed")
+				_crash_sfx.play()
+				if _player:
+					_player.shake(9.0, 0.45)
 				CardFx.spawn(get_parent(), global_position + Vector2(_dir * SIZE / 2.0, 0.0), "pop")
 		"dazed":
 			velocity.x = 0.0
@@ -124,6 +144,12 @@ func _physics_process(delta: float) -> void:
 				_set_mode("hop")
 				_wait = 0.6
 	move_and_slide()
+	if is_on_floor() and not _was_on_floor:
+		_land_sfx.pitch_scale = randf_range(0.55, 0.65)   # a heavy landing
+		_land_sfx.play()
+		if _player:
+			_player.shake(3.0, 0.18)
+	_was_on_floor = is_on_floor()
 	_check_player()
 	queue_redraw()
 
@@ -160,9 +186,20 @@ func _take_stomp() -> void:
 	hp -= 1
 	_flash = FLASH
 	CardFx.spawn(get_parent(), global_position - Vector2(0.0, SIZE / 2.0), "pop")
+	_hit_sfx.pitch_scale = 1.0 + (MAX_HP - hp) * 0.08
+	_hit_sfx.play()
+	if _player:
+		_player.shake(6.0, 0.25)
 	if hp <= 0:
+		_charge_sfx.stop()
 		defeated.emit(global_position)
-		CardFx.spawn(get_parent(), global_position, "pop")
+		CardFx.spawn(get_parent(), global_position, "boom")
+		var boom := _sfx("boss_defeat", 0.0)   # on the level, so it keeps playing once he's gone
+		get_parent().add_child(boom)
+		boom.finished.connect(boom.queue_free)
+		boom.play()
+		if _player:
+			_player.shake(12.0, 0.7)
 		hide()
 		process_mode = Node.PROCESS_MODE_DISABLED
 		return
