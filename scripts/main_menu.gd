@@ -212,16 +212,22 @@ func _ready() -> void:
 
 	var paul := _page("Paul")
 	paul.add_child(_title("Paul's Cards"))
+	_paul_row = HBoxContainer.new()
+	_paul_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	_paul_row.add_theme_constant_override("separation", 12)
+	paul.add_child(_paul_row)
+	# A thin line between Paul's cards and what he says.
+	var line := ColorRect.new()
+	line.color = Color(DIM, 0.5)
+	line.custom_minimum_size = Vector2(300, 1)
+	line.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	paul.add_child(line)
 	_paul_info = Label.new()
 	_paul_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_paul_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_paul_info.custom_minimum_size = Vector2(300, 0)
 	_paul_info.add_theme_color_override("font_color", DIM)
 	paul.add_child(_paul_info)
-	_paul_row = HBoxContainer.new()
-	_paul_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	_paul_row.add_theme_constant_override("separation", 12)
-	paul.add_child(_paul_row)
 	_button(paul, "Back", _back_out)
 
 	var replay := _page("Replay")
