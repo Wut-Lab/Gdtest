@@ -231,6 +231,81 @@ def render_music():
     return buf
 
 
+# ---------- Level tracks: busier, 128 BPM, 48 bars = exactly 90 s ----------
+
+LEVEL_SECTIONS = {
+    # Practice and dungeon (random) levels.
+    "level": dict(shift=0, prog=["A", "A", "B", "C", "B", "A"],
+                  mel=[None, "lead", "lead", "bell", "lead", "lead"]),
+    # Saved levels in the Replay Room: same tune, new key, different order and colours.
+    "saved": dict(shift=2, prog=["C", "B", "A", "C", "A", "B"],
+                  mel=[None, "bell", "lead", "lead", "bell", "lead"]),
+}
+
+
+def render_level_music(variant):
+    cfg = LEVEL_SECTIONS[variant]
+    bpm = 128
+    beat = 60 / bpm
+    slot = beat / 2
+    bar = beat * 4
+    sh = cfg["shift"]
+    total = int(len(cfg["prog"]) * 8 * bar * SR)
+    buf = np.zeros(total + 4 * SR)
+
+    def put(sound, t, gain):
+        i = int(t * SR)
+        x = sound * gain
+        buf[i:i + len(x)] += x[: len(buf) - i]
+
+    bar_i = 0
+    for si, part in enumerate(cfg["prog"]):
+        mel = cfg["mel"][si]
+        for b in range(8):
+            t0 = bar_i * bar
+            root, q = CHORDS[PROG[part][b]]
+            root += sh
+            tones = [root + 12 + x for x in TRIAD[q]] + [root + 24]
+            for m in tones[:3]:
+                put(pad(midi_hz(m + 12), bar * 0.95), t0, 0.04)
+            # Sixteenth-note arpeggio for drive.
+            for k in range(16):
+                idx = [0, 1, 2, 3][k % 4] if variant == "level" else [3, 2, 1, 0][k % 4]
+                put(pluck(midi_hz(tones[idx] + 12), slot / 2), t0 + k * slot / 2,
+                    0.055 * (1.0 if k % 2 == 0 else 0.7))
+            # Driving eighth-note bass.
+            for k in range(8):
+                iv = [0, 0, 12, 0, 7, 0, 12, 7][k]
+                put(bass(midi_hz(root - 12 + iv), slot * 0.8), t0 + k * slot, 0.15)
+            for st, ln, d in MEL[part][b] if mel else []:
+                f = midi_hz(deg(d) + sh)
+                if mel == "lead":
+                    put(lead(f, ln * slot * 0.9), t0 + st * slot, 0.12)
+                    put(bell(f * 2, ln * slot), t0 + st * slot, 0.03)
+                else:
+                    put(bell(f * 2, ln * slot), t0 + st * slot, 0.09)
+            # Drums: four-on-the-floor, claps on 2 and 4, eighth hats, sixteenth shakers.
+            intro = si == 0 and b < 4
+            for k in range(8):
+                t = t0 + k * slot
+                if k % 2 == 0 and not intro:
+                    put(kick(), t, 0.24)
+                if k in (2, 6):
+                    put(clap(), t, 0.07)
+                put(hat(), t + (slot / 2 if variant == "saved" else 0), 0.045)
+                put(shaker(), t + slot / 2, 0.035)
+            if b == 7:   # little fill into the next section
+                for k in range(4):
+                    put(clap(), t0 + (4 + k) * slot + slot / 2, 0.04)
+            bar_i += 1
+
+    tail = buf[total:]
+    buf = buf[:total]
+    buf[: len(tail)] += tail
+    buf *= 0.7 / np.max(np.abs(buf))
+    return buf
+
+
 # ---------- Sound effects ----------
 
 def sweep(f0, f1, dur, shape="tri"):
@@ -308,6 +383,13 @@ def main():
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", tmp, "-c:a", "libvorbis",
                     "-q:a", "2", os.path.join(OUT, "music.ogg")], check=True)
     os.remove(tmp)
+    for v in ("level", "saved"):
+        m = render_level_music(v)
+        write_wav(tmp, m)
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", tmp, "-c:a", "libvorbis",
+                        "-q:a", "2", os.path.join(OUT, "music_%s.ogg" % v)], check=True)
+        os.remove(tmp)
+        print("AUDIO OK: music_%s %.1fs" % (v, len(m) / SR))
     print("AUDIO OK: music %.1fs" % (len(music) / SR))
 
 

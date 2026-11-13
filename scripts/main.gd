@@ -38,6 +38,7 @@ var player: Player
 var _near_door := ""
 ## Where falls send you: the start, or the last checkpoint touched this run.
 var _respawn := Vector2.ZERO
+var _music_track := ""
 var _ding: AudioStreamPlayer
 
 var _js_load_level: JavaScriptObject
@@ -117,12 +118,22 @@ func _start_music() -> void:
 	var music := AudioStreamPlayer.new()
 	music.bus = AudioSettings.MUSIC_BUS
 	music.process_mode = Node.PROCESS_MODE_ALWAYS   # keeps playing in the pause menu
-	var stream: AudioStreamOggVorbis = load("res://audio/music.ogg")
-	stream.loop = true
-	music.stream = stream
 	music.volume_db = -12.0
 	music.name = "Music"
 	add_child(music)
+	set_music("music")
+
+
+## Switch tracks: "music" (town), "music_level" (practice and dungeon levels) or
+## "music_saved" (saved levels in the Replay Room). Starts the new one from the top.
+func set_music(track: String) -> void:
+	var music: AudioStreamPlayer = get_node_or_null("Music")
+	if music == null or _music_track == track:
+		return
+	_music_track = track
+	var stream: AudioStreamOggVorbis = load("res://audio/%s.ogg" % track)
+	stream.loop = true
+	music.stream = stream
 	music.play()
 
 
@@ -181,6 +192,7 @@ func play_main_level() -> void:
 	seed_value = 0
 	_level_key = "main"
 	_replay_mode = ""
+	set_music("music_level")
 	hud.set_seed(0)
 	load_level_text(FileAccess.get_file_as_string(level.map_file))
 
@@ -192,6 +204,7 @@ func play_random_level(s: int, mode := "") -> void:
 	seed_value = s if s > 0 else LevelGen.random_seed()
 	_level_key = "seed%d" % seed_value
 	_replay_mode = mode
+	set_music("music_saved" if mode != "" else "music_level")
 	hud.set_seed(seed_value)
 	var text := LevelGen.generate(seed_value)
 	if mode == "hard":
@@ -217,6 +230,7 @@ func enter_town(at_door := "") -> void:
 	state = State.TOWN
 	seed_value = 0
 	_level_key = "town"
+	set_music("music")
 	_replay_mode = ""
 	_near_door = ""
 	hud.set_seed(0)
@@ -597,6 +611,7 @@ func _setup_web_bridge() -> void:
 func _on_js_load_level(args: Array) -> void:
 	if args.size() > 0:
 		_level_key = "custom"
+		set_music("music_level")
 		_replay_mode = ""
 		load_level_text(str(args[0]))
 
