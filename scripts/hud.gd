@@ -291,7 +291,10 @@ func show_out(time: float, falls: int) -> void:
 ## A short message that floats in near the top of the screen and fades away.
 ## A big message in the middle of the screen: fades in, stays 3 seconds, fades out.
 func banner(text: String) -> void:
+	for old in get_tree().get_nodes_in_group("hud_banner"):
+		old.queue_free()   # a new banner replaces the last one instead of piling on it
 	var l := Label.new()
+	l.add_to_group("hud_banner")
 	l.text = text
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)

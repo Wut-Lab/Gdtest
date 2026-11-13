@@ -804,13 +804,14 @@ func _play_boss(ar: Dictionary, carry: int) -> void:
 	hud.banner("Boss: %s!" % ar.boss_name)
 
 
-## The boss is down: a short pause to see him pop, then the win.
+## The boss is down: the exit cube appears by the door on his side. Touching it wins (and
+## pays the boss rewards).
 func _on_boss_defeated() -> void:
 	if state != State.PLAY:
 		return
 	Haptics.hurt()
-	await get_tree().create_timer(0.8).timeout
-	_on_goal_reached()
+	level.open_boss_exit()
+	hud.banner("The exit is open!")
 
 
 ## Mossy Cave: most floating platforms become crumbling blocks.

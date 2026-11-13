@@ -69,6 +69,9 @@ var heart_check := Callable()
 @onready var ground: TileMapLayer = $Ground
 @onready var start: Marker2D = $Start
 @onready var goal: Goal = $Goal
+## Boss rooms: background doors (d, bottom cell of a 2-tall door) and whether a boss is here.
+var _back_doors: Array[Vector2i] = []
+var _has_boss := false
 
 
 func _ready() -> void:
@@ -132,6 +135,7 @@ func load_map_text(text: String) -> void:
 	var water_cells: Array[Vector2i] = []
 	var crumbles: Array[Vector2i] = []
 	var bosses: Array[Vector2i] = []
+	_back_doors.clear()
 	var lines := text.replace("\r", "").split("\n")
 	for y in lines.size():
 		var line: String = lines[y]
@@ -166,6 +170,8 @@ func load_map_text(text: String) -> void:
 					crumbles.append(Vector2i(x, y))
 				"m":
 					bosses.append(Vector2i(x, y))
+				"d":
+					_back_doors.append(Vector2i(x, y))
 				"~":
 					water_cells.append(Vector2i(x, y))
 				"!", "$", "&", "%", "(", ")", "{", "}", "[", "]", "f", "l":
@@ -200,6 +206,7 @@ func load_map_text(text: String) -> void:
 		var cb := CrumbleBlock.new()
 		cb.position = Vector2(cell.x * T + T / 2.0, cell.y * T + T / 2.0)
 		_obstacles.add_child(cb)
+	_has_boss = not bosses.is_empty()
 	for cell in bosses:
 		var boss := BigBadSquare.new()
 		boss.position = Vector2(cell.x * T + T / 2.0, (cell.y + 1) * T - BigBadSquare.SIZE / 2.0)
@@ -287,6 +294,27 @@ func reset_pickups() -> void:
 		h.reset()
 	for s in _obstacles.get_children():
 		s.reset()
+	if _has_boss:
+		_hide_goal()   # the exit only opens once the boss is beaten
+
+
+func _hide_goal() -> void:
+	goal.hide()
+	goal.set_deferred("monitoring", false)
+
+
+## The boss is beaten: the exit cube appears in front of the door on his side (the rightmost).
+func open_boss_exit() -> void:
+	if _back_doors.is_empty():
+		return
+	var cell: Vector2i = _back_doors[0]
+	for c in _back_doors:
+		if c.x > cell.x:
+			cell = c
+	goal.position = Vector2(cell.x * T + T / 2.0, (cell.y + 1) * T - 18.0)
+	goal.show()
+	goal.set_deferred("monitoring", true)
+	CardFx.spawn(self, goal.position, "pop")
 
 
 ## Chests sit on the floor of their cell. Numbered in reading order, for the save file.
@@ -399,6 +427,8 @@ func set_theme(t: String) -> void:
 func _draw() -> void:
 	if theme == "moss":
 		_draw_moss()
+	for cell in _back_doors:
+		_draw_back_door(cell)
 	# A faint tile grid behind the level.
 	var b := get_bounds()
 	var step := float(T)
@@ -410,6 +440,21 @@ func _draw() -> void:
 	while y < b.end.y:
 		draw_line(Vector2(b.position.x, y), Vector2(b.end.x, y), grid_color)
 		y += step
+
+
+## A wooden door set into the back wall, 2 tiles tall, standing on the floor of its cell.
+func _draw_back_door(cell: Vector2i) -> void:
+	var w := 40.0
+	var h := 60.0
+	var x := cell.x * T + T / 2.0 - w / 2.0
+	var y := (cell.y + 1) * T - h
+	draw_rect(Rect2(x - 4, y - 4, w + 8, h + 4), Color("8a5a32"))      # frame
+	draw_rect(Rect2(x, y, w, h), Color("5a3a22"))                      # door
+	for i in 3:
+		draw_rect(Rect2(x + 4 + i * 12, y + 4, 8, h - 8), Color("6b4428"))   # planks
+	draw_rect(Rect2(x, y + 14, w, 3), Color("3f2817"))
+	draw_rect(Rect2(x, y + h - 18, w, 3), Color("3f2817"))
+	draw_rect(Rect2(x + w - 10, y + h / 2.0, 4, 4), Color("e0a35a"))   # knob
 
 
 ## Mossy Cave: tufts of moss along every top surface and a few vines hanging under ledges.
