@@ -13,6 +13,8 @@ signal player_color_changed(color: Color)
 signal town_requested
 ## The dungeon gate: start a floor ("moss" = Mossy Cave).
 signal floor_requested(floor_id: String)
+## The gate is opening: main should call set_areas.
+signal areas_needed
 ## Town: the Enter button by a building's door.
 signal enter_pressed
 signal like_pressed
@@ -36,6 +38,8 @@ var enter_button: Button
 var like_button: Button
 ## Small equipped cards under the timer (dotted outlines for empty slots).
 var card_row: HBoxContainer
+var areas_box: VBoxContainer
+const AREA_COLORS := {"basic": Color("e0a35a"), "moss": Color("6cc04f")}
 var _card_icons: Array[CardIcon] = []
 var _card_buttons: Array[Button] = []
 @onready var out_menu: Control = %OutMenu
@@ -116,23 +120,32 @@ func _ready() -> void:
 		town.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		town.pressed.connect(town_requested.emit)
 		menu.get_node("Panel/Box").add_child(town)
-	# Floors: a run of 5 levels in a row (hearts carry over), then a boss.
-	var floors := HBoxContainer.new()
-	floors.alignment = BoxContainer.ALIGNMENT_CENTER
-	var moss := Button.new()
-	moss.text = "Mossy Cave  (5 levels + boss)"
-	moss.custom_minimum_size = Vector2(300, 44)
-	moss.add_theme_color_override("font_color", Color("1b2440"))
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color("6cc04f")
-	sb.set_corner_radius_all(8)
-	for st in ["normal", "hover", "pressed", "focus"]:
-		moss.add_theme_stylebox_override(st, sb)
-	moss.pressed.connect(func() -> void: floor_requested.emit("moss"))
-	floors.add_child(moss)
+	# The dungeon's areas, under the practice level. Filled by main (set_areas) each time the
+	# gate opens: an area only shows once the boss before it is beaten.
+	random_button.hide()
+	seed_edit.hide()
+	play_button.text = "Practice level"
+	play_button.custom_minimum_size = Vector2(300, 44)
+	# Keep the gate short: the how-to text goes, and the colour picker opens from its own button.
+	start_menu.get_node("Panel/Box/StartBody").hide()
+	var color_row: Control = start_menu.get_node("Panel/Box/ColorRow")
+	color_row.hide()
+	var color_toggle := Button.new()
+	color_toggle.text = "Change color"
+	color_toggle.custom_minimum_size = Vector2(200, 40)
+	color_toggle.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	color_toggle.pressed.connect(func() -> void:
+		var picking := not color_row.visible
+		color_row.visible = picking
+		start_menu.get_node("Panel/Box/LevelRow").visible = not picking
+		areas_box.visible = not picking
+		color_toggle.text = "Done" if picking else "Change color")
+	areas_box = VBoxContainer.new()
+	areas_box.add_theme_constant_override("separation", 8)
 	var sbox := start_menu.get_node("Panel/Box")
-	sbox.add_child(floors)
-	sbox.move_child(floors, sbox.get_node("LevelRow").get_index() + 1)
+	sbox.add_child(areas_box)
+	sbox.move_child(areas_box, sbox.get_node("LevelRow").get_index() + 1)
+	sbox.add_child(color_toggle)
 	like_button = Button.new()
 	like_button.custom_minimum_size = Vector2(200, 44)
 	like_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -201,7 +214,42 @@ func show_main_menu(player_color: Color) -> void:
 	main_menu.open(player_color)
 
 
+## rows: [{id, title, progress}] for each area that's open, in order.
+func set_areas(rows: Array) -> void:
+	for c in areas_box.get_children():
+		areas_box.remove_child(c)
+		c.queue_free()
+	for r: Dictionary in rows:
+		var b := Button.new()
+		b.text = r.title
+		b.custom_minimum_size = Vector2(300, 44)
+		b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		b.add_theme_color_override("font_color", Color("1b2440"))
+		b.add_theme_color_override("font_hover_color", Color("1b2440"))
+		b.add_theme_color_override("font_focus_color", Color("1b2440"))
+		for st in ["normal", "hover", "pressed", "focus"]:
+			var sb := StyleBoxFlat.new()
+			sb.bg_color = AREA_COLORS.get(r.id, Color("79e2c2"))
+			if st == "hover" or st == "focus":
+				sb.bg_color = sb.bg_color.lightened(0.15)
+			sb.set_corner_radius_all(8)
+			b.add_theme_stylebox_override(st, sb)
+		var id: String = r.id
+		b.pressed.connect(func() -> void: floor_requested.emit(id))
+		var p := Label.new()
+		p.text = r.progress
+		p.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		p.add_theme_font_size_override("font_size", 13)
+		p.add_theme_color_override("font_color", Color("a9b3d1"))
+		var group := VBoxContainer.new()
+		group.add_theme_constant_override("separation", 2)
+		group.add_child(b)
+		group.add_child(p)
+		areas_box.add_child(group)
+
+
 func show_start() -> void:
+	areas_needed.emit()
 	main_menu.hide()
 	tune_button.show()
 	start_menu.show()

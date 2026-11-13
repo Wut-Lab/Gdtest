@@ -48,10 +48,14 @@ var _replay_mode := ""
 var _bubble_used := false
 ## Which town door the last run started from, so Back to Town returns there.
 var _came_from := "dungeon"
-## Floor runs: 5 levels in a row with hearts carried over, then a boss. "" = not in a floor.
-const FLOORS := {"moss": {"name": "Mossy Cave", "levels": 5}}
+## Dungeon areas, in order. Each is a run of 5 fixed levels (hearts carry over), then its boss.
+## An area shows at the gate once the boss of the area before it is beaten.
+const AREAS := [
+	{"id": "basic", "name": "Basic", "first": 1, "seeds": [18, 25, 3, 34, 1]},
+	{"id": "moss", "name": "Mossy Cave", "first": 6, "seeds": [29, 56, 49, 10, 8]},
+]
 const FLOOR_CLEAR_REWARD := 10
-var _floor := ""
+var _floor := ""   # the area being played ("" = none)
 var _floor_step := 0
 var _floor_seeds: Array[int] = []
 ## Hearts carried into the next level of a floor (-1 = start fresh).
@@ -110,6 +114,7 @@ func _ready() -> void:
 	hud.main_level_requested.connect(play_main_level)
 	hud.random_level_requested.connect(play_random_level)
 	hud.floor_requested.connect(start_floor)
+	hud.areas_needed.connect(_update_gate)
 	hud.pause_requested.connect(pause)
 	hud.card_pressed.connect(func(i: int) -> void:
 		pause()
@@ -573,8 +578,9 @@ func _lose_heart(from_fall := false) -> void:
 		player.velocity = Vector2.ZERO
 		hud.show_out(run_time, falls)
 		if _floor != "":
-			hud.out_label.text = "Out of hearts on level %d of %d. Start %s again?" % [
-				_floor_step, FLOORS[_floor].levels, FLOORS[_floor].name]
+			var ar := _area(_floor)
+			hud.out_label.text = "Out of hearts on Level %d. Start again from Level %d?" % [
+				ar.first + _floor_step - 1, ar.first]
 		$TouchControls.hide()
 
 
@@ -702,13 +708,43 @@ func _on_goal_reached() -> void:
 
 ## --- Floor runs ---------------------------------------------------------------------------
 
+static func _area(id: String) -> Dictionary:
+	for ar in AREAS:
+		if ar.id == id:
+			return ar
+	return {}
+
+
+static func area_unlocked(i: int) -> bool:
+	return i == 0 or CardCollection.is_beaten("boss:" + AREAS[i - 1].id)
+
+
+## Fill the dungeon gate with the areas you can play, and how far you've got in each.
+func _update_gate() -> void:
+	var rows := []
+	for i in AREAS.size():
+		if not area_unlocked(i):
+			break
+		var ar: Dictionary = AREAS[i]
+		var marks := []
+		for k in ar.seeds.size():
+			var n: int = ar.first + k
+			marks.append(("✓" if CardCollection.is_beaten(_area_key(ar.id, ar.seeds[k])) else "") + str(n))
+		marks.append(("✓" if CardCollection.is_beaten("boss:" + ar.id) else "") + "Boss")
+		rows.append({"id": ar.id, "title": "Levels %d–%d: %s" % [ar.first, ar.first + 4, ar.name],
+			"progress": "  ".join(marks)})
+	hud.set_areas(rows)
+
+
+static func _area_key(id: String, s: int) -> String:
+	return ("seed%d" if id == "basic" else id + "%d") % s
+
+
 func start_floor(id: String) -> void:
 	_floor = id
 	_floor_step = 1
 	_carry_hearts = -1
-	_floor_seeds.clear()
-	for i in FLOORS[id].levels:
-		_floor_seeds.append(LevelGen.random_seed())
+	_floor_seeds.assign(_area(id).seeds)
 	_play_floor_level()
 
 
@@ -725,7 +761,7 @@ func _play_floor_level() -> void:
 	var carry := _carry_hearts
 	_came_from = "dungeon"
 	seed_value = _floor_seeds[step - 1]
-	_level_key = "%s%d" % [id, seed_value]
+	_level_key = _area_key(id, seed_value)
 	_replay_mode = ""
 	set_music("music_level")
 	hud.set_seed(seed_value)
@@ -738,7 +774,8 @@ func _play_floor_level() -> void:
 	_floor_step = step
 	_carry_hearts = carry
 	load_level_text(text)
-	hud.banner("%s  ·  %d of %d" % [FLOORS[id].name, step, FLOORS[id].levels])
+	var ar := _area(id)
+	hud.banner("Level %d  ·  %s" % [ar.first + step - 1, ar.name])
 
 
 ## Mossy Cave: most floating platforms become crumbling blocks.
@@ -752,17 +789,22 @@ func _mossify(text: String, s: int) -> String:
 
 
 func _floor_level_won() -> void:
-	var total: int = FLOORS[_floor].levels
+	var ar := _area(_floor)
+	var total: int = ar.seeds.size()
 	if _floor_step < total:
-		hud.set_floor_win("Next level (%d of %d)" % [_floor_step + 1, total])
+		hud.set_floor_win("Next: Level %d" % (ar.first + _floor_step))
 		return
-	# The whole floor is cleared. The boss comes later.
-	var key := "floor:" + _floor
+	# All 5 levels done. The bosses aren't built yet, so for now this stands in for the boss.
+	var key: String = "boss:" + _floor
 	if not CardCollection.is_beaten(key):
 		CardCollection.mark_beaten(key)
 		CardCollection.add_pixels(FLOOR_CLEAR_REWARD)
 		hud.set_pixels(CardCollection.pixels)
-		hud.toast("%s cleared! +%d pixels" % [FLOORS[_floor].name, FLOOR_CLEAR_REWARD])
+		var i := AREAS.find(ar)
+		var news := "%s cleared! +%d pixels" % [ar.name, FLOOR_CLEAR_REWARD]
+		if i + 1 < AREAS.size():
+			news += ". %s is open!" % AREAS[i + 1].name
+		hud.toast(news)
 	hud.banner("The boss's lair is still being dug...")
 	hud.set_floor_win("")
 
