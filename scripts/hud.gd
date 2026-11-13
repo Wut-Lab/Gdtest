@@ -255,11 +255,6 @@ func set_areas(rows: Array) -> void:
 		_area_style(b, color)
 		var id: String = r.id
 		b.pressed.connect(func() -> void: floor_requested.emit(id))
-		var p := Label.new()
-		p.text = r.progress
-		p.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		p.add_theme_font_size_override("font_size", 13)
-		p.add_theme_color_override("font_color", Color("a9b3d1"))
 		var group := VBoxContainer.new()
 		group.add_theme_constant_override("separation", 2)
 		if r.get("rematch", false):
@@ -277,7 +272,6 @@ func set_areas(rows: Array) -> void:
 			group.add_child(row)
 		else:
 			group.add_child(b)
-		group.add_child(p)
 		areas_box.add_child(group)
 
 
