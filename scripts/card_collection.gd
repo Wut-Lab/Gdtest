@@ -58,9 +58,9 @@ static var shop_stock: Array[String] = []
 static var shop_wins := 0
 ## Every level ever completed (Romeo changes hills every 2).
 static var clears := 0
-## Seconds spent floating in the town pond (30 brings Larry and his fishing hut).
-static var pond_time := 0.0
-const LARRY_TIME := 30.0
+## Cards bought from the Shop (the 3rd brings Larry and his fishing hut).
+static var shop_buys := 0
+const LARRY_BUYS := 3
 ## Levels this file has beaten (level keys): a win only pays the first time.
 static var beaten: Array[String] = []
 ## Random levels (seeds) the player liked (10 to start, see room_size()), replayable from the Replay Room.
@@ -107,7 +107,9 @@ static func use_file(n: int) -> void:
 		shop_stock.assign(cfg.get_value("shop", "stock", []))
 		shop_wins = int(cfg.get_value("shop", "wins", 0))
 		clears = int(cfg.get_value("progress", "clears", 0))
-		pond_time = float(cfg.get_value("progress", "pond_time", 0.0))
+		# Older saves: count the shop-only cards they own as purchases.
+		shop_buys = int(cfg.get_value("progress", "shop_buys",
+			owned.filter(func(a: String) -> bool: return drop_group(a) == "shop").size()))
 		beaten.assign(cfg.get_value("progress", "beaten", []))
 		liked.assign(cfg.get_value("replay", "liked", []))
 	else:
@@ -119,7 +121,7 @@ static func use_file(n: int) -> void:
 		shop_stock.clear()
 		shop_wins = 0
 		clears = 0
-		pond_time = 0.0
+		shop_buys = 0
 		beaten.clear()
 		liked.clear()
 	var settings := ConfigFile.new()
@@ -138,7 +140,7 @@ static func save() -> void:
 	cfg.set_value("shop", "stock", shop_stock)
 	cfg.set_value("shop", "wins", shop_wins)
 	cfg.set_value("progress", "clears", clears)
-	cfg.set_value("progress", "pond_time", pond_time)
+	cfg.set_value("progress", "shop_buys", shop_buys)
 	cfg.set_value("progress", "beaten", beaten)
 	cfg.set_value("replay", "liked", liked)
 	cfg.save(path(file))
@@ -204,6 +206,7 @@ static func buy(ability: String) -> bool:
 		return false
 	pixels -= price_of(ability)
 	shop_stock[i] = ""
+	shop_buys += 1
 	add(ability)   # saves
 	return true
 
@@ -310,7 +313,7 @@ static func levels_beaten() -> int:
 
 
 static func larry_here() -> bool:
-	return pond_time >= LARRY_TIME
+	return shop_buys >= LARRY_BUYS
 
 
 static func milestone(n: int) -> bool:

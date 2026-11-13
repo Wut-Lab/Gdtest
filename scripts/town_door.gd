@@ -5,7 +5,7 @@ extends Area2D
 ## % = the Replay Room (a small house, shown once it's unlocked).
 ## ( = Paul, a pink block with a mini card shop; ) = Terry, a lazy yellow block (milestones).
 ## { = Paula (purple) and } = Tim (green), who walk back and forth.
-## f = a small fishing hut and l = Larry (after 30 seconds floating in the pond).
+## f = a small fishing hut and l = Larry (after your 3rd card from the Shop).
 ## [ / ] = Romeo (dark red) on the left / right hill: paces a tile each way and hops now and then.
 ## It sits on the floor of its cell; the building is drawn around it, 3 tiles wide.
 
