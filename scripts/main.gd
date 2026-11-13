@@ -188,6 +188,8 @@ func _on_screen_changed() -> void:
 		return
 	var visible := get_viewport().get_visible_rect().size
 	var z := maxf(1.0, visible.y / 760.0)
+	if _level_key.begins_with("boss_"):
+		z = minf(z, visible.x / level.get_bounds().size.x)   # boss rooms: always see the whole arena
 	player.camera.zoom = Vector2(z, z)
 	_fit_to_bar()
 
@@ -754,6 +756,9 @@ func start_floor(id: String) -> void:
 
 
 func _leave_floor() -> void:
+	if _level_key.begins_with("boss_"):
+		_level_key = ""
+		_on_screen_changed()   # back to the normal zoom
 	_floor = ""
 	_carry_hearts = -1
 	level.set_theme("")
@@ -795,6 +800,7 @@ func _play_boss(ar: Dictionary, carry: int) -> void:
 	_floor_step = ar.seeds.size() + 1
 	_carry_hearts = carry
 	load_level_text(FileAccess.get_file_as_string(ar.boss))
+	_on_screen_changed()
 	hud.banner("Boss: %s!" % ar.boss_name)
 
 
