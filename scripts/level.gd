@@ -17,6 +17,7 @@ extends Node2D
 ##   T  wide moving platform with spikes on top (3 tiles wide, centered on its cell)
 ##   B  wide moving platform with spikes underneath (ride on top)
 ##   @  checkpoint (falls send you back here once you've touched it)
+##   c  crumbling block (Mossy Cave): holds a moment after you land, then falls; grows back
 ##   !  town: dungeon gate     $  town: shop     &  town: card hall
 
 signal goal_reached
@@ -56,6 +57,9 @@ var _pixels: Node2D
 var _doors: Node2D
 ## The pond (empty in most levels).
 var water: Water
+## The look of the level: "" (sandstone) or "moss" (Mossy Cave: green-tinted stone, moss on top
+## of the ground and vines hanging from platforms).
+var theme := ""
 var _checkpoints: Node2D
 ## Main sets this: whether a heart can be picked up right now (false at full health).
 var heart_check := Callable()
@@ -124,6 +128,7 @@ func load_map_text(text: String) -> void:
 	var doors := {}   # cell -> door character
 	var checkpoints: Array[Vector2i] = []
 	var water_cells: Array[Vector2i] = []
+	var crumbles: Array[Vector2i] = []
 	var lines := text.replace("\r", "").split("\n")
 	for y in lines.size():
 		var line: String = lines[y]
@@ -154,6 +159,8 @@ func load_map_text(text: String) -> void:
 						_hard_cells[Vector2i(x, y)] = true
 				"@":
 					checkpoints.append(Vector2i(x, y))
+				"c":
+					crumbles.append(Vector2i(x, y))
 				"~":
 					water_cells.append(Vector2i(x, y))
 				"!", "$", "&", "%", "(", ")", "{", "}", "[", "]", "f", "l":
@@ -184,6 +191,10 @@ func load_map_text(text: String) -> void:
 	_place_pixels(pixel_cells)
 	_place_hearts(hearts, cards)
 	_place_spikes(spikes, vspikes, platforms, bad_blocks)
+	for cell in crumbles:
+		var cb := CrumbleBlock.new()
+		cb.position = Vector2(cell.x * T + T / 2.0, cell.y * T + T / 2.0)
+		_obstacles.add_child(cb)
 	water.setup(water_cells)
 	_update_walls()
 	queue_redraw()
@@ -368,7 +379,15 @@ func _update_walls() -> void:
 		_walls[i].position = r.get_center()
 
 
+func set_theme(t: String) -> void:
+	theme = t
+	ground.modulate = Color(0.62, 0.86, 0.6) if t == "moss" else Color.WHITE
+	queue_redraw()
+
+
 func _draw() -> void:
+	if theme == "moss":
+		_draw_moss()
 	# A faint tile grid behind the level.
 	var b := get_bounds()
 	var step := float(T)
@@ -380,3 +399,25 @@ func _draw() -> void:
 	while y < b.end.y:
 		draw_line(Vector2(b.position.x, y), Vector2(b.end.x, y), grid_color)
 		y += step
+
+
+## Mossy Cave: tufts of moss along every top surface and a few vines hanging under ledges.
+func _draw_moss() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	for cell in ground.get_used_cells():
+		var above := ground.get_cell_source_id(cell + Vector2i.UP) == -1
+		var below := ground.get_cell_source_id(cell + Vector2i.DOWN) == -1
+		var x := cell.x * T
+		var y := cell.y * T
+		if above:
+			draw_rect(Rect2(x, y - 3, T, 5), Color("4f9a3c"))
+			for i in 3:
+				var tx := x + rng.randi_range(2, T - 6)
+				draw_rect(Rect2(tx, y - 3 - rng.randi_range(2, 5), 3, 4), Color("6cc04f"))
+		if below and rng.randf() < 0.35:
+			var len := rng.randi_range(14, 44)
+			var vx := x + rng.randi_range(6, T - 6)
+			draw_line(Vector2(vx, y + T), Vector2(vx, y + T + len), Color("3f7f31"), 2.0)
+			for k in range(8, len, 10):
+				draw_rect(Rect2(vx - 3, y + T + k, 3, 3), Color("5fb047"))

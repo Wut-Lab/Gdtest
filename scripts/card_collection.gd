@@ -309,7 +309,7 @@ static func toggle_like(seed_value: int) -> bool:
 
 ## Levels beaten for milestones: random levels and the training level (not replays or tests).
 static func levels_beaten() -> int:
-	return beaten.filter(func(k: String) -> bool: return k == "main" or k.begins_with("seed")).size()
+	return beaten.filter(func(k: String) -> bool: return k == "main" or k.begins_with("seed") or k.begins_with("moss")).size()
 
 
 static func larry_here() -> bool:

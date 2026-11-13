@@ -11,6 +11,8 @@ signal pause_requested
 signal player_color_changed(color: Color)
 ## Town: go back to town (from the dungeon gate, a win or running out of hearts).
 signal town_requested
+## The dungeon gate: start a floor ("moss" = Mossy Cave).
+signal floor_requested(floor_id: String)
 ## Town: the Enter button by a building's door.
 signal enter_pressed
 signal like_pressed
@@ -114,6 +116,23 @@ func _ready() -> void:
 		town.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		town.pressed.connect(town_requested.emit)
 		menu.get_node("Panel/Box").add_child(town)
+	# Floors: a run of 5 levels in a row (hearts carry over), then a boss.
+	var floors := HBoxContainer.new()
+	floors.alignment = BoxContainer.ALIGNMENT_CENTER
+	var moss := Button.new()
+	moss.text = "Mossy Cave  (5 levels + boss)"
+	moss.custom_minimum_size = Vector2(300, 44)
+	moss.add_theme_color_override("font_color", Color("1b2440"))
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color("6cc04f")
+	sb.set_corner_radius_all(8)
+	for st in ["normal", "hover", "pressed", "focus"]:
+		moss.add_theme_stylebox_override(st, sb)
+	moss.pressed.connect(func() -> void: floor_requested.emit("moss"))
+	floors.add_child(moss)
+	var sbox := start_menu.get_node("Panel/Box")
+	sbox.add_child(floors)
+	sbox.move_child(floors, sbox.get_node("LevelRow").get_index() + 1)
 	like_button = Button.new()
 	like_button.custom_minimum_size = Vector2(200, 44)
 	like_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -191,7 +210,18 @@ func show_start() -> void:
 	play_button.grab_focus()
 
 
+## In a floor run: the win menu's New level button becomes "Next level", and Play again hides.
+func set_floor_win(next_text: String) -> void:
+	new_level_button.visible = next_text != ""
+	new_level_button.text = next_text if next_text != "" else "New level"
+	again_button.visible = false
+	like_button.hide()
+	(new_level_button if next_text != "" else win_menu.get_node("Panel/Box").get_child(-1)).grab_focus()
+
+
 func show_win(time: float, falls: int, hearts: int, seed_value: int, reward := 0) -> void:
+	again_button.visible = true
+	new_level_button.text = "New level"
 	result_label.text = "Time %.2fs  ·  Falls %d  ·  Hearts %d" % [time, falls, hearts]
 	if reward > 0:
 		result_label.text += "\n+%d pixels%s" % [reward, "  ·  Fast run!" if reward > 3 else ""]

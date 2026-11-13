@@ -48,6 +48,14 @@ var _replay_mode := ""
 var _bubble_used := false
 ## Which town door the last run started from, so Back to Town returns there.
 var _came_from := "dungeon"
+## Floor runs: 5 levels in a row with hearts carried over, then a boss. "" = not in a floor.
+const FLOORS := {"moss": {"name": "Mossy Cave", "levels": 5}}
+const FLOOR_CLEAR_REWARD := 10
+var _floor := ""
+var _floor_step := 0
+var _floor_seeds: Array[int] = []
+## Hearts carried into the next level of a floor (-1 = start fresh).
+var _carry_hearts := -1
 var player: Player
 ## The town building the player is standing at ("" = none).
 var _near_door := ""
@@ -98,9 +106,10 @@ func _ready() -> void:
 	hud.like_pressed.connect(_on_like_pressed)
 	hud.main_menu.replay_requested.connect(_play_replay)
 	hud.main_menu.closed.connect(_leave_building)
-	hud.play_requested.connect(new_run)
+	hud.play_requested.connect(_play_again)
 	hud.main_level_requested.connect(play_main_level)
 	hud.random_level_requested.connect(play_random_level)
+	hud.floor_requested.connect(start_floor)
 	hud.pause_requested.connect(pause)
 	hud.card_pressed.connect(func(i: int) -> void:
 		pause()
@@ -208,6 +217,7 @@ func load_level_text(text: String) -> void:
 
 ## The hand-made level (levels/level_01.txt).
 func play_main_level() -> void:
+	_leave_floor()
 	_came_from = "dungeon"
 	seed_value = 0
 	_level_key = "main"
@@ -220,6 +230,10 @@ func play_main_level() -> void:
 ## A random level from a seed; a seed below 1 picks a new one.
 ## mode: "" (a dungeon level), or a Replay Room mode: "true", "hard" or "scramble".
 func play_random_level(s: int, mode := "") -> void:
+	if s <= 0 and _floor != "" and state == State.WON:
+		_next_floor_level()   # the win menu's "Next level" button
+		return
+	_leave_floor()
 	_came_from = "replay" if mode != "" else "dungeon"
 	seed_value = s if s > 0 else LevelGen.random_seed()
 	_level_key = "seed%d" % seed_value
@@ -247,6 +261,7 @@ func play_random_level(s: int, mode := "") -> void:
 ## Square Hub Town: walk around and go into its buildings. Coming back from the dungeon puts
 ## you at its gate.
 func enter_town(at_door := "") -> void:
+	_leave_floor()
 	state = State.TOWN
 	seed_value = 0
 	_level_key = "town"
@@ -368,9 +383,9 @@ func new_run() -> void:
 	falls = 0
 	hits = 0
 	player.abilities.assign(CardCollection.equipped)   # equipped from the collection
-	hearts = _start_hearts()
+	hearts = _carry_hearts if _carry_hearts > 0 else _start_hearts()
 	_show_abilities()
-	hud.set_hearts(hearts, _start_hearts())
+	hud.set_hearts(hearts, maxi(hearts, _start_hearts()))
 	level.reset_pickups()
 	if _level_key == "custom":
 		_sync_chests()   # editor test levels refill their chests every run
@@ -557,6 +572,9 @@ func _lose_heart(from_fall := false) -> void:
 		player.active = false
 		player.velocity = Vector2.ZERO
 		hud.show_out(run_time, falls)
+		if _floor != "":
+			hud.out_label.text = "Out of hearts on level %d of %d. Start %s again?" % [
+				_floor_step, FLOORS[_floor].levels, FLOORS[_floor].name]
 		$TouchControls.hide()
 
 
@@ -677,7 +695,90 @@ func _on_goal_reached() -> void:
 		hud.set_pixels(CardCollection.pixels)
 	hud.show_win(run_time, falls, hearts, seed_value, reward)
 	hud.set_like(seed_value > 0 and CardCollection.replay_unlocked(), seed_value in CardCollection.liked)
+	if _floor != "":
+		_floor_level_won()
 	$TouchControls.hide()
+
+
+## --- Floor runs ---------------------------------------------------------------------------
+
+func start_floor(id: String) -> void:
+	_floor = id
+	_floor_step = 1
+	_carry_hearts = -1
+	_floor_seeds.clear()
+	for i in FLOORS[id].levels:
+		_floor_seeds.append(LevelGen.random_seed())
+	_play_floor_level()
+
+
+func _leave_floor() -> void:
+	_floor = ""
+	_carry_hearts = -1
+	level.set_theme("")
+	$Background/Sky.modulate = Color.WHITE
+
+
+func _play_floor_level() -> void:
+	var id := _floor
+	var step := _floor_step
+	var carry := _carry_hearts
+	_came_from = "dungeon"
+	seed_value = _floor_seeds[step - 1]
+	_level_key = "%s%d" % [id, seed_value]
+	_replay_mode = ""
+	set_music("music_level")
+	hud.set_seed(seed_value)
+	var text := LevelGen.generate(seed_value)
+	if id == "moss":
+		text = _mossify(text, seed_value)
+		level.set_theme("moss")
+		$Background/Sky.modulate = Color(0.55, 0.85, 0.7)
+	_floor = id
+	_floor_step = step
+	_carry_hearts = carry
+	load_level_text(text)
+	hud.banner("%s  ·  %d of %d" % [FLOORS[id].name, step, FLOORS[id].levels])
+
+
+## Mossy Cave: most floating platforms become crumbling blocks.
+func _mossify(text: String, s: int) -> String:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = s * 31 + 7
+	var out := ""
+	for ch in text:
+		out += "c" if ch == "=" and rng.randf() < 0.6 else ch
+	return out
+
+
+func _floor_level_won() -> void:
+	var total: int = FLOORS[_floor].levels
+	if _floor_step < total:
+		hud.set_floor_win("Next level (%d of %d)" % [_floor_step + 1, total])
+		return
+	# The whole floor is cleared. The boss comes later.
+	var key := "floor:" + _floor
+	if not CardCollection.is_beaten(key):
+		CardCollection.mark_beaten(key)
+		CardCollection.add_pixels(FLOOR_CLEAR_REWARD)
+		hud.set_pixels(CardCollection.pixels)
+		hud.toast("%s cleared! +%d pixels" % [FLOORS[_floor].name, FLOOR_CLEAR_REWARD])
+	hud.banner("The boss's lair is still being dug...")
+	hud.set_floor_win("")
+
+
+func _next_floor_level() -> void:
+	_carry_hearts = hearts
+	_floor_step += 1
+	_play_floor_level()
+
+
+## Play again / Try again. Out of hearts in a floor starts the floor over from level 1.
+func _play_again() -> void:
+	if _floor != "" and state == State.OUT:
+		start_floor(_floor)
+		return
+	new_run()
 
 
 ## Winning pays 3 pixels, or 4 for a fast run, the first time only: replays and editor
@@ -734,6 +835,7 @@ func _setup_web_bridge() -> void:
 
 func _on_js_load_level(args: Array) -> void:
 	if args.size() > 0:
+		_leave_floor()
 		_level_key = "custom"
 		set_music("music_level")
 		_replay_mode = ""
