@@ -30,6 +30,7 @@ var health := 1
 var _origin := Vector2.ZERO
 var _t := 0.0
 var _dir := 1.0
+var _reach := Vector2(-1.0, -1.0)   # px it may go left (x) and right (y); set on first use
 var _hit_areas: Array[Area2D] = []
 ## Stunning Landing: seconds left frozen in place.
 var _stun := 0.0
@@ -144,10 +145,7 @@ func _physics_process(delta: float) -> void:
 		path.y = -(d if d < span else span * 2.0 - d)
 	else:
 		# 2 tiles each way, starting from the middle heading right.
-		var span := 2.0 * T
-		var d := fposmod(_t * speed + span, span * 4.0)
-		_dir = 1.0 if d < span * 2.0 else -1.0
-		path.x = (d if d < span * 2.0 else span * 4.0 - d) - span
+		path.x = _pace_x()
 	position = _origin + _shift + path
 	if _stun > 0.0:
 		_next_bolts -= delta
@@ -201,3 +199,17 @@ func _draw() -> void:
 		CardFx.draw_stun(self, _bolts, _stun)
 	if _slow > 0.0:
 		CardFx.draw_slow(self, half_size(), _slow)
+
+
+## Up to 2 tiles each way, starting from the middle heading right, but stopping a tile short
+## of its platform's edges.
+func _pace_x() -> float:
+	if _reach.x < 0.0:
+		var at: Vector2 = global_position - position + _origin
+		_reach = Vector2(CardFx.pace_reach(self, at, -1.0, 2, 0), CardFx.pace_reach(self, at, 1.0, 2, 0))
+	var total := _reach.x + _reach.y
+	if total <= 0.0:
+		return 0.0
+	var d := fposmod(_t * speed + _reach.x, total * 2.0)
+	_dir = 1.0 if d < total else -1.0
+	return (d if d < total else total * 2.0 - d) - _reach.x

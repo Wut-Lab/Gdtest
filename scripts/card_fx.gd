@@ -143,3 +143,27 @@ func _draw() -> void:
 		var c2 := Color(SPARK_2, 1.0 - k * 0.6)
 		for i in _bolts.size():
 			draw_polyline(_bolts[i], c1 if i % 2 == 0 else c2, 2.0)
+
+
+## How far (px) a pacing obstacle may go in direction dir (-1/1), up to max_tiles, so it stops
+## with at least one free floor tile between it and the platform's edge (somewhere to land).
+## half_tiles: tiles from its centre to its outer edge cell (0 for 1-wide, 1 for 3-wide).
+## Obstacles not standing on floor (floating bridges) keep their full reach.
+static func pace_reach(body: PhysicsBody2D, at: Vector2, dir: float, max_tiles: int, half_tiles := 0) -> float:
+	var space := body.get_world_2d().direct_space_state
+	var floor_at := func(x: float) -> bool:
+		var q := PhysicsRayQueryParameters2D.create(Vector2(x, at.y), Vector2(x, at.y + 32.0), 1)
+		q.exclude = [body.get_rid()]
+		return not space.intersect_ray(q).is_empty()
+	if not floor_at.call(at.x):
+		return max_tiles * 32.0
+	var k := 0
+	while k < max_tiles:
+		var ok := true
+		for c in range(half_tiles + 1, half_tiles + 3):   # its new outer cell + one spare tile
+			if not floor_at.call(at.x + dir * (k + c) * 32.0):
+				ok = false
+		if not ok:
+			break
+		k += 1
+	return k * 32.0

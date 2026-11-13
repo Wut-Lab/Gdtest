@@ -136,9 +136,10 @@ func _physics_process(delta: float) -> void:
 	queue_redraw()
 
 
-## True if there's floor just past its front edge, so it never walks off a platform.
+## True if there's floor a full tile past its front edge, so it never walks off a platform and
+## always leaves one tile at the edge for the player to land on.
 func _ground_ahead() -> bool:
-	var from := global_position + Vector2(_dir * (SIZE / 2.0 + 2.0), 0.0)
+	var from := global_position + Vector2(_dir * (SIZE / 2.0 + 2.0 + 32.0), 0.0)
 	var q := PhysicsRayQueryParameters2D.create(from, from + Vector2(0.0, SIZE / 2.0 + 8.0), 1)
 	q.exclude = [get_rid()]
 	var hit := get_world_2d().direct_space_state.intersect_ray(q)
