@@ -142,6 +142,8 @@ var _push_cd := 0.0
 var pay_heart: Callable = func() -> bool: return true
 ## Safety Bubble: the last plain ground you stood on, and the bubble's float-back time.
 var last_ground := Vector2.ZERO
+## Guard Block: the shield is up (Main sets it at the start and the checkpoint).
+var guard_up := false
 var _bubble := 0.0
 var _brick: Node = null
 var _takeoff_x := 0.0   # Grip and Go: where you left the ground
@@ -214,13 +216,27 @@ func reset_to(pos: Vector2) -> void:
 ## Knocked back by a hazard (push.x: -1 left, 1 right; push.y: -1 up, 1 down), then a
 ## moment of safety.
 func knock_back(push: Vector2) -> void:
-	velocity = Vector2(push.x * 320.0, 420.0 if push.y > 0.0 else -420.0)
-	_stun = 0.3
+	var soft := 0.5 if "long_blink" in abilities else 1.0   # Long Blink: half the knockback
+	velocity = Vector2(push.x * 320.0 * soft, (420.0 if push.y > 0.0 else -420.0) * (0.6 if soft < 1.0 else 1.0))
+	_stun = 0.3 * soft
 	_bouncing = true
-	invincible = 1.2
+	invincible = 1.2 * (2.0 if "long_blink" in abilities else 1.0)
 	_squash = Vector2(0.65, 1.3)
 	_puff()
 	_play(_hurt_sfx)
+
+
+## Guard Block card: the shield takes the hit and breaks. Returns true if it did.
+func try_guard(push: Vector2) -> bool:
+	if "guard_block" not in abilities or not guard_up:
+		return false
+	guard_up = false
+	velocity = Vector2(push.x * 180.0, -220.0)
+	_stun = 0.1
+	invincible = 0.8
+	CardFx.spawn(get_parent(), global_position, "pop")
+	_play(_land_sfx, 1.5)
+	return true
 
 
 ## Lucky Charm card: maybe shrug off an obstacle's hit. Returns true if it was shrugged off:
@@ -740,6 +756,9 @@ func _draw() -> void:
 		var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.02)
 		draw_rect(rect.grow(4.0 + 2.0 * pulse), Color(1.0, 0.2, 0.15, 0.35))
 		draw_rect(rect.grow(2.0), Color(1.0, 0.25, 0.2, 0.6), false, 2.0)
+	if guard_up and "guard_block" in abilities:
+		# Guard Block: a thin blue shield outline while it's up.
+		draw_rect(rect.grow(3.0), Color(0.55, 0.8, 1.0, 0.7), false, 2.0)
 	if _bubble > 0.0:
 		# Safety Bubble: a shimmering bubble that pops as it fades.
 		var r := SIZE * (0.95 + 0.15 * (1.0 - _bubble))

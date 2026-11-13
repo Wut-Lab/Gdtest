@@ -331,6 +331,7 @@ func new_run() -> void:
 	player.reset_to(level.start.position)
 	_respawn = level.start.position
 	_bubble_used = false
+	player.guard_up = true
 	player.active = true
 	run_time = 0.0
 	falls = 0
@@ -464,6 +465,7 @@ func _on_checkpoint(spot: Vector2) -> void:
 		return
 	_respawn = spot
 	_bubble_used = false
+	player.guard_up = true
 	_ding.play()
 	hud.toast("Checkpoint!")
 
@@ -472,6 +474,9 @@ func _on_checkpoint(spot: Vector2) -> void:
 func _on_player_hurt(push: Vector2) -> void:
 	if state != State.PLAY or player.is_safe():
 		return
+	if player.try_guard(push):
+		hud.toast("Guard Block!")
+		return   # Guard Block: the shield took it
 	if player.try_shrug_off(push):
 		return   # Lucky Charm: shrugged it off
 	hits += 1

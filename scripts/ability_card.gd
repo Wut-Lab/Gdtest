@@ -13,11 +13,12 @@ const LETTERS := {"D": "dash", "Q": "pound", "J": "double_jump", "L": "glide", "
 const NAMES := {"dash": "Dash", "pound": "Ground Pound", "double_jump": "Double Jump", "glide": "Glide",
 	"quick": "Quick", "tele_hop": "Tele-hop", "high_jump": "High Jump", "phase_jump": "Phase Jump", "shockwave": "Shockwave", "stun_landing": "Stunning Landing", "grip_and_go": "Grip and Go", "lucky_charm": "Lucky Charm", "bounce_house": "Bounce House", "secret_helper": "Secret Helper", "magnet": "Magnet", "wall_cling": "Wall Cling", "brick_drop": "Brick Drop", "slow_burst": "Slow Burst",
 	"portion_booster": "Portion Booster", "air_brake": "Air Brake", "momentum": "Momentum", "heart_box": "Heart Box",
-	"angry_dash": "Angry Block Dash", "personal_space": "Personal Space", "safety_bubble": "Safety Bubble"}
+	"angry_dash": "Angry Block Dash", "personal_space": "Personal Space", "safety_bubble": "Safety Bubble",
+	"guard_block": "Guard Block", "long_blink": "Long Blink"}
 ## Card types, color coded: attacks are red, jumps are blue, movement is yellow, misc is gray.
 const TYPES := {"dash": "attack", "pound": "attack", "double_jump": "jump", "glide": "jump",
 	"quick": "movement", "tele_hop": "movement", "high_jump": "jump", "phase_jump": "jump", "shockwave": "attack", "stun_landing": "attack", "grip_and_go": "movement", "lucky_charm": "misc", "bounce_house": "misc", "secret_helper": "misc", "magnet": "misc", "wall_cling": "jump", "brick_drop": "attack", "slow_burst": "misc", "portion_booster": "misc", "air_brake": "movement", "momentum": "movement", "heart_box": "misc",
-	"angry_dash": "attack", "personal_space": "misc", "safety_bubble": "misc"}
+	"angry_dash": "attack", "personal_space": "misc", "safety_bubble": "misc", "guard_block": "misc", "long_blink": "misc"}
 const TYPE_NAMES := {"attack": "Attack card", "jump": "Jump card", "movement": "Movement card", "misc": "Misc card"}
 const TYPE_COLORS := {"attack": Color("e5484d"), "jump": Color("3d7be0"), "movement": Color("e0a400"),
 	"misc": Color("7d8597")}
@@ -71,11 +72,15 @@ const DESCRIPTIONS := {
 		+ "and stun them for 1 second. Recharges in 3 seconds.",
 	"safety_bubble": "Passive: the first time you fall into a pit in a level, a bubble catches you "
 		+ "and floats you back to the last ground you stood on, with no heart lost. Refills at the checkpoint.",
+	"guard_block": "Passive: a shield blocks the first hit from a spike square, spiked platform or Bad "
+		+ "Block in each level, with no heart lost. You can see it around you while it's up. Refills at the checkpoint.",
+	"long_blink": "Passive: after you get hurt, you stay safe twice as long (2.4 seconds instead of 1.2) "
+		+ "and get knocked back half as far.",
 }
 const PAPER := Color("eef1fa")
 const EDGE := Color("1b2440")
 
-@export_enum("dash", "pound", "double_jump", "glide", "quick", "tele_hop", "high_jump", "phase_jump", "shockwave", "stun_landing", "grip_and_go", "lucky_charm", "bounce_house", "secret_helper", "magnet", "wall_cling", "brick_drop", "slow_burst", "portion_booster", "air_brake", "momentum", "heart_box", "angry_dash", "personal_space", "safety_bubble") var ability := "dash"
+@export_enum("dash", "pound", "double_jump", "glide", "quick", "tele_hop", "high_jump", "phase_jump", "shockwave", "stun_landing", "grip_and_go", "lucky_charm", "bounce_house", "secret_helper", "magnet", "wall_cling", "brick_drop", "slow_burst", "portion_booster", "air_brake", "momentum", "heart_box", "angry_dash", "personal_space", "safety_bubble", "guard_block", "long_blink") var ability := "dash"
 
 var _t := 0.0
 
@@ -169,6 +174,20 @@ static func _draw_symbol(ci: CanvasItem, ability_name: String, o: Vector2, c: Co
 			ci.draw_arc(o, 8.0, 0.0, TAU, 20, c, 2.0)
 			ci.draw_rect(Rect2(o + Vector2(-3, -3), Vector2(6, 6)), c)
 			ci.draw_rect(Rect2(o + Vector2(-6, -6), Vector2(b, b)), Color(c, 0.6))
+		"guard_block":
+			# A blocky shield with a block in the middle.
+			ci.draw_rect(Rect2(o + Vector2(-7, -8), Vector2(14, b)), c)
+			ci.draw_rect(Rect2(o + Vector2(-7, -8), Vector2(b, 10)), c)
+			ci.draw_rect(Rect2(o + Vector2(5, -8), Vector2(b, 10)), c)
+			ci.draw_rect(Rect2(o + Vector2(-5, 2), Vector2(b, b)), c)
+			ci.draw_rect(Rect2(o + Vector2(3, 2), Vector2(b, b)), c)
+			ci.draw_rect(Rect2(o + Vector2(-3, 4), Vector2(6, b)), c)
+			ci.draw_rect(Rect2(o + Vector2(-2, -4), Vector2(4, 4)), c)
+		"long_blink":
+			# A block fading out in steps, like a long blink.
+			for i in 3:
+				ci.draw_rect(Rect2(o + Vector2(-9 + i * 6, -3), Vector2(5, 5)), Color(c, 1.0 - i * 0.3))
+			ci.draw_rect(Rect2(o + Vector2(-9, 5), Vector2(18, b)), c)
 		"dash":
 			# Two right-pointing chevrons.
 			for cx in [-5.0, 1.0]:

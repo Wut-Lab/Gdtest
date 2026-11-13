@@ -11,7 +11,7 @@ const FILES := 3
 const MAX_EQUIPPED := 3
 const STARTER := "heart_box"
 ## Every card, grouped by type, in the order the collection screen shows them.
-const ALL := ["dash", "pound", "double_jump", "glide", "quick", "tele_hop", "high_jump", "phase_jump", "shockwave", "stun_landing", "grip_and_go", "lucky_charm", "bounce_house", "secret_helper", "magnet", "wall_cling", "brick_drop", "slow_burst", "portion_booster", "air_brake", "momentum", "heart_box", "angry_dash", "personal_space", "safety_bubble"]
+const ALL := ["dash", "pound", "double_jump", "glide", "quick", "tele_hop", "high_jump", "phase_jump", "shockwave", "stun_landing", "grip_and_go", "lucky_charm", "bounce_house", "secret_helper", "magnet", "wall_cling", "brick_drop", "slow_burst", "portion_booster", "air_brake", "momentum", "heart_box", "angry_dash", "personal_space", "safety_bubble", "guard_block", "long_blink"]
 
 ## Where each card can come from (its drop group, as on the blueprint):
 ##   shop = Shop Only, drop = Drop Only (earned in levels, never sold), chest = Chest Only,
@@ -27,7 +27,7 @@ const DROP_GROUPS := {
 	"momentum": "both",
 	"heart_box": "starter", "lucky_charm": "shop", "bounce_house": "shop", "slow_burst": "drop",
 	"portion_booster": "drop", "secret_helper": "chest", "magnet": "chest",
-	"angry_dash": "milestone", "personal_space": "milestone", "safety_bubble": "paul",
+	"angry_dash": "milestone", "personal_space": "milestone", "safety_bubble": "paul", "guard_block": "paul", "long_blink": "paul",
 }
 ## Level milestones (random levels and the training level beaten):
 ##   5: Paul moves onto the floating platform in town (his mini shop sells Paul cards)
