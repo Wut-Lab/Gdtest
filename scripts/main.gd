@@ -57,6 +57,9 @@ func _ready() -> void:
 
 	player.reset_to(level.start.position)
 	player.fell.connect(_on_player_fell)
+	get_tree().node_added.connect(_hook_button_haptics)
+	for n in find_children("*", "BaseButton", true, false):
+		_hook_button_haptics(n)
 	level.goal_reached.connect(_on_goal_reached)
 	level.heart_collected.connect(_on_heart_collected)
 	level.heart_check = func() -> bool: return hearts < _start_hearts()   # no pickups at full health
@@ -392,7 +395,7 @@ func _on_player_fell() -> void:
 		player.reset_to(level.start.position)
 		return
 	player.reset_to(_respawn)
-	_lose_heart()
+	_lose_heart(true)
 
 
 ## A checkpoint: falls send you back here for the rest of this run.
@@ -421,8 +424,14 @@ func _start_hearts() -> int:
 	return START_HEARTS + (1 if "heart_box" in player.abilities else 0) + _run_bonus
 
 
-func _lose_heart() -> void:
+func _lose_heart(from_fall := false) -> void:
 	hearts -= 1
+	if hearts <= 0:
+		Haptics.lose()
+	elif from_fall:
+		Haptics.fall()
+	else:
+		Haptics.hurt()
 	hud.set_hearts(hearts, _start_hearts())
 	hud.hearts_display.flash()
 	if hearts <= 0:
@@ -596,3 +605,11 @@ func _on_js_load_level(args: Array) -> void:
 		_level_key = "custom"
 		_replay_mode = ""
 		load_level_text(str(args[0]))
+
+
+## Every menu button gives a small tap buzz (on-screen move/jump keys are left out).
+func _hook_button_haptics(n: Node) -> void:
+	if not n is BaseButton or (has_node("TouchControls") and $TouchControls.is_ancestor_of(n)):
+		return
+	if not n.pressed.is_connected(Haptics.tap):
+		n.pressed.connect(Haptics.tap)

@@ -401,6 +401,7 @@ func _physics_process(delta: float) -> void:
 		_puff()
 		_land_sfx.volume_db = lerpf(-14.0, -4.0, amount)   # harder landings are louder
 		_play(_land_sfx)
+		Haptics.land()
 	if "shockwave" in abilities and _shock_cd == 0.0 and not bounced_now and is_on_floor() \
 			and not _was_on_floor and before.y > shockwave_fall_speed:
 		_shockwave()   # Shockwave: any hard landing, not just a Ground Pound
