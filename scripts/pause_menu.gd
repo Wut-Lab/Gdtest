@@ -11,6 +11,8 @@ extends Control
 
 signal continue_pressed
 signal quit_pressed
+## Save the dungeon run (back to the start of this level next time) and go to the title.
+signal save_quit_pressed
 ## Options opened from the main menu was closed.
 signal closed
 
@@ -59,6 +61,8 @@ func _ready() -> void:
 	_button(paused, "Continue", func() -> void: continue_pressed.emit())
 	_button(paused, "Cards", func() -> void: _show("Cards"))
 	_button(paused, "Options", func() -> void: _show("Options"))
+	_save_quit = _button(paused, "Save and Quit", func() -> void: save_quit_pressed.emit())
+	_save_quit.hide()
 	_quit = _button(paused, "Back to Town", func() -> void: quit_pressed.emit())
 
 	var cards := _page_box("Cards")
@@ -140,6 +144,14 @@ func _ready() -> void:
 	_preview.volume_db = -8.0
 	add_child(_preview)
 	hide()
+
+
+var _save_quit: Button
+
+
+## Save and Quit only shows during a dungeon run.
+func set_save_quit(on: bool) -> void:
+	_save_quit.visible = on
 
 
 ## The quit button's label: "Back to Town" in the dungeon, "Main Menu" in town.

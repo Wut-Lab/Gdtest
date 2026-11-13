@@ -65,6 +65,10 @@ static var shop_buys := 0
 const LARRY_BUYS := 3
 ## Levels this file has beaten (level keys): a win only pays the first time.
 static var beaten: Array[String] = []
+## Times each area's boss was beaten the normal way (after its 5 levels): {area id: count}.
+static var boss_wins := {}
+## A dungeon run saved with Save and Quit: {area, step, hearts, rematch}, or {} for none.
+static var run := {}
 ## Random levels (seeds) the player liked (10 to start, see room_size()), replayable from the Replay Room.
 const MAX_LIKED := 10
 ## Each first Hard or Scramble replay clear adds a Replay Room space, up to this many.
@@ -113,6 +117,8 @@ static func use_file(n: int) -> void:
 		shop_buys = int(cfg.get_value("progress", "shop_buys",
 			owned.filter(func(a: String) -> bool: return drop_group(a) == "shop").size()))
 		beaten.assign(cfg.get_value("progress", "beaten", []))
+		boss_wins = cfg.get_value("progress", "boss_wins", {})
+		run = cfg.get_value("progress", "run", {})
 		liked.assign(cfg.get_value("replay", "liked", []))
 	else:
 		# A fresh file: written to disk the first time something changes.
@@ -125,6 +131,8 @@ static func use_file(n: int) -> void:
 		clears = 0
 		shop_buys = 0
 		beaten.clear()
+		boss_wins = {}
+		run = {}
 		liked.clear()
 	var settings := ConfigFile.new()
 	settings.load(SETTINGS)
@@ -144,6 +152,8 @@ static func save() -> void:
 	cfg.set_value("progress", "clears", clears)
 	cfg.set_value("progress", "shop_buys", shop_buys)
 	cfg.set_value("progress", "beaten", beaten)
+	cfg.set_value("progress", "boss_wins", boss_wins)
+	cfg.set_value("progress", "run", run)
 	cfg.set_value("replay", "liked", liked)
 	cfg.save(path(file))
 

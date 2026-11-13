@@ -15,6 +15,9 @@ extends Control
 ## Options opens the same Options page as the pause menu.
 
 signal play_pressed
+## The save file has a saved dungeon run: pick it back up, or end it and go to town.
+signal resume_run_pressed
+signal end_run_pressed
 signal options_pressed
 ## A Shop or Cards visit from town is over.
 signal closed
@@ -26,6 +29,7 @@ const BUTTON_SIZE := Vector2(240, 44)
 const DIM := Color("a9b3d1")
 
 var _pages := {}
+var _resume_text: Label
 var _square: PlayerPreview
 var _count: Label
 var _icons := {}          # ability -> CardIcon in the collection grid
@@ -318,7 +322,22 @@ func _ready() -> void:
 		_erase_buttons.append(erase)
 	_button(files, "Back", func() -> void: _show("Main"))
 
+	var resume := _page("Resume")
+	resume.add_child(_title("Saved Run"))
+	_resume_text = Label.new()
+	_resume_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_resume_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_resume_text.custom_minimum_size = Vector2(280, 0)
+	_resume_text.add_theme_color_override("font_color", DIM)
+	resume.add_child(_resume_text)
+	_button(resume, "Resume", func() -> void: resume_run_pressed.emit())
+	_button(resume, "End Run (go to town)", func() -> void:
+		CardCollection.run = {}
+		CardCollection.save()
+		end_run_pressed.emit())
+
 	panel.add_child(main)
+	panel.add_child(resume)
 	panel.add_child(files)
 	panel.add_child(cards)
 	panel.add_child(card)
@@ -410,6 +429,11 @@ func _update_file_row(n: int) -> void:
 func _pick_file(n: int) -> void:
 	CardCollection.use_file(n)
 	_update_main_label()
+	if not CardCollection.run.is_empty():
+		_resume_text.text = "You stopped in the middle of a run: %s. Resume from the start of that level?" \
+			% CardCollection.run.get("where", "the dungeon")
+		_show("Resume")
+		return
 	play_pressed.emit()
 
 

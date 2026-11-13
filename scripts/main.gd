@@ -64,6 +64,8 @@ var _floor_step := 0
 var _floor_seeds: Array[int] = []
 ## Hearts carried into the next level of a floor (-1 = start fresh).
 var _carry_hearts := -1
+var _rematch := false   # a Rematch: straight to the boss, no rewards
+var _level_hearts := 0  # hearts at the start of this level (Save and Quit goes back to it)
 var player: Player
 ## The town building the player is standing at ("" = none).
 var _near_door := ""
@@ -119,6 +121,10 @@ func _ready() -> void:
 	hud.main_level_requested.connect(play_main_level)
 	hud.random_level_requested.connect(play_random_level)
 	hud.floor_requested.connect(start_floor)
+	hud.rematch_requested.connect(start_rematch)
+	hud.pause_menu.save_quit_pressed.connect(_save_and_quit)
+	hud.main_menu.resume_run_pressed.connect(_resume_run)
+	hud.main_menu.end_run_pressed.connect(enter_town)
 	hud.areas_needed.connect(_update_gate)
 	hud.pause_requested.connect(pause)
 	hud.card_pressed.connect(func(i: int) -> void:
@@ -441,6 +447,7 @@ func pause() -> void:
 	$TouchControls.hide()
 	hud.pause_menu.set_cards(player.abilities, player.color)
 	hud.pause_menu.open()
+	hud.pause_menu.set_save_quit(state == State.PLAY and _floor != "")
 
 
 func resume() -> void:
@@ -588,6 +595,8 @@ func _lose_heart(from_fall := false) -> void:
 			var ar := _area(_floor)
 			var where := "the boss" if _floor_step > ar.seeds.size() else "Level %d" % (ar.first + _floor_step - 1)
 			hud.out_label.text = "Out of hearts on %s. Start again from Level %d?" % [where, ar.first]
+			if _rematch:
+				hud.out_label.text = "Out of hearts. Try the rematch again?"
 		$TouchControls.hide()
 
 
@@ -739,7 +748,7 @@ func _update_gate() -> void:
 			marks.append(("✓" if CardCollection.is_beaten(_area_key(ar.id, ar.seeds[k])) else "") + str(n))
 		marks.append(("✓" if CardCollection.is_beaten("boss:" + ar.id) else "") + "Boss")
 		rows.append({"id": ar.id, "title": "Levels %d–%d: %s" % [ar.first, ar.first + 4, ar.name],
-			"progress": "  ".join(marks)})
+			"progress": "  ".join(marks), "rematch": ar.has("boss") and boss_wins(ar.id) >= 2})
 	hud.set_areas(rows)
 
 
@@ -747,9 +756,24 @@ static func _area_key(id: String, s: int) -> String:
 	return ("seed%d" if id == "basic" else id + "%d") % s
 
 
-func start_floor(id: String) -> void:
+## Times this area's boss was beaten the normal way. Files that beat him before wins were
+## counted have at least 1.
+static func boss_wins(id: String) -> int:
+	var n: int = CardCollection.boss_wins.get(id, 0)
+	return maxi(n, 1 if CardCollection.is_beaten("boss:" + id) else 0)
+
+
+## Rematch (after 2 normal wins): straight into the boss room with fresh hearts. No rewards.
+func start_rematch(id: String) -> void:
+	start_floor(id, _area(id).seeds.size() + 1)
+	_rematch = true
+	hud.banner("Rematch: %s!" % _area(id).boss_name, 5.0, 1.0)
+
+
+func start_floor(id: String, step := 1) -> void:
+	_rematch = false
 	_floor = id
-	_floor_step = 1
+	_floor_step = step
 	_carry_hearts = -1
 	_floor_seeds.assign(_area(id).seeds)
 	_play_floor_level()
@@ -760,6 +784,7 @@ func _leave_floor() -> void:
 		_level_key = ""
 		_on_screen_changed()   # back to the normal zoom
 	_floor = ""
+	_rematch = false
 	_carry_hearts = -1
 	level.set_theme("")
 	$Background/Sky.modulate = Color.WHITE
@@ -788,6 +813,7 @@ func _play_floor_level() -> void:
 	_floor_step = step
 	_carry_hearts = carry
 	load_level_text(text)
+	_level_hearts = hearts
 	hud.banner("Level %d  ·  %s" % [ar.first + step - 1, ar.name])
 
 
@@ -800,7 +826,10 @@ func _play_boss(ar: Dictionary, carry: int) -> void:
 	_floor_step = ar.seeds.size() + 1
 	_carry_hearts = carry
 	set_music("music_boss")
+	var rematch := _rematch
 	load_level_text(FileAccess.get_file_as_string(ar.boss))
+	_rematch = rematch
+	_level_hearts = hearts
 	_on_screen_changed()
 	hud.banner("Boss: %s!" % ar.boss_name, 5.0, 1.0)
 
@@ -836,6 +865,28 @@ func _floor_level_won() -> void:
 		return
 	# The boss is beaten (areas without a boss yet: clearing level 5 stands in for it).
 	var key: String = "boss:" + _floor
+	if _rematch:
+		hud.banner("Rematch won!", 5.0, 1.0)
+		hud.set_floor_win("")
+		return
+	if ar.has("boss"):
+		var wins := boss_wins(_floor) + 1
+		CardCollection.boss_wins[_floor] = wins
+		CardCollection.save()
+		if wins >= 2 and CardCollection.is_beaten(key):
+			# The second win: every card he gives is yours now.
+			var got := []
+			for c in ["dash", BOSS_CARDS.get(ar.id, "")]:
+				if c != "" and not CardCollection.owns(c):
+					_on_card_collected(c)
+					got.append(AbilityCard.NAMES[c])
+			var news := "%s beaten again!" % ar.boss_name
+			if not got.is_empty():
+				news += " You got " + " and ".join(got) + "."
+			if wins == 2:
+				news += " Rematch unlocked at the gate."
+			hud.result_label.text += "\n" + news
+			hud.banner(news, 5.0, 1.0)
 	if not CardCollection.is_beaten(key):
 		CardCollection.mark_beaten(key)
 		var px := FLOOR_CLEAR_REWARD
@@ -859,6 +910,40 @@ func _floor_level_won() -> void:
 	hud.set_floor_win("")
 
 
+## Pause menu's Save and Quit: remember this run from the start of the current level, then go
+## back to the title. Picking the save file again offers to resume it.
+func _save_and_quit() -> void:
+	var ar := _area(_floor)
+	var where := "the %s boss" % ar.name if _floor_step > ar.seeds.size() \
+		else "Level %d (%s)" % [ar.first + _floor_step - 1, ar.name]
+	if _rematch:
+		where = "a rematch with %s" % ar.boss_name
+	CardCollection.run = {"area": _floor, "step": _floor_step, "hearts": _level_hearts,
+		"rematch": _rematch, "where": where}
+	CardCollection.save()
+	enter_town("dungeon")
+	go_to_start()
+
+
+## Resume the saved run at the start of the level it stopped on.
+func _resume_run() -> void:
+	var r := CardCollection.run
+	CardCollection.run = {}
+	CardCollection.save()
+	if _area(r.get("area", "")).is_empty():
+		enter_town()
+		return
+	if r.get("rematch", false):
+		start_rematch(r.area)
+		return
+	_floor = r.area
+	_floor_step = int(r.step)
+	_floor_seeds.assign(_area(r.area).seeds)
+	_rematch = false
+	_carry_hearts = int(r.hearts) if _floor_step > 1 and int(r.hearts) > 0 else -1
+	_play_floor_level()
+
+
 func _next_floor_level() -> void:
 	_carry_hearts = hearts
 	_floor_step += 1
@@ -868,7 +953,10 @@ func _next_floor_level() -> void:
 ## Play again / Try again. Out of hearts in a floor starts the floor over from level 1.
 func _play_again() -> void:
 	if _floor != "" and state == State.OUT:
-		start_floor(_floor)
+		if _rematch:
+			start_rematch(_floor)
+		else:
+			start_floor(_floor)
 		return
 	new_run()
 

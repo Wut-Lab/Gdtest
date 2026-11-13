@@ -15,6 +15,8 @@ signal town_requested
 signal floor_requested(floor_id: String)
 ## The gate is opening: main should call set_areas.
 signal areas_needed
+## The area's Rematch button: fight its boss straight away.
+signal rematch_requested(floor_id: String)
 ## Town: the Enter button by a building's door.
 signal enter_pressed
 signal like_pressed
@@ -243,7 +245,20 @@ func set_areas(rows: Array) -> void:
 		p.add_theme_color_override("font_color", Color("a9b3d1"))
 		var group := VBoxContainer.new()
 		group.add_theme_constant_override("separation", 2)
-		group.add_child(b)
+		if r.get("rematch", false):
+			var row := HBoxContainer.new()
+			row.add_theme_constant_override("separation", 8)
+			row.alignment = BoxContainer.ALIGNMENT_CENTER
+			b.custom_minimum_size = Vector2(260, 44)
+			row.add_child(b)
+			var rm := Button.new()
+			rm.text = "Rematch"
+			rm.custom_minimum_size = Vector2(110, 44)
+			rm.pressed.connect(func() -> void: rematch_requested.emit(id))
+			row.add_child(rm)
+			group.add_child(row)
+		else:
+			group.add_child(b)
 		group.add_child(p)
 		areas_box.add_child(group)
 
