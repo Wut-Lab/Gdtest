@@ -352,7 +352,8 @@ func _leave_building() -> void:
 	hud.set_pixels(CardCollection.pixels)
 	$TouchControls.show()
 	hud.pause_button.show()
-	hud.show_enter(TownDoor.NAMES[_near_door] if _near_door != "" else "")
+	hud.show_enter(TownDoor.NAMES[_near_door] if _near_door != "" else "",
+		"Talk to" if _near_door in TownDoor.PEOPLE else "Enter")
 
 
 func new_run() -> void:

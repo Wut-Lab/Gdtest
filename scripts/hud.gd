@@ -66,6 +66,10 @@ func _ready() -> void:
 	pixel_counter.alignment = BoxContainer.ALIGNMENT_END
 	add_child(pixel_counter)
 	move_child(pixel_counter, 0)   # under the menus
+	# A dark outline on the stats so they stay readable over sand-coloured walls.
+	for l: Label in [time_label, falls_label, seed_label]:
+		l.add_theme_color_override("font_outline_color", Color("1b2440"))
+		l.add_theme_constant_override("outline_size", 5)
 	# The equipped cards, small, under the timer. Tap one to see it (pauses the game).
 	cards_label.hide()
 	card_row = HBoxContainer.new()
@@ -215,7 +219,7 @@ func banner(text: String) -> void:
 	l.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 	l.offset_left = -260
 	l.offset_right = 260
-	l.offset_top = 120
+	l.offset_top = 165   # below the HUD cards, so it never covers them on a narrow screen
 	l.add_theme_font_size_override("font_size", 30)
 	l.add_theme_color_override("font_color", Color("f2c230"))
 	l.add_theme_color_override("font_outline_color", Color("1b2440"))
