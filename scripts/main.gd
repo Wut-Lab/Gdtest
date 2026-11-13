@@ -801,7 +801,7 @@ func _play_boss(ar: Dictionary, carry: int) -> void:
 	_carry_hearts = carry
 	load_level_text(FileAccess.get_file_as_string(ar.boss))
 	_on_screen_changed()
-	hud.banner("Boss: %s!" % ar.boss_name)
+	hud.banner("Boss: %s!" % ar.boss_name, 5.0, 1.0)
 
 
 ## The boss is down: the exit cube appears by the door on his side. Touching it wins (and
@@ -811,7 +811,7 @@ func _on_boss_defeated() -> void:
 		return
 	Haptics.hurt()
 	level.open_boss_exit()
-	hud.banner("The exit is open!")
+	hud.banner("The exit is open!", 5.0, 1.0)
 
 
 ## Mossy Cave: most floating platforms become crumbling blocks.

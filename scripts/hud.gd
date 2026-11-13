@@ -290,7 +290,8 @@ func show_out(time: float, falls: int) -> void:
 
 ## A short message that floats in near the top of the screen and fades away.
 ## A big message in the middle of the screen: fades in, stays 3 seconds, fades out.
-func banner(text: String) -> void:
+## Fades in over 0.5 s, stays [param hold] seconds, then fades out over [param fade_out].
+func banner(text: String, hold := 3.0, fade_out := 0.6) -> void:
 	for old in get_tree().get_nodes_in_group("hud_banner"):
 		old.queue_free()   # a new banner replaces the last one instead of piling on it
 	var l := Label.new()
@@ -309,8 +310,8 @@ func banner(text: String) -> void:
 	add_child(l)
 	var tw := create_tween()
 	tw.tween_property(l, "modulate:a", 1.0, 0.5)
-	tw.tween_interval(3.0)
-	tw.tween_property(l, "modulate:a", 0.0, 0.6)
+	tw.tween_interval(hold)
+	tw.tween_property(l, "modulate:a", 0.0, fade_out)
 	tw.tween_callback(l.queue_free)
 
 
