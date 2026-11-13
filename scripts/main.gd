@@ -19,7 +19,8 @@ var run_time := 0.0
 const WIN_REWARD := 3
 ## Terry, the lazy yellow block in town, says one of these when you talk to him.
 const _WALKER_LINES := ["Hi!", "It's a good day to dungeon dive!", "Have a great dive!"]
-const TOWNSFOLK_LINES := {"paula": _WALKER_LINES, "tim": _WALKER_LINES}
+const TOWNSFOLK_LINES := {"paula": _WALKER_LINES, "tim": _WALKER_LINES,
+	"romeo": ["I like the view from up here!"]}
 ## How many times you've talked to each townsfolk (their lines go in order).
 var _talks := {}
 var dialog: DialogBox
@@ -61,6 +62,7 @@ func _ready() -> void:
 	level = level_scene.instantiate() as Level
 	world.add_child(level)
 	player = player_scene.instantiate() as Player
+	player.water = level.water
 	level.add_child(player)
 	_fit_to_level()
 
@@ -257,6 +259,8 @@ func enter_town(at_door := "") -> void:
 	town = town.replace("r", "R" if CardCollection.milestone(10) else "#")
 	if not CardCollection.milestone(10):
 		town = town.replace(")", ".")
+	# Romeo sits on the right hill, then the left, switching every 2 levels you complete.
+	town = town.replace("[" if CardCollection.clears / 2 % 2 == 0 else "]", ".")
 	level.load_map_text(town)
 	for d in level.get_doors():
 		if d.kind == "paul":
@@ -302,7 +306,7 @@ func _enter_door() -> void:
 	if _near_door in TOWNSFOLK_LINES:
 		var n: int = _talks.get(_near_door, 0)
 		_talks[_near_door] = n + 1
-		_talk(_near_door, [TOWNSFOLK_LINES[_near_door][n % 3]])
+		_talk(_near_door, [TOWNSFOLK_LINES[_near_door][n % TOWNSFOLK_LINES[_near_door].size()]])
 		return
 	if _near_door == "terry":
 		_talk("terry", [TERRY_LINES[randi() % TERRY_LINES.size()]])

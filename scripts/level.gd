@@ -54,6 +54,8 @@ var _obstacles: Node2D
 var _chests: Node2D
 var _pixels: Node2D
 var _doors: Node2D
+## The pond (empty in most levels).
+var water: Water
 var _checkpoints: Node2D
 ## Main sets this: whether a heart can be picked up right now (false at full health).
 var heart_check := Callable()
@@ -87,6 +89,9 @@ func _ready() -> void:
 	_pixels = Node2D.new()
 	_pixels.name = "Pixels"
 	add_child(_pixels)
+	water = Water.new()
+	water.name = "Water"
+	add_child(water)
 	_doors = Node2D.new()
 	_doors.name = "Doors"
 	add_child(_doors)
@@ -118,6 +123,7 @@ func load_map_text(text: String) -> void:
 	_hard_cells.clear()
 	var doors := {}   # cell -> door character
 	var checkpoints: Array[Vector2i] = []
+	var water_cells: Array[Vector2i] = []
 	var lines := text.replace("\r", "").split("\n")
 	for y in lines.size():
 		var line: String = lines[y]
@@ -148,7 +154,9 @@ func load_map_text(text: String) -> void:
 						_hard_cells[Vector2i(x, y)] = true
 				"@":
 					checkpoints.append(Vector2i(x, y))
-				"!", "$", "&", "%", "(", ")", "{", "}":
+				"~":
+					water_cells.append(Vector2i(x, y))
+				"!", "$", "&", "%", "(", ")", "{", "}", "[", "]":
 					doors[Vector2i(x, y)] = ch
 				"T", "B":
 					platforms[Vector2i(x, y)] = ch == "T"
@@ -176,6 +184,7 @@ func load_map_text(text: String) -> void:
 	_place_pixels(pixel_cells)
 	_place_hearts(hearts, cards)
 	_place_spikes(spikes, vspikes, platforms, bad_blocks)
+	water.setup(water_cells)
 	_update_walls()
 	queue_redraw()
 

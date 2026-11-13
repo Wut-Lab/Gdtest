@@ -56,6 +56,8 @@ static var opened_chests: Array[String] = []
 ## The cards on display in the shop ("" = sold), and wins since it last restocked.
 static var shop_stock: Array[String] = []
 static var shop_wins := 0
+## Every level ever completed (Romeo changes hills every 2).
+static var clears := 0
 ## Levels this file has beaten (level keys): a win only pays the first time.
 static var beaten: Array[String] = []
 ## Random levels (seeds) the player liked (10 to start, see room_size()), replayable from the Replay Room.
@@ -101,6 +103,7 @@ static func use_file(n: int) -> void:
 		opened_chests.assign(cfg.get_value("progress", "opened_chests", []))
 		shop_stock.assign(cfg.get_value("shop", "stock", []))
 		shop_wins = int(cfg.get_value("shop", "wins", 0))
+		clears = int(cfg.get_value("progress", "clears", 0))
 		beaten.assign(cfg.get_value("progress", "beaten", []))
 		liked.assign(cfg.get_value("replay", "liked", []))
 	else:
@@ -111,6 +114,7 @@ static func use_file(n: int) -> void:
 		opened_chests.clear()
 		shop_stock.clear()
 		shop_wins = 0
+		clears = 0
 		beaten.clear()
 		liked.clear()
 	var settings := ConfigFile.new()
@@ -128,6 +132,7 @@ static func save() -> void:
 	cfg.set_value("progress", "opened_chests", opened_chests)
 	cfg.set_value("shop", "stock", shop_stock)
 	cfg.set_value("shop", "wins", shop_wins)
+	cfg.set_value("progress", "clears", clears)
 	cfg.set_value("progress", "beaten", beaten)
 	cfg.set_value("replay", "liked", liked)
 	cfg.save(path(file))
@@ -171,6 +176,7 @@ static func get_shop() -> Array[String]:
 
 ## A win counts toward restocking the shop.
 static func record_win() -> void:
+	clears += 1
 	shop_wins += 1
 	if shop_wins >= RESTOCK_WINS:
 		shop_wins = 0

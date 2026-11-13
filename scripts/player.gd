@@ -118,6 +118,8 @@ var active := false
 ## Abilities from collected cards: "dash", "pound", "double_jump".
 var abilities: Array[String] = []
 var fall_limit_y := INF
+## The level's pond (town): the player floats in it.
+var water: Water
 ## Seconds of blinking after being hurt, when nothing can hurt you again.
 var invincible := 0.0
 ## Phase Jump card: phased out (nothing can hurt you) right now.
@@ -181,6 +183,16 @@ func _make_sfx(path: String, volume_db: float) -> AudioStreamPlayer:
 func _play(p: AudioStreamPlayer, pitch := 1.0) -> void:
 	p.pitch_scale = pitch * randf_range(0.95, 1.05)
 	p.play()
+
+
+## How much of the player is under water, 0 (none) to 1 (all).
+func _submerged() -> float:
+	if water == null or water.is_empty():
+		return 0.0
+	var top := water.surface_at(position.x)
+	if top == INF:
+		return 0.0
+	return clampf((position.y + SIZE / 2.0 - top) / SIZE, 0.0, 1.0)
 
 
 func reset_to(pos: Vector2) -> void:
@@ -390,6 +402,9 @@ func _physics_process(delta: float) -> void:
 		_coyote = coyote_time
 	else:
 		_coyote = maxf(_coyote - delta, 0.0)
+	var sub := _submerged()
+	if sub > 0.3:
+		_coyote = coyote_time   # you can always hop out of the water
 	if Input.is_action_just_pressed("jump"):
 		_jump_buffer = jump_buffer_time
 	else:
@@ -435,13 +450,19 @@ func _physics_process(delta: float) -> void:
 	elif _pounding:
 		velocity.y = pound_speed
 		g = 0.0
-	elif velocity.y < 0.0 and not Input.is_action_pressed("jump") and not _bouncing:
+	elif velocity.y < 0.0 and not Input.is_action_pressed("jump") and not _bouncing and sub == 0.0:
 		g *= short_hop_gravity
 	velocity.y = minf(velocity.y + g * delta, pound_speed if _pounding else max_fall_speed)
 	if "glide" in abilities and velocity.y > glide_fall_speed and Input.is_action_pressed("jump") \
 			and not _pounding and _dash == 0.0 and not on_floor:
 		velocity.y = glide_fall_speed   # Glide card: float down while jump is held
 		_squash = _squash.lerp(Vector2(1.25, 0.85), 0.3)
+	if sub > 0.0:
+		# Floating: the more of you is under water, the harder it pushes you up (you settle about
+		# half in), and the water slows you down.
+		velocity.y -= gravity * 2.0 * sub * delta
+		velocity.y *= exp(-5.0 * sub * delta)
+		velocity.x *= exp(-1.5 * sub * delta)
 	if velocity.y >= 0.0:
 		_bouncing = false
 

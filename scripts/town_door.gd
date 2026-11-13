@@ -5,16 +5,17 @@ extends Area2D
 ## % = the Replay Room (a small house, shown once it's unlocked).
 ## ( = Paul, a pink block with a mini card shop; ) = Terry, a lazy yellow block (milestones).
 ## { = Paula (purple) and } = Tim (green), who walk back and forth.
+## [ / ] = Romeo (dark red) on the left / right hill: paces a tile each way and hops now and then.
 ## It sits on the floor of its cell; the building is drawn around it, 3 tiles wide.
 
 signal near_changed(door: TownDoor, near: bool)
 
-const KINDS := {"!": "dungeon", "$": "shop", "&": "cards", "%": "replay", "(": "paul", ")": "terry", "{": "paula", "}": "tim"}
+const KINDS := {"!": "dungeon", "$": "shop", "&": "cards", "%": "replay", "(": "paul", ")": "terry", "{": "paula", "}": "tim", "[": "romeo", "]": "romeo"}
 const NAMES := {"dungeon": "the Dungeon", "shop": "the Shop", "cards": "the Card Hall", "replay": "the Replay Room",
-	"paul": "Paul", "terry": "Terry", "paula": "Paula", "tim": "Tim"}
+	"paul": "Paul", "terry": "Terry", "paula": "Paula", "tim": "Tim", "romeo": "Romeo"}
 const SIGNS := {"dungeon": "DUNGEON", "shop": "SHOP", "cards": "CARDS", "replay": "REPLAY"}
 ## Townsfolk: you talk to them instead of entering.
-const PEOPLE := ["paul", "terry", "paula", "tim"]
+const PEOPLE := ["paul", "terry", "paula", "tim", "romeo"]
 ## Townsfolk who stroll back and forth (body colour, highlight).
 const WALKERS := {"paula": [Color("9b5de5"), Color("c19bf2")], "tim": [Color("3dbb5c"), Color("7fdc95")]}
 const WALK_RANGE := 36.0
@@ -27,6 +28,12 @@ var _t := 0.0
 var _home := Vector2.ZERO
 ## Drawn in a dialogue box: no door area, no walking, animates while paused.
 var portrait := false
+## Romeo: where he's pacing to, how long he waits, and his current hop.
+var _goal_x := 0.0
+var _wait := 1.0
+var _hop_t := -1.0
+var _hop_h := 0.0
+const HOP_TIME := 0.55
 
 
 func _ready() -> void:
@@ -49,6 +56,8 @@ func _process(delta: float) -> void:
 	_t += delta
 	if WALKERS.has(kind) and not portrait:
 		position.x = _home.x + WALK_RANGE * sin(_t * 0.7)
+	elif kind == "romeo" and not portrait:
+		_romeo(delta)
 	queue_redraw()
 
 
@@ -61,6 +70,7 @@ func _draw() -> void:
 		"paul": _draw_paul()
 		"terry": _draw_terry()
 		"paula", "tim": _draw_walker()
+		"romeo": _draw_romeo()
 	if not SIGNS.has(kind):
 		return
 	var font := ThemeDB.fallback_font
@@ -219,3 +229,49 @@ func _draw_walker() -> void:
 	else:
 		# A small backpack, ready for a dive.
 		draw_rect(Rect2(-dir * 13 - (4 if dir > 0 else 0), -20 + y, 4, 12), Color("8a5a2b"))
+
+
+## Romeo paces between one tile left and one tile right of his spot, pauses, and sometimes hops
+## 1-2 tiles straight up, landing where he took off.
+func _romeo(delta: float) -> void:
+	if _hop_t >= 0.0:
+		_hop_t += delta
+		var k := _hop_t / HOP_TIME
+		position.y = _home.y - _hop_h * 4.0 * k * (1.0 - k)
+		if k >= 1.0:
+			_hop_t = -1.0
+			position.y = _home.y
+		return
+	var x := position.x - _home.x
+	if absf(_goal_x - x) > 0.5:
+		position.x = _home.x + move_toward(x, _goal_x, 45.0 * delta)
+		return
+	_wait -= delta
+	if _wait > 0.0:
+		return
+	_wait = randf_range(0.6, 1.8)
+	if randf() < 0.35:
+		_hop_t = 0.0
+		_hop_h = randf_range(32.0, 64.0)
+	else:
+		_goal_x = [-32.0, 0.0, 32.0].pick_random()
+
+
+## Romeo: a dark red block with a big excited grin and wide, sparkly eyes.
+func _draw_romeo() -> void:
+	var dir := signf(_goal_x - (position.x - _home.x)) if not portrait else 0.0
+	var stretch := 3.0 if _hop_t >= 0.0 else 0.0
+	var top := -26.0 - stretch
+	draw_rect(Rect2(-13, top, 26, 26 + stretch), EDGE)
+	draw_rect(Rect2(-11, top + 2, 22, 22 + stretch), Color("8e1b2a"))
+	draw_rect(Rect2(-11, top + 2, 22, 4), Color("c03a4c"))
+	# Wide eyes with a shine, raised brows.
+	for ex in [-8, 2]:
+		var e := Vector2(ex + dir * 1.5, top + 9)
+		draw_rect(Rect2(e, Vector2(6, 6)), Color("f4f6ff"))
+		draw_rect(Rect2(e + Vector2(2, 2), Vector2(3, 3)), EDGE)
+		draw_rect(Rect2(e + Vector2(3, 2), Vector2(1, 1)), Color.WHITE)
+		draw_rect(Rect2(e + Vector2(0, -3), Vector2(6, 1.5)), EDGE)
+	# A big open grin.
+	draw_rect(Rect2(-5 + dir * 1.5, top + 17, 10, 5), EDGE)
+	draw_rect(Rect2(-3 + dir * 1.5, top + 20, 6, 2), Color("f27bb5"))
