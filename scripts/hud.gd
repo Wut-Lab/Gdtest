@@ -122,21 +122,21 @@ func _ready() -> void:
 		town.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		town.pressed.connect(town_requested.emit)
 		if menu == start_menu:
-			_gate_size(town, 180)
+			_gate_size(town, GATE_WIDTH)
 		menu.get_node("Panel/Box").add_child(town)
 	# The dungeon's areas, under the practice level. Filled by main (set_areas) each time the
 	# gate opens: an area only shows once the boss before it is beaten.
 	random_button.hide()
 	seed_edit.hide()
 	play_button.text = "Practice level"
-	_gate_size(play_button, 260)
+	_gate_size(play_button, GATE_WIDTH)
 	# Keep the gate short: the how-to text goes, and the colour picker opens from its own button.
 	start_menu.get_node("Panel/Box/StartBody").hide()
 	var color_row: Control = start_menu.get_node("Panel/Box/ColorRow")
 	color_row.hide()
 	var color_toggle := Button.new()
 	color_toggle.text = "Change color"
-	_gate_size(color_toggle, 180)
+	_gate_size(color_toggle, GATE_WIDTH)
 	color_toggle.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	color_toggle.pressed.connect(func() -> void:
 		var picking := not color_row.visible
@@ -221,6 +221,9 @@ func show_main_menu(player_color: Color) -> void:
 ## rows: [{id, title, progress}] for each area that's open, in order.
 ## Dungeon gate buttons are a little smaller and thinner than the other menus'.
 const GATE_HEIGHT := 34.0
+## Every gate row is this wide; an area with a Rematch button splits it between the two.
+const GATE_WIDTH := 260.0
+const REMATCH_WIDTH := 84.0
 const GATE_FONT := 15
 
 
@@ -249,7 +252,7 @@ func set_areas(rows: Array) -> void:
 	for r: Dictionary in rows:
 		var b := Button.new()
 		b.text = r.title
-		_gate_size(b, 260)
+		_gate_size(b, GATE_WIDTH)
 		b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		var color: Color = AREA_COLORS.get(r.id, Color("79e2c2"))
 		_area_style(b, color)
@@ -261,11 +264,11 @@ func set_areas(rows: Array) -> void:
 			var row := HBoxContainer.new()
 			row.add_theme_constant_override("separation", 8)
 			row.alignment = BoxContainer.ALIGNMENT_CENTER
-			_gate_size(b, 200)
+			_gate_size(b, GATE_WIDTH - 8 - REMATCH_WIDTH)
 			row.add_child(b)
 			var rm := Button.new()
 			rm.text = "Rematch"
-			_gate_size(rm, 90)
+			_gate_size(rm, REMATCH_WIDTH)
 			_area_style(rm, color)
 			rm.pressed.connect(func() -> void: rematch_requested.emit(id))
 			row.add_child(rm)
