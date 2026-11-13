@@ -121,20 +121,22 @@ func _ready() -> void:
 		town.custom_minimum_size = Vector2(200, 44)
 		town.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		town.pressed.connect(town_requested.emit)
+		if menu == start_menu:
+			_gate_size(town, 180)
 		menu.get_node("Panel/Box").add_child(town)
 	# The dungeon's areas, under the practice level. Filled by main (set_areas) each time the
 	# gate opens: an area only shows once the boss before it is beaten.
 	random_button.hide()
 	seed_edit.hide()
 	play_button.text = "Practice level"
-	play_button.custom_minimum_size = Vector2(300, 44)
+	_gate_size(play_button, 260)
 	# Keep the gate short: the how-to text goes, and the colour picker opens from its own button.
 	start_menu.get_node("Panel/Box/StartBody").hide()
 	var color_row: Control = start_menu.get_node("Panel/Box/ColorRow")
 	color_row.hide()
 	var color_toggle := Button.new()
 	color_toggle.text = "Change color"
-	color_toggle.custom_minimum_size = Vector2(200, 40)
+	_gate_size(color_toggle, 180)
 	color_toggle.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	color_toggle.pressed.connect(func() -> void:
 		var picking := not color_row.visible
@@ -217,6 +219,29 @@ func show_main_menu(player_color: Color) -> void:
 
 
 ## rows: [{id, title, progress}] for each area that's open, in order.
+## Dungeon gate buttons are a little smaller and thinner than the other menus'.
+const GATE_HEIGHT := 34.0
+const GATE_FONT := 15
+
+
+func _gate_size(b: Button, width: float) -> void:
+	b.custom_minimum_size = Vector2(width, GATE_HEIGHT)
+	b.add_theme_font_size_override("font_size", GATE_FONT)
+
+
+## A gate button filled with an area's color (dark text).
+func _area_style(b: Button, color: Color) -> void:
+	b.add_theme_color_override("font_color", Color("1b2440"))
+	b.add_theme_color_override("font_hover_color", Color("1b2440"))
+	b.add_theme_color_override("font_focus_color", Color("1b2440"))
+	b.add_theme_color_override("font_pressed_color", Color("1b2440"))
+	for st in ["normal", "hover", "pressed", "focus"]:
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = color.lightened(0.15) if st == "hover" or st == "focus" else color
+		sb.set_corner_radius_all(8)
+		b.add_theme_stylebox_override(st, sb)
+
+
 func set_areas(rows: Array) -> void:
 	for c in areas_box.get_children():
 		areas_box.remove_child(c)
@@ -224,18 +249,10 @@ func set_areas(rows: Array) -> void:
 	for r: Dictionary in rows:
 		var b := Button.new()
 		b.text = r.title
-		b.custom_minimum_size = Vector2(300, 44)
+		_gate_size(b, 260)
 		b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		b.add_theme_color_override("font_color", Color("1b2440"))
-		b.add_theme_color_override("font_hover_color", Color("1b2440"))
-		b.add_theme_color_override("font_focus_color", Color("1b2440"))
-		for st in ["normal", "hover", "pressed", "focus"]:
-			var sb := StyleBoxFlat.new()
-			sb.bg_color = AREA_COLORS.get(r.id, Color("79e2c2"))
-			if st == "hover" or st == "focus":
-				sb.bg_color = sb.bg_color.lightened(0.15)
-			sb.set_corner_radius_all(8)
-			b.add_theme_stylebox_override(st, sb)
+		var color: Color = AREA_COLORS.get(r.id, Color("79e2c2"))
+		_area_style(b, color)
 		var id: String = r.id
 		b.pressed.connect(func() -> void: floor_requested.emit(id))
 		var p := Label.new()
@@ -249,11 +266,12 @@ func set_areas(rows: Array) -> void:
 			var row := HBoxContainer.new()
 			row.add_theme_constant_override("separation", 8)
 			row.alignment = BoxContainer.ALIGNMENT_CENTER
-			b.custom_minimum_size = Vector2(260, 44)
+			_gate_size(b, 200)
 			row.add_child(b)
 			var rm := Button.new()
 			rm.text = "Rematch"
-			rm.custom_minimum_size = Vector2(110, 44)
+			_gate_size(rm, 90)
+			_area_style(rm, color)
 			rm.pressed.connect(func() -> void: rematch_requested.emit(id))
 			row.add_child(rm)
 			group.add_child(row)
@@ -264,6 +282,8 @@ func set_areas(rows: Array) -> void:
 
 
 func show_start() -> void:
+	for old in get_tree().get_nodes_in_group("hud_banner"):
+		old.queue_free()   # no level banner over the gate
 	areas_needed.emit()
 	main_menu.hide()
 	tune_button.show()
