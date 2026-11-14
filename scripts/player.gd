@@ -65,7 +65,7 @@ const SIZE := 24.0
 
 @export_group("Dash and pound")
 ## These need their ability cards.
-## Dash: a quick straight burst the way you face (Shift, X or K). One per jump in the air.
+## Dash: a quick straight burst the way you face (its card slot key). One per jump in the air.
 @export var dash_speed := 620.0
 @export var dash_time := 0.16
 @export var dash_cooldown := 0.45
@@ -688,7 +688,7 @@ func _drop_brick() -> void:
 func _update_dash_and_pound(delta: float, on_floor: bool) -> void:
 	_dash_cd = maxf(_dash_cd - delta, 0.0)
 	_brick_cd = maxf(_brick_cd - delta, 0.0)
-	if Input.is_action_just_pressed("brick") and "brick_drop" in abilities and not on_floor \
+	if _card_pressed("brick", "brick_drop") and not on_floor \
 			and _brick_cd == 0.0:
 		_drop_brick()
 	_push_cd = maxf(_push_cd - delta, 0.0)
@@ -697,13 +697,13 @@ func _update_dash_and_pound(delta: float, on_floor: bool) -> void:
 		_angry = maxf(_angry - delta, 0.0)
 		if _angry == 0.0:
 			_angry_cd = angry_cooldown   # recharge starts when the rage ends
-	elif Input.is_action_just_pressed("angry") and "angry_dash" in abilities and _angry_cd == 0.0 \
+	elif _card_pressed("angry", "angry_dash") and _angry_cd == 0.0 \
 			and pay_heart.call():
 		_angry = angry_time
 		_squash = Vector2(1.3, 0.75)
 		_puff()
 		_play(_land_sfx, 0.5)
-	if Input.is_action_just_pressed("push") and "personal_space" in abilities and _push_cd == 0.0:
+	if _card_pressed("push", "personal_space") and _push_cd == 0.0:
 		_personal_space()
 	_shock_cd = maxf(_shock_cd - delta, 0.0)
 	if on_floor:
@@ -718,7 +718,7 @@ func _update_dash_and_pound(delta: float, on_floor: bool) -> void:
 		return
 	if _stun > 0.0:
 		return
-	if Input.is_action_just_pressed("dash") and "dash" in abilities and _dash_cd == 0.0 and not _pounding \
+	if _card_pressed("dash", "dash") and _dash_cd == 0.0 and not _pounding \
 			and (on_floor or not _air_dash_used):
 		var dir := Input.get_axis("move_left", "move_right")
 		if dir != 0.0:
@@ -731,7 +731,7 @@ func _update_dash_and_pound(delta: float, on_floor: bool) -> void:
 		_squash = Vector2(1.4, 0.7)
 		_puff()
 		_play(_jump_sfx, 1.4)
-	elif Input.is_action_just_pressed("pound") and "pound" in abilities and not on_floor and not _pounding:
+	elif _card_pressed("pound", "pound") and not on_floor and not _pounding:
 		_pounding = true
 		velocity = Vector2(0.0, pound_speed)
 		_squash = Vector2(0.7, 1.4)
@@ -951,3 +951,13 @@ func _draw() -> void:
 		for side in [-1.0, 1.0]:
 			var bx: float = ex + side * 4.0
 			draw_line(Vector2(bx + side * 3.0, ey - 4.0), Vector2(bx - side * 2.0, ey - 1.0), eyes, 2.0)
+
+
+## A card ability's button: its touch button (action), or the keyboard/gamepad key of the card
+## slot it is equipped in (slot 1 = J / X, slot 2 = K / B, slot 3 = L / Y).
+func _card_pressed(action: String, ability: String) -> bool:
+	var slot := abilities.find(ability)
+	if slot < 0:
+		return false
+	return Input.is_action_just_pressed(action) \
+			or (slot < 3 and Input.is_action_just_pressed("slot_%d" % (slot + 1)))

@@ -26,9 +26,9 @@ const TYPE_COLORS := {"attack": Color("e5484d"), "jump": Color("3d7be0"), "movem
 	"misc": Color("7d8597")}
 ## How each card reads in the menus: active cards say how to use them, passives start "Passive:".
 const DESCRIPTIONS := {
-	"dash": "Press Dash (Shift, X or K) to burst forward the way you're facing. You get one dash "
+	"dash": "Press its card slot key (J, K or L) to burst forward the way you're facing. You get one dash "
 		+ "per jump in the air. Dashing into an up-down spike square breaks it.",
-	"pound": "Press Ground Pound (Down, S or J) in the air to slam straight down. Pounding onto "
+	"pound": "In the air, press its card slot key (J, K or L) to slam straight down. Pounding onto "
 		+ "a spike square breaks it, and you bounce off. Hold jump as you land to spring back up.",
 	"double_jump": "Press jump again in the air for one extra jump, 75% as high as a full jump. "
 		+ "It recharges when you land.",
@@ -55,7 +55,7 @@ const DESCRIPTIONS := {
 	"magnet": "Passive: pixels within 2 tiles of you fly over to you.",
 	"wall_cling": "Passive: press against a wall in mid-air to hang on for up to 1 second, then "
 		+ "jump to kick off it. Works on normal walls, not rubber ones.",
-	"brick_drop": "Press Brick (C or L) in the air to drop a brick straight down. It stays where "
+	"brick_drop": "In the air, press its card slot key (J, K or L) to drop a brick straight down. It stays where "
 		+ "it lands, even on a spike square, and you can stand on it. Recharges in 3 seconds.",
 	"slow_burst": "Passive: when you get hurt, every obstacle within 3 tiles of you moves at half "
 		+ "speed for 3 seconds.",
@@ -66,10 +66,10 @@ const DESCRIPTIONS := {
 	"momentum": "Passive: keep running without stopping or turning to build up speed, up to "
 		+ "25% faster after 2 seconds.",
 	"heart_box": "Passive: you start every run with one extra heart (3 instead of 2).",
-	"angry_dash": "Rare. Press Angry (V or U) to rage for 3 seconds: you glow red, run 50% faster "
+	"angry_dash": "Rare. Press its card slot key (J, K or L) to rage for 3 seconds: you glow red, run 50% faster "
 		+ "and smash straight through Bad Blocks, spike squares and spiked platforms without getting hurt. "
 		+ "Costs 1 heart (never your last). Recharges 5 seconds after the rage ends.",
-	"personal_space": "Rare. Press Push (B or I) to shove every Bad Block, spike square and spiked "
+	"personal_space": "Rare. Press its card slot key (J, K or L) to shove every Bad Block, spike square and spiked "
 		+ "platform within 4 tiles 3 tiles away from you (Bad Blocks stop at their platform's edge) "
 		+ "and stun them for 1 second. Recharges in 3 seconds.",
 	"safety_bubble": "Passive: the first time you fall into a pit in a level, a bubble catches you "

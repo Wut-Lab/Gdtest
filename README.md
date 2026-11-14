@@ -67,9 +67,12 @@ make those the game's defaults. In Godot, the same values are on the Player scen
 
 | Action | Keyboard | Gamepad | Touch |
 |---|---|---|---|
-| Move | ← → or A D | D-pad or left stick | Left and right buttons, bottom-left |
-| Jump (hold for higher) | Space, ↑, W or Z | A / Cross | JUMP button, bottom-right |
+| Move | A D | D-pad or left stick | Left and right buttons, bottom-left |
+| Jump (hold for higher) | W or Space | A / Cross | JUMP button, bottom-right |
 | Restart | R | | |
+| Pause | Esc or P | Start | Pause button |
+| Enter a town door | E or W | | ENTER button |
+| Card slot 1 / 2 / 3 ability | J / K / L | X / B / Y | That card's button |
 
 Touch buttons appear on touchscreens. To try them on a PC, turn on
 **Project Settings > Input Devices > Pointing > Emulate Touch From Mouse**.

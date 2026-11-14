@@ -557,7 +557,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			and not get_tree().paused:
 		new_run()
 	elif state == State.TOWN and (event.is_action_pressed("ui_up")
-			or (event is InputEventKey and event.pressed and event.keycode == KEY_E)):
+			or (event is InputEventKey and event.pressed and event.physical_keycode in [KEY_E, KEY_W])):
 		_enter_door()
 
 
