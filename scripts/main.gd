@@ -296,6 +296,9 @@ func enter_town(at_door := "") -> void:
 	town = town.replace("r", "R" if CardCollection.milestone(10) else "#")
 	if not CardCollection.milestone(10):
 		town = town.replace(")", ".")
+	# Area milestones: the first time you play an area, a little of it shows up in town.
+	if "moss" not in CardCollection.areas_played:
+		town = town.replace("o", ".")   # mossy blocks by the pond
 	if not CardCollection.larry_here():
 		town = town.replace("f", ".").replace("l", ".")   # Larry's hut: your 3rd Shop card
 	# Romeo sits on the right hill, then the left, switching every 2 levels you complete.
@@ -814,6 +817,9 @@ func _play_floor_level() -> void:
 	_replay_mode = ""
 	set_music("music_level")
 	var ar := _area(id)
+	if id not in CardCollection.areas_played:
+		CardCollection.areas_played.append(id)   # town milestone: see enter_town
+		CardCollection.save()
 	if step > ar.seeds.size():
 		_play_boss(ar, carry)
 		return

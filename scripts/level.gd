@@ -71,6 +71,9 @@ var heart_check := Callable()
 @onready var goal: Goal = $Goal
 ## Boss rooms: background doors (d, bottom cell of a 2-tall door) and whether a boss is here.
 var _back_doors: Array[Vector2i] = []
+## Mossy blocks (o): ground blocks with moss on them, e.g. by the town pond after the Mossy Cave.
+var _moss_cells: Array[Vector2i] = []
+var _moss_layer: Node2D
 var _has_boss := false
 
 
@@ -98,6 +101,10 @@ func _ready() -> void:
 	_pixels = Node2D.new()
 	_pixels.name = "Pixels"
 	add_child(_pixels)
+	_moss_layer = Node2D.new()   # over the tiles, so the moss covers the blocks
+	_moss_layer.name = "MossBlocks"
+	add_child(_moss_layer)
+	_moss_layer.draw.connect(_draw_moss_blocks)
 	water = Water.new()
 	water.name = "Water"
 	add_child(water)
@@ -136,6 +143,7 @@ func load_map_text(text: String) -> void:
 	var crumbles: Array[Vector2i] = []
 	var bosses: Array[Vector2i] = []
 	_back_doors.clear()
+	_moss_cells.clear()
 	var lines := text.replace("\r", "").split("\n")
 	for y in lines.size():
 		var line: String = lines[y]
@@ -168,6 +176,9 @@ func load_map_text(text: String) -> void:
 					checkpoints.append(Vector2i(x, y))
 				"c":
 					crumbles.append(Vector2i(x, y))
+				"o":
+					cells[Vector2i(x, y)] = "#"
+					_moss_cells.append(Vector2i(x, y))
 				"m":
 					bosses.append(Vector2i(x, y))
 				"d":
@@ -214,6 +225,7 @@ func load_map_text(text: String) -> void:
 		boss.defeated.connect(func(_pos: Vector2) -> void: boss_defeated.emit())
 		_obstacles.add_child(boss)
 	water.setup(water_cells)
+	_moss_layer.queue_redraw()
 	_update_walls()
 	queue_redraw()
 
@@ -455,6 +467,27 @@ func _draw_back_door(cell: Vector2i) -> void:
 	draw_rect(Rect2(x, y + 14, w, 3), Color("3f2817"))
 	draw_rect(Rect2(x, y + h - 18, w, 3), Color("3f2817"))
 	draw_rect(Rect2(x + w - 10, y + h / 2.0, 4, 4), Color("e0a35a"))   # knob
+
+
+## A block wrapped in moss: green over the top and down the sides, with tufts and a vine.
+func _draw_moss_blocks() -> void:
+	for cell in _moss_cells:
+		_draw_moss_block(_moss_layer, cell)
+
+
+func _draw_moss_block(c: CanvasItem, cell: Vector2i) -> void:
+	var x := cell.x * T
+	var y := cell.y * T
+	var rng := RandomNumberGenerator.new()
+	rng.seed = cell.x * 31 + cell.y
+	c.draw_rect(Rect2(x, y, T, T), Color(0.31, 0.6, 0.24, 0.45))
+	c.draw_rect(Rect2(x, y - 3, T, 7), Color("4f9a3c"))
+	for side in [x, x + T - 4]:
+		c.draw_rect(Rect2(side, y + 4, 4, rng.randi_range(8, 20)), Color("4f9a3c"))
+	for i in 4:
+		c.draw_rect(Rect2(x + rng.randi_range(2, T - 6), y - 3 - rng.randi_range(2, 6), 3, 5), Color("6cc04f"))
+	for i in 3:
+		c.draw_rect(Rect2(x + rng.randi_range(4, T - 8), y + rng.randi_range(8, T - 8), 4, 3), Color("6cc04f"))
 
 
 ## Mossy Cave: tufts of moss along every top surface and a few vines hanging under ledges.

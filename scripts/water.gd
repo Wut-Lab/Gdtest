@@ -31,6 +31,7 @@ func setup(cells: Array[Vector2i]) -> void:
 	for c in cells:
 		_depth[c] = c.y - int(_surface[c.x] / T)
 	if cells.is_empty():
+		queue_redraw()   # clear the last map's pond (levels have no water)
 		return
 	var xs := _surface.keys()
 	xs.sort()

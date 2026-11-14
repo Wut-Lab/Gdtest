@@ -167,6 +167,33 @@ func set_town(on: bool) -> void:
 func _build_equip() -> VBoxContainer:
 	var page := _page_box("Equip")
 	(page.get_child(0) as Label).text = "Cards"
+	# Filters for the card list: All, then one per card type.
+	var filters := HBoxContainer.new()
+	filters.add_theme_constant_override("separation", 4)
+	filters.alignment = BoxContainer.ALIGNMENT_CENTER
+	page.add_child(filters)
+	var group := ButtonGroup.new()
+	for f in FILTERS:
+		var fb := Button.new()
+		fb.text = FILTERS[f]
+		fb.toggle_mode = true
+		fb.button_group = group
+		fb.button_pressed = f == "all"
+		fb.custom_minimum_size = Vector2(0, 30)
+		fb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		fb.add_theme_font_size_override("font_size", 13)
+		if f != "all":
+			var col: Color = AbilityCard.TYPE_COLORS[f]
+			fb.add_theme_color_override("font_pressed_color", Color.WHITE)
+			var sb := StyleBoxFlat.new()
+			sb.bg_color = col
+			sb.set_corner_radius_all(6)
+			fb.add_theme_stylebox_override("pressed", sb)
+			fb.add_theme_stylebox_override("hover_pressed", sb)
+		fb.pressed.connect(func() -> void:
+			_equip_filter = f
+			_refresh_equip())
+		filters.add_child(fb)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 12)
 	page.add_child(row)
@@ -198,6 +225,8 @@ func _build_equip() -> VBoxContainer:
 
 
 const EQUIP_WIDTH := 190.0
+const FILTERS := {"all": "All", "attack": "Attack", "movement": "Movement", "jump": "Jump", "misc": "Misc"}
+var _equip_filter := "all"
 
 
 ## A card row: its picture and its name. Empty ability = an empty slot.
@@ -242,7 +271,8 @@ func _refresh_equip() -> void:
 		c.queue_free()
 	var full := eq.size() >= CardCollection.MAX_EQUIPPED
 	for a in CardCollection.ALL:
-		if a in CardCollection.owned and a not in eq:
+		if a in CardCollection.owned and a not in eq \
+				and (_equip_filter == "all" or AbilityCard.TYPES[a] == _equip_filter):
 			var b := _card_button(EQUIP_WIDTH - 12)
 			_set_card_button(b, a)
 			b.disabled = full
@@ -250,7 +280,9 @@ func _refresh_equip() -> void:
 			_equip_list.add_child(b)
 	if _equip_list.get_child_count() == 0:
 		var none := Label.new()
-		none.text = "No other cards yet."
+		none.text = "No other cards yet." if _equip_filter == "all" else "No %s cards here." % FILTERS[_equip_filter]
+		none.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		none.custom_minimum_size = Vector2(EQUIP_WIDTH - 12, 0)
 		none.add_theme_color_override("font_color", Color("a9b3d1"))
 		_equip_list.add_child(none)
 
