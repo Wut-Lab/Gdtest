@@ -8,7 +8,8 @@ audio/land.wav, audio/hurt.wav, audio/buy.wav, audio/ding.wav, the boss sounds (
 boss_crash, boss_defeat) and the boss track music_boss.ogg, plus the Mossy Cave tracks
 (music_moss, music_moss_boss, both with crickets) and Old Mossback's moss_* sounds, and
 Cavern Lake's music_lake, music_lake_boss and its sounds (chomp, splash, bubbles, harpoon_fire,
-lake_boss_hit, lake_boss_defeat). Everything is synthesized here, so edit this file and rerun
+lake_boss_hit, lake_boss_defeat), and the Ember Forge's music_forge, music_forge_boss and
+its sounds (flame_jet, sizzle, anvil_clang, sparks, forge_boss_hit, forge_boss_defeat). Everything is synthesized here, so edit this file and rerun
 it to change the sound, then run `godot --headless --path . --import`.
 """
 import os
@@ -990,6 +991,210 @@ def sfx_lake_boss_defeat():
     return out
 
 
+# ---------- Ember Forge: an anvil-driven forge track, a boss track and its sounds ----------
+
+def anvil(f, dur=0.6, decay=0.35):
+    """A hammer on an anvil: a bright metallic ring (inharmonic partials) with a sharp strike."""
+    n = int((dur + decay * 2) * SR)
+    t = np.arange(n) / SR
+    out = np.zeros(n)
+    for ratio, g, dk in ((1.0, 1.0, 1.0), (2.41, 0.6, 0.7), (3.87, 0.4, 0.5), (5.95, 0.25, 0.35), (8.4, 0.12, 0.2)):
+        out += np.sin(2 * np.pi * f * ratio * t) * np.exp(-t / (decay * dk)) * g
+    strike = np.zeros(n)
+    m = int(0.006 * SR)
+    strike[:m] = np.random.default_rng(int(f)).standard_normal(m) * np.linspace(1, 0, m)
+    return (out + strike) * np.minimum(t / 0.001, 1)
+
+
+def brass(f, dur):
+    """A low, buzzy horn for the forge's heavy chords."""
+    n = int((dur + 0.15) * SR)
+    t = np.arange(n) / SR
+    ph = 2 * np.pi * f * t
+    w = np.sin(ph) + 0.5 * np.sin(2 * ph) + 0.35 * np.sin(3 * ph) + 0.2 * np.sin(4 * ph) + 0.1 * np.sin(5 * ph)
+    return w * 0.4 * env_adsr(n, 0.06, 0.3, 0.75, 0.1, dur)
+
+
+def rumble(dur, seed):
+    """Low lava rumble: smoothed noise."""
+    r = np.random.default_rng(seed)
+    n = int(dur * SR)
+    x = r.standard_normal(n)
+    for _ in range(3):
+        x = np.convolve(x, np.ones(40) / 40, "same")
+    return x / (np.max(np.abs(x)) + 1e-9)
+
+
+def render_forge_music():
+    """Ember Forge levels: 116 BPM in C phrygian-ish minor, 32 bars (about 66 s). A heavy horn
+    pad, a pulsing low bass, anvil clangs as the backbeat, a hammered bell riff and lava rumble."""
+    bpm = 116
+    beat = 60 / bpm
+    slot = beat / 2
+    bar = beat * 4
+    prog = [(48, "min"), (49, "maj"), (48, "min"), (46, "min"),
+            (44, "maj"), (49, "maj"), (43, "maj"), (48, "min")] * 4   # Cm Db Cm Bbm Ab Db G Cm
+    total = int(len(prog) * bar * SR)
+    buf = np.zeros(total + 4 * SR)
+    wet = np.zeros_like(buf)
+
+    def put(sound, t, gain, into=None):
+        b = buf if into is None else into
+        i = int(t * SR)
+        x = sound * gain
+        b[i:i + len(x)] += x[: len(b) - i]
+
+    riff = [(0, 0), (3, 3), (4, 7), (6, 5)]   # (slot, semitones over the chord root)
+    for bi, (root, q) in enumerate(prog):
+        t0 = bi * bar
+        sec = bi // 8
+        tones = [root + x for x in TRIAD[q]]
+        for m in tones:
+            put(brass(midi_hz(m), bar * 0.95), t0, 0.05)
+        for k in range(8):   # pulsing eighth-note bass
+            put(bass(midi_hz(root - 12), slot * 0.6), t0 + k * slot, 0.14 if k % 2 == 0 else 0.09)
+        put(kick(), t0, 0.3)
+        put(kick(), t0 + 4 * slot, 0.24)
+        if sec >= 1 or bi >= 4:
+            for k in (2, 6):   # the anvil on the backbeat
+                put(anvil(1180, 0.3, 0.18), t0 + k * slot, 0.09)
+        if sec >= 1:
+            for st, iv in riff:
+                put(bell(midi_hz(root + 24 + iv), slot), t0 + st * slot, 0.05, wet)
+        if sec == 2:
+            for k in range(8):
+                put(hat(), t0 + k * slot + slot / 2, 0.04)
+        if bi % 4 == 3:
+            put(anvil(880, 0.4, 0.3), t0 + 7 * slot, 0.08)
+    buf += echo(wet, slot * 1.5, 0.35, 0.4)
+    buf[:total] += rumble(total / SR, 61) * 0.05
+    tail = buf[total:]
+    buf = buf[:total]
+    buf[: len(tail)] += tail
+    buf *= 0.68 / np.max(np.abs(buf))
+    return buf
+
+
+def render_forge_boss_music():
+    """Anvil Annie: 148 BPM in C minor, 16 bars (about 26 s) that loop. Pounding double kicks,
+    anvil hits on every beat, a horn riff and a fast hammered arpeggio."""
+    bpm = 148
+    beat = 60 / bpm
+    slot = beat / 2
+    bar = beat * 4
+    prog = [(48, "min"), (44, "maj"), (46, "maj"), (43, "maj")] * 4   # Cm Ab Bb G
+    total = int(len(prog) * bar * SR)
+    buf = np.zeros(total + 4 * SR)
+
+    def put(sound, t, gain):
+        i = int(t * SR)
+        x = sound * gain
+        buf[i:i + len(x)] += x[: len(buf) - i]
+
+    riff = [0, 0, 12, 0, 10, 0, 7, 3]
+    for bi, (root, q) in enumerate(prog):
+        t0 = bi * bar
+        tones = [root + x for x in TRIAD[q]]
+        for m in tones:
+            put(brass(midi_hz(m), bar * 0.95), t0, 0.04)
+        for k in range(8):
+            put(bass(midi_hz(root - 12 + riff[k]), slot * 0.7), t0 + k * slot, 0.2)
+        for k in (0, 1, 4, 5):
+            put(kick(), t0 + k * slot, 0.3 if k % 4 == 0 else 0.2)
+        for k in (0, 2, 4, 6):
+            put(anvil(1180 if k in (2, 6) else 980, 0.25, 0.14), t0 + k * slot, 0.07)
+        if bi >= 4:
+            for k in range(16):
+                put(pluck(midi_hz(tones[k % 3] + 24), slot / 2), t0 + k * slot / 2, 0.03)
+        if bi % 2 == 1:
+            put(brass(midi_hz(root + 12 + 7), bar * 0.4), t0 + bar / 2, 0.09)
+        for k in range(8):
+            put(hat(), t0 + k * slot + slot / 2, 0.05)
+    buf[:total] += rumble(total / SR, 62) * 0.04
+    tail = buf[total:]
+    buf = buf[:total]
+    buf[: len(tail)] += tail
+    buf *= 0.7 / np.max(np.abs(buf))
+    return buf
+
+
+def sfx_flame_jet():
+    """A fire jet roaring up: a rush of noise that swells, roars and dies away."""
+    r = np.random.default_rng(71)
+    n = int(1.0 * SR)
+    t = np.arange(n) / SR
+    x = r.standard_normal(n)
+    roar = np.convolve(x, np.ones(6) / 6, "same") * np.minimum(t / 0.06, 1) * np.exp(-np.maximum(t - 0.6, 0) / 0.15)
+    low = rumble(1.0, 72) * 0.8 * np.minimum(t / 0.05, 1) * np.exp(-t / 0.5)
+    crackle = np.zeros(n)
+    for _ in range(14):
+        i = int(r.uniform(0.05, 0.85) * SR)
+        c = noise_hit(0.004, n_sec=0.02)
+        crackle[i:i + len(c)] += c * 0.5
+    return roar * 0.5 + low + crackle
+
+
+def sfx_sizzle():
+    """Something burning: a hiss that fades, with little pops."""
+    r = np.random.default_rng(73)
+    n = int(0.5 * SR)
+    t = np.arange(n) / SR
+    x = r.standard_normal(n)
+    hiss = (x - np.convolve(x, np.ones(4) / 4, "same")) * np.exp(-t / 0.18) * np.minimum(t / 0.01, 1)
+    for _ in range(5):
+        i = int(r.uniform(0.0, 0.35) * SR)
+        c = noise_hit(0.003, n_sec=0.015)
+        hiss[i:i + len(c)] += c * 1.2
+    return hiss
+
+
+def sfx_anvil_clang():
+    """Anvil Annie's slam: a huge clang over a deep thud."""
+    out = anvil(620, 1.0, 0.5) * 0.7
+    hi = anvil(930, 1.0, 0.3)
+    out[: len(hi)] += hi * 0.3
+    thud = sweep(110, 40, 0.5)
+    t = np.arange(len(thud)) / SR
+    out[: len(thud)] += thud * np.exp(-t / 0.12) * 1.2
+    return out
+
+
+def sfx_sparks():
+    """Sparks spat out: a crackling fizz."""
+    r = np.random.default_rng(74)
+    out = np.zeros(int(0.45 * SR))
+    for _ in range(18):
+        i = int(r.uniform(0.0, 0.35) * SR)
+        c = noise_hit(r.uniform(0.002, 0.006), n_sec=0.03)
+        out[i:i + len(c)] += c * r.uniform(0.4, 1.0)
+    t = np.arange(len(out)) / SR
+    return out * np.exp(-t / 0.25)
+
+
+def sfx_forge_boss_hit():
+    """Stomping Anvil Annie: a ringing clang and a grunt of iron."""
+    out = anvil(780, 0.7, 0.28)
+    g = sweep(160, 90, 0.25, shape="square")
+    t = np.arange(len(g)) / SR
+    out[: len(g)] += g * np.exp(-t / 0.08) * 0.3
+    return out
+
+
+def sfx_forge_boss_defeat():
+    """Anvil Annie beaten: a cracking clang, a heavy fall, cooling hiss, then a fanfare (C Eb G C)."""
+    out = np.zeros(int(2.2 * SR))
+    c = sfx_anvil_clang()
+    out[: len(c)] += c[: len(out)]
+    s = sfx_sizzle()
+    i = int(0.4 * SR)
+    out[i:i + len(s)] += s * 0.6
+    for start, m in ((1.0, 72), (1.14, 75), (1.28, 79), (1.42, 84)):
+        b = bell(midi_hz(m + 12), 0.5)
+        i = int(start * SR)
+        out[i:i + len(b)] += b[: len(out) - i] * 0.45
+    return out
+
+
 def write_wav(path, x, rate=SR):
     x = np.clip(x, -1, 1)
     with wave.open(path, "wb") as f:
@@ -1036,11 +1241,14 @@ def main():
         write_wav(os.path.join(OUT, name + ".wav"), x * 0.9 / np.max(np.abs(x)))
     for name, fn in (("chomp", sfx_chomp), ("splash", sfx_splash), ("bubbles", sfx_bubbles),
                      ("harpoon_fire", sfx_harpoon_fire), ("lake_boss_hit", sfx_lake_boss_hit),
-                     ("lake_boss_defeat", sfx_lake_boss_defeat)):
+                     ("lake_boss_defeat", sfx_lake_boss_defeat), ("flame_jet", sfx_flame_jet),
+                     ("sizzle", sfx_sizzle), ("anvil_clang", sfx_anvil_clang), ("sparks", sfx_sparks),
+                     ("forge_boss_hit", sfx_forge_boss_hit), ("forge_boss_defeat", sfx_forge_boss_defeat)):
         x = fn()
         write_wav(os.path.join(OUT, name + ".wav"), x * 0.9 / np.max(np.abs(x)))
     for name, fn in (("music_moss", render_moss_music), ("music_moss_boss", render_moss_boss_music),
-                     ("music_lake", render_lake_music), ("music_lake_boss", render_lake_boss_music)):
+                     ("music_lake", render_lake_music), ("music_lake_boss", render_lake_boss_music),
+                     ("music_forge", render_forge_music), ("music_forge_boss", render_forge_boss_music)):
         m = fn()
         write_wav(tmp, m)
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", tmp, "-c:a", "libvorbis",

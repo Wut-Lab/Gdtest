@@ -21,6 +21,7 @@ extends Node2D
 ##   !  town: dungeon gate     $  town: shop     &  town: card hall
 ##   ~  still water (you float)   < >  shallow river running left / right (carries you)
 ##   |  waterfall (pushes you down)   a  Piranha Block (in water)   u  Harpoonist Block
+##   _  lava (Ember Forge)   :  hot plate   j  flame jet   t  Cinder Block   z  Anvil Annie (boss)
 ##   ,  shallow spikes (Cavern Lake)   x  Crazy Harry, the Cavern Lake boss (in his lake)
 
 signal goal_reached
@@ -124,6 +125,35 @@ func add_overgrowth(pos: Vector2) -> void:
 var _currents: Array[Dictionary] = []
 const UNDERTOW_TIME := 2.5
 const UNDERTOW_PULL := 150.0
+
+
+## Ember Forge hot plates and boss floor.
+var _plates: Array = []
+var _cinder_cells := {}
+var _lava: ForgeHazards.Lava
+var _sizzle: AudioStreamPlayer
+
+
+func set_plates_active(on: bool) -> void:
+	for p in _plates:
+		if is_instance_valid(p):
+			p.active = on
+
+
+## Lava or a red-hot plate burned the player.
+func _burn(push: Vector2) -> void:
+	var p: Player = get_tree().get_first_node_in_group("player")
+	if p and not p.is_safe():
+		_sizzle.play()
+	player_hurt.emit(push)
+
+
+## Hot Feet card: a stomp's burst of heat stuns enemies within about 2 tiles for a second.
+func hot_feet(pos: Vector2) -> void:
+	CardFx.spawn(self, pos, "shock", 70.0)
+	for t in get_tree().get_nodes_in_group("card_targets"):
+		if t.visible and t.has_method("stun") and t.position.distance_to(pos) < 72.0:
+			t.stun(1.0)
 
 
 ## Geyser Jump card: a jump from pos (the player's feet) sprays water down, pushing enemies under
@@ -266,6 +296,15 @@ func _ready() -> void:
 	water = Water.new()
 	water.name = "Water"
 	add_child(water)
+	_lava = ForgeHazards.Lava.new()
+	_lava.name = "Lava"
+	_lava.hurt_player.connect(_burn)
+	add_child(_lava)
+	_sizzle = AudioStreamPlayer.new()
+	_sizzle.stream = load("res://audio/sizzle.wav")
+	_sizzle.volume_db = -4.0
+	_sizzle.bus = AudioSettings.SOUNDS_BUS
+	add_child(_sizzle)
 	_doors = Node2D.new()
 	_doors.name = "Doors"
 	add_child(_doors)
@@ -295,6 +334,7 @@ func load_map_text(text: String) -> void:
 	var platforms := {}   # cell -> spikes on top?
 	var bad_blocks: Array[Vector2i] = []
 	_hard_cells.clear()
+	_cinder_cells.clear()
 	_mossy_cells.clear()
 	_moss_patches.clear()
 	_overgrowth = {}
@@ -309,6 +349,11 @@ func load_map_text(text: String) -> void:
 	var water_cells := {}   # cell -> "~", "<", ">" or "|"
 	var piranhas: Array[Vector2i] = []
 	var lake_bosses: Array[Vector2i] = []
+	var lava_cells: Array[Vector2i] = []
+	var plates: Array[Vector2i] = []
+	var jets: Array[Vector2i] = []
+	var forge_bosses: Array[Vector2i] = []
+	_plates.clear()
 	var harpoonists: Array[Vector2i] = []
 	var shallow: Array[Vector2i] = []
 	var crumbles: Array[Vector2i] = []
@@ -375,12 +420,23 @@ func load_map_text(text: String) -> void:
 					water_cells[Vector2i(x, y)] = kind
 				"u":
 					harpoonists.append(Vector2i(x, y))
+				"_":
+					lava_cells.append(Vector2i(x, y))
+				":":
+					plates.append(Vector2i(x, y))
+				"j":
+					jets.append(Vector2i(x, y))
+				"t":
+					bad_blocks.append(Vector2i(x, y))
+					_cinder_cells[Vector2i(x, y)] = true
+				"z":
+					forge_bosses.append(Vector2i(x, y))
 				"x":
 					lake_bosses.append(Vector2i(x, y))
 					water_cells[Vector2i(x, y)] = "~"
 				",":
 					shallow.append(Vector2i(x, y))
-				"!", "$", "&", "%", "(", ")", "{", "}", "[", "]", "f", "l":
+				"!", "$", "&", "%", "(", ")", "{", "}", "[", "]", "f", "l", ";":
 					doors[Vector2i(x, y)] = ch
 				"T", "B":
 					platforms[Vector2i(x, y)] = ch == "T"
@@ -456,6 +512,39 @@ func load_map_text(text: String) -> void:
 		hb.harpooned.connect(func(push: Vector2) -> void: player_harpooned.emit(push))
 		hb.broken.connect(func(pos: Vector2) -> void: obstacle_broken.emit(pos, "harpoonist"))
 		_obstacles.add_child(hb)
+	_lava.cells = lava_cells
+	_lava.queue_redraw()
+	var plate_phase := {}
+	for cell in plates:   # plates in a row heat up together
+		var start := cell
+		while plates.has(start + Vector2i.LEFT):
+			start += Vector2i.LEFT
+		if not plate_phase.has(start):
+			plate_phase[start] = fmod(start.x * 1.37 + start.y * 0.71, 4.2)
+		var hp := ForgeHazards.HotPlate.new()
+		hp.phase = plate_phase[start]
+		hp.position = Vector2(cell.x * T + T / 2.0, cell.y * T + ForgeHazards.HotPlate.THICK / 2.0)
+		hp.hurt_player.connect(_burn)
+		_obstacles.add_child(hp)
+		_plates.append(hp)
+	for cell in jets:
+		var fj := ForgeHazards.FlameJet.new()
+		fj.phase = fmod(cell.x * 0.93, 3.2)
+		fj.position = Vector2(cell.x * T + T / 2.0, (cell.y + 1) * T)
+		fj.hurt_player.connect(func(push: Vector2) -> void: player_hurt.emit(push))
+		_obstacles.add_child(fj)
+	for cell in forge_bosses:
+		_has_boss = true
+		var fb := ForgeBoss.new()
+		fb.position = Vector2(cell.x * T + T / 2.0, (cell.y + 1) * T - ForgeBoss.H / 2.0)
+		fb.room = self
+		fb.min_x = T
+		fb.max_x = (lines[cell.y].length() - 1) * T
+		fb.hurt_player.connect(func(push: Vector2) -> void: player_hurt.emit(push))
+		fb.defeated.connect(func(_pos: Vector2) -> void: boss_defeated.emit())
+		_obstacles.add_child(fb)
+	if not forge_bosses.is_empty():
+		set_plates_active(false)   # the boss heats them up in stage 2
 	for cell in lake_bosses:
 		_has_boss = true
 		var probe := _make_piranha(cell, water_cells)   # just to find his stretch of lake
@@ -581,11 +670,12 @@ func _place_spikes(cells: Array[Vector2i], vertical_cells: Array[Vector2i], plat
 		var e := BadBlock.new()
 		e.hard = _hard_cells.has(cell)
 		e.mossy = _mossy_cells.has(cell)
+		e.cinder = _cinder_cells.has(cell)
 		e.landed.connect(func(pos: Vector2) -> void: add_moss_patch(pos))
 		e.position = Vector2(cell.x * T + T / 2.0, (cell.y + 1) * T - BadBlock.SIZE / 2.0)
 		e.hurt_player.connect(func(push: Vector2) -> void: player_hurt.emit(push))
 		e.broken.connect(func(pos: Vector2) -> void:
-			obstacle_broken.emit(pos, "moss_square" if e.mossy else "bad_block"))
+			obstacle_broken.emit(pos, "moss_square" if e.mossy else ("cinder" if e.cinder else "bad_block")))
 		_obstacles.add_child(e)
 	for cell in platforms:
 		var p := SpikePlatform.new()
@@ -735,7 +825,8 @@ func _update_walls() -> void:
 
 func set_theme(t: String) -> void:
 	theme = t
-	ground.modulate = {"moss": Color(0.62, 0.86, 0.6), "lake": Color(0.5, 0.66, 0.98)}.get(t, Color.WHITE)
+	ground.modulate = {"moss": Color(0.62, 0.86, 0.6), "lake": Color(0.5, 0.66, 0.98),
+		"forge": Color(0.78, 0.5, 0.42)}.get(t, Color.WHITE)
 	queue_redraw()
 
 
@@ -744,6 +835,8 @@ func _draw() -> void:
 		_draw_moss()
 	elif theme == "lake":
 		_draw_lake()
+	elif theme == "forge":
+		_draw_forge()
 	for cell in _back_doors:
 		_draw_back_door(cell)
 	# A faint tile grid behind the level.
@@ -829,6 +922,24 @@ func _draw_moss_block(c: CanvasItem, cell: Vector2i) -> void:
 		c.draw_rect(Rect2(x + rng.randi_range(2, T - 6), y - 3 - rng.randi_range(2, 6), 3, 5), Color("6cc04f"))
 	for i in 3:
 		c.draw_rect(Rect2(x + rng.randi_range(4, T - 8), y + rng.randi_range(8, T - 8), 4, 3), Color("6cc04f"))
+
+
+## Ember Forge: scorched stone with glowing cracks along the top and soot underneath.
+func _draw_forge() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 13
+	for cell in ground.get_used_cells():
+		var x := cell.x * T
+		var y := cell.y * T
+		if ground.get_cell_source_id(cell + Vector2i.UP) == -1:
+			# Glowing embers along the top edge, with a warm haze above.
+			draw_rect(Rect2(x, y - 3, T, 3), Color("c2410c"))
+			draw_rect(Rect2(x, y - 8, T, 5), Color(1.0, 0.45, 0.1, 0.12))
+			for i in 3:
+				if rng.randf() < 0.5:
+					draw_rect(Rect2(x + rng.randi_range(2, T - 6), y - 5, 3, 2), Color("ffb347"))
+		if ground.get_cell_source_id(cell + Vector2i.DOWN) == -1 and rng.randf() < 0.3:
+			draw_rect(Rect2(x + rng.randi_range(2, T - 10), y + T, 8, 3), Color(0.1, 0.08, 0.08, 0.5))   # soot
 
 
 ## Cavern Lake: damp stone, little stalactites hanging under ledges and wet shine on top.

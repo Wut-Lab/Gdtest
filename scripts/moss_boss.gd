@@ -360,6 +360,7 @@ func _check_player() -> void:
 			side = -_dir
 		if p.velocity.y >= 0.0 and feet < global_position.y - SIZE * 0.2:
 			p.velocity.y = -p.jump_velocity * 0.85
+			p.stomped()   # Hot Feet card
 			if _flash == 0.0:
 				_take_stomp()
 			return

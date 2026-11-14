@@ -185,6 +185,7 @@ func _check_player() -> void:
 				return
 			if not p.is_pounding():
 				p.velocity.y = -p.jump_velocity * 0.6
+				p.stomped()   # Hot Feet card
 			_die()
 			return
 		var dx: float = p.global_position.x - global_position.x

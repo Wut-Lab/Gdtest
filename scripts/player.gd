@@ -6,6 +6,8 @@ extends CharacterBody2D
 signal fell
 ## Overgrowth card: landed from a jump here (feet).
 signal grew_moss(pos: Vector2)
+## Hot Feet card: a stomp set off a burst of heat at pos (feet).
+signal hot_feet(pos: Vector2)
 ## Geyser Jump card: a jump sprayed water down from feet (pos).
 signal geyser(pos: Vector2, face: float)
 ## Undertow card: a dash finished, leaving a current from start to end.
@@ -422,6 +424,15 @@ func _run_speed() -> float:
 
 
 ## Launch speed of a jump: High Jump makes it 20% higher.
+## You bounced off an enemy (or a boss) you stomped. Hot Feet card: the bounce is 30% higher and
+## a burst of heat stuns enemies nearby.
+func stomped() -> void:
+	if "hot_feet" not in abilities:
+		return
+	velocity.y *= 1.3
+	hot_feet.emit(global_position + Vector2(0.0, SIZE / 2.0))
+
+
 ## Geyser Jump card: every jump (double jumps too) is 10% higher and sprays water down.
 func _geyser() -> void:
 	if "geyser_jump" not in abilities:

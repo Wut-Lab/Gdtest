@@ -11,7 +11,7 @@ const FILES := 3
 const MAX_EQUIPPED := 3
 const STARTER := "heart_box"
 ## Every card, grouped by type, in the order the collection screen shows them.
-const ALL := ["dash", "pound", "double_jump", "glide", "quick", "tele_hop", "high_jump", "phase_jump", "shockwave", "stun_landing", "grip_and_go", "lucky_charm", "bounce_house", "secret_helper", "magnet", "wall_cling", "brick_drop", "slow_burst", "portion_booster", "air_brake", "momentum", "heart_box", "angry_dash", "personal_space", "safety_bubble", "guard_block", "long_blink", "chain_dash", "overgrowth", "bark_hide", "undertow", "geyser_jump"]
+const ALL := ["dash", "pound", "double_jump", "glide", "quick", "tele_hop", "high_jump", "phase_jump", "shockwave", "stun_landing", "grip_and_go", "lucky_charm", "bounce_house", "secret_helper", "magnet", "wall_cling", "brick_drop", "slow_burst", "portion_booster", "air_brake", "momentum", "heart_box", "angry_dash", "personal_space", "safety_bubble", "guard_block", "long_blink", "chain_dash", "overgrowth", "bark_hide", "undertow", "geyser_jump", "kiln_skin", "hot_feet"]
 
 ## Where each card can come from (its drop group, as on the blueprint):
 ##   shop = Shop Only, drop = Drop Only (earned in levels, never sold), chest = Chest Only,
@@ -30,9 +30,9 @@ const DROP_GROUPS := {
 	"portion_booster": "drop", "secret_helper": "chest", "magnet": "chest",
 	"angry_dash": "milestone", "personal_space": "milestone", "safety_bubble": "paul", "guard_block": "paul", "long_blink": "paul",
 	"chain_dash": "boss",
-	"overgrowth": "moss", "bark_hide": "boss", "undertow": "lake", "geyser_jump": "boss",
+	"overgrowth": "moss", "bark_hide": "boss", "undertow": "lake", "geyser_jump": "boss", "kiln_skin": "forge", "hot_feet": "boss",
 }
-## Level milestones (random levels and the training level beaten):
+## Level milestones (random dungeon levels beaten; the training level doesn't count):
 ##   5: Paul moves onto the floating platform in town (his mini shop sells Paul cards)
 ##   10: rubber blocks under Paul's platform let you reach him, and Terry moves in
 ##   15: a rare attack card (RARE_ATTACK) joins your collection
@@ -340,10 +340,10 @@ static func toggle_like(seed_value: int) -> bool:
 
 
 
-## Levels beaten for milestones: random levels and the training level (not replays or tests).
+## Levels beaten for milestones: random levels only (not the training level, replays or tests).
 static func levels_beaten() -> int:
 	return beaten.filter(func(k: String) -> bool:
-		return k == "main" or _is_slot(k) or (k.begins_with("seed") and not OLD_KEYS.has(k))).size()
+		return _is_slot(k) or (k.begins_with("seed") and not OLD_KEYS.has(k))).size()   # not the training level
 
 
 static func larry_here() -> bool:

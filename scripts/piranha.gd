@@ -244,6 +244,7 @@ func _check_player() -> void:
 				return
 			if not p.is_pounding():
 				p.velocity.y = -p.jump_velocity * 0.6
+				p.stomped()   # Hot Feet card
 			_die()
 			return
 		if _stun > 0.0:

@@ -11,14 +11,14 @@ extends Area2D
 
 signal near_changed(door: TownDoor, near: bool)
 
-const KINDS := {"!": "dungeon", "$": "shop", "&": "cards", "%": "replay", "(": "paul", ")": "terry", "{": "paula", "}": "tim", "[": "romeo", "]": "romeo", "f": "hut", "l": "larry"}
+const KINDS := {"!": "dungeon", "$": "shop", "&": "cards", "%": "replay", "(": "paul", ")": "terry", "{": "paula", "}": "tim", "[": "romeo", "]": "romeo", "f": "hut", "l": "larry", ";": "forge"}
 const NAMES := {"dungeon": "the Dungeon", "shop": "the Shop", "cards": "the Card Hall", "replay": "the Replay Room",
 	"paul": "Paul", "terry": "Terry", "paula": "Paula", "tim": "Tim", "romeo": "Romeo", "hut": "the Fishing Hut", "larry": "Larry", "pork": "Pork"}
 const SIGNS := {"dungeon": "DUNGEON", "shop": "SHOP", "cards": "CARDS", "replay": "REPLAY"}
 ## Townsfolk: you talk to them instead of entering.
 const PEOPLE := ["paul", "terry", "paula", "tim", "romeo", "larry", "pork"]
 ## Scenery only: no door to walk up to.
-const DECOR := ["hut"]
+const DECOR := ["hut", "forge"]
 ## Townsfolk who stroll back and forth (body colour, highlight).
 const WALKERS := {"paula": [Color("9b5de5"), Color("c19bf2")], "tim": [Color("3dbb5c"), Color("7fdc95")]}
 const WALK_RANGE := 36.0
@@ -77,6 +77,7 @@ func _draw() -> void:
 		"paula", "tim": _draw_walker()
 		"romeo": _draw_romeo()
 		"hut": _draw_hut()
+		"forge": _draw_forge()
 		"larry": _draw_larry()
 	if not SIGNS.has(kind):
 		return
@@ -285,6 +286,38 @@ func _draw_romeo() -> void:
 
 
 ## A small, makeshift fishing hut: patchy planks, a tarp roof tied down at the corners, a crate.
+## Ember Forge milestone: a little smithy by the shop: a brick furnace with a flickering fire,
+## a chimney puffing smoke, and an anvil with a hammer on it.
+func _draw_forge() -> void:
+	draw_rect(Rect2(-40, -64, 44, 64), EDGE)
+	for row in 7:
+		for i in 5:
+			var x0 := clampf(-38.0 + i * 10.0 - (5.0 if row % 2 else 0.0), -38.0, 2.0)
+			var x1 := clampf(-38.0 + i * 10.0 - (5.0 if row % 2 else 0.0) + 9.0, -38.0, 2.0)
+			if x1 > x0:
+				draw_rect(Rect2(x0, -62 + row * 9, x1 - x0, 8), Color("8f3f2a") if (row + i) % 3 else Color("a24d33"))
+	draw_rect(Rect2(-30, -84, 14, 22), Color("6f3324"))   # chimney
+	var flick := 0.5 + 0.5 * sin(_t * 13.0) * sin(_t * 7.3)
+	draw_rect(Rect2(-32, -30, 24, 24), Color("2a1410"))   # the furnace mouth
+	draw_rect(Rect2(-29, -22 + flick * 3.0, 18, 16 - flick * 3.0), Color("ff7a1f"))
+	draw_rect(Rect2(-25, -16 + flick * 2.0, 10, 10 - flick * 2.0), Color("ffd23f"))
+	draw_rect(Rect2(-36, -34, 32, 4), Color(1.0, 0.55, 0.2, 0.25 + 0.2 * flick))   # glow
+	for i in 3:   # smoke puffs rising from the chimney
+		var k := fmod(_t * 0.5 + i / 3.0, 1.0)
+		draw_rect(Rect2(-27 + sin(_t + i) * 4.0 + k * 10.0, -90 - k * 40.0, 8 + k * 6.0, 8 + k * 6.0), Color(0.35, 0.33, 0.35, 0.5 * (1.0 - k)))
+	# The anvil and a hammer.
+	draw_rect(Rect2(10, -28, 30, 8), Color("3b3f4a"))
+	draw_colored_polygon(PackedVector2Array([Vector2(40, -28), Vector2(48, -26), Vector2(40, -22)]), Color("3b3f4a"))
+	draw_rect(Rect2(18, -20, 14, 10), Color("2c2f38"))
+	draw_rect(Rect2(13, -10, 24, 10), Color("3b3f4a"))
+	draw_rect(Rect2(10, -28, 30, 2), Color("8a92a3"))
+	draw_rect(Rect2(16, -36, 16, 3), Color("7a5230"))
+	draw_rect(Rect2(28, -40, 7, 9), Color("5d6270"))
+	if fmod(_t, 2.5) < 0.15:   # now and then a spark jumps off the anvil
+		for i in 4:
+			draw_rect(Rect2(26 + i * 4 - 6, -34 - i * 3, 2, 2), Color("ffd23f"))
+
+
 func _draw_hut() -> void:
 	draw_rect(Rect2(-34, -58, 60, 58), EDGE)
 	var planks := [Color("9a7b55"), Color("8a6c48"), Color("a8875f"), Color("7f6342")]

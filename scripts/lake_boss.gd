@@ -298,6 +298,7 @@ func _check_player() -> void:
 
 func _take_stomp(p: Player) -> void:
 	p.velocity.y = -p.jump_velocity * 0.85
+	p.stomped()   # Hot Feet card
 	hp -= 1
 	_flash = 0.3
 	_hit_sfx.pitch_scale = 1.0 + (MAX_HP - hp) * 0.06

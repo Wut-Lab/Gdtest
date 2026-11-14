@@ -59,13 +59,22 @@ const AREAS := [
 	{"id": "lake", "name": "Cavern Lake", "first": 11, "levels": 5, "extra": 8,
 		"bad": [1, 1, 2, 2, 3], "hard": [1, 1, 1, 2, 2],
 		"boss": "res://levels/boss_lake.txt", "boss_name": "Crazy Harry"},
+	# Harder again: more and harder Bad Blocks from the start.
+	{"id": "forge", "name": "Ember Forge", "first": 16, "levels": 5, "extra": 10,
+		"bad": [2, 2, 2, 3, 3], "hard": [1, 1, 2, 2, 3],
+		"boss": "res://levels/boss_forge.txt", "boss_name": "Anvil Annie"},
 ]
 const FLOOR_CLEAR_REWARD := 10
 ## Beating a boss the first time: these pixels plus its card (Dash first, if you lack it).
 const BOSS_REWARD := 25
 ## Each boss gives its area's own card if you don't have it yet, otherwise the boss's card.
-const BOSS_CARDS := {"basic": "chain_dash", "moss": "bark_hide", "lake": "geyser_jump"}
-const AREA_CARDS := {"basic": "dash", "moss": "overgrowth", "lake": "undertow"}
+const BOSS_CARDS := {"basic": "chain_dash", "moss": "bark_hide", "lake": "geyser_jump", "forge": "hot_feet"}
+const AREA_CARDS := {"basic": "dash", "moss": "overgrowth", "lake": "undertow", "forge": "kiln_skin"}
+## Each area's sky tint.
+const SKY := {"moss": Color(0.55, 0.85, 0.7), "lake": Color(0.5, 0.62, 0.9), "forge": Color(0.95, 0.5, 0.4)}
+## Kiln Skin card: seconds between blocked hits.
+const KILN_COOLDOWN := 12.0
+var _kiln_cd := 0.0
 ## Chance Pork is in town on a visit, after the first.
 const PORK_CHANCE := 0.3
 ## Longest level a run may roll, in tiles.
@@ -101,6 +110,7 @@ func _ready() -> void:
 	player = player_scene.instantiate() as Player
 	player.water = level.water
 	player.slip_check = level.is_slippery
+	player.hot_feet.connect(func(pos: Vector2) -> void: level.hot_feet(level.to_local(pos)))
 	player.geyser.connect(func(pos: Vector2, face: float) -> void: level.geyser(level.to_local(pos), face))
 	player.undertow.connect(func(a: Vector2, b: Vector2) -> void:
 		level.add_undertow(level.to_local(a), level.to_local(b)))
@@ -325,6 +335,8 @@ func enter_town(at_door := "") -> void:
 		town = town.replace("o", ".")   # mossy blocks by the pond
 	if "lake" in CardCollection.areas_played:
 		town = _flood_rubber(town)   # the rubber blocks float in little pools
+	if "forge" not in CardCollection.areas_played:
+		town = town.replace(";", ".")   # the little smithy by the shop
 	if not CardCollection.larry_here():
 		town = town.replace("f", ".").replace("l", ".")   # Larry's hut: your 3rd Shop card
 	# Romeo sits on the right hill, then the left, switching every 2 levels you complete.
@@ -449,6 +461,7 @@ func new_run() -> void:
 	hearts = _carry_hearts if _carry_hearts > 0 else _start_hearts()
 	if _carry_hearts <= 0:
 		_cracked = false
+	_kiln_cd = 0.0
 	_show_abilities()
 	hud.set_hearts(hearts, maxi(hearts, _start_hearts()), _cracked)
 	level.reset_pickups()
@@ -549,6 +562,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _process(delta: float) -> void:
+	_kiln_cd = maxf(_kiln_cd - delta, 0.0)
 	if state == State.PLAY:
 		run_time += delta
 	hud.set_stats(run_time, falls)
@@ -628,6 +642,19 @@ func _on_player_hurt(push: Vector2, heavy := false) -> void:
 		return   # Bark Hide: the bark took it
 	if player.try_shrug_off(push):
 		return   # Lucky Charm: shrugged it off
+	if "kiln_skin" in player.abilities and _kiln_cd == 0.0:
+		# Kiln Skin: red-hot skin takes the hit and scorches everything close by.
+		_kiln_cd = KILN_COOLDOWN
+		player.knock_back(push * 0.5)   # a small hop back, and a moment of blinking safety
+		CardFx.spawn(level, level.to_local(player.global_position), "shock", 80.0)
+		for t in get_tree().get_nodes_in_group("card_targets"):
+			if t.visible and t.global_position.distance_to(player.global_position) < 80.0:
+				if t.has_method("stun"):
+					t.stun(1.0)
+				if t.has_method("shove"):
+					t.shove(signf(t.global_position.x - player.global_position.x), 2)
+		hud.toast("Kiln Skin!")
+		return
 	hits += 1
 	player.knock_back(push)
 	player.slow_burst()
@@ -718,15 +745,15 @@ func _on_chest_opened(index: int) -> void:
 ## drop a card 10% of the time, otherwise 1 pixel. Cards come from the Drop pool, ones this
 ## file doesn't own yet.
 func _on_obstacle_broken(pos: Vector2, kind: String) -> void:
-	var chance := 0.1 if kind in ["bad_block", "moss_square", "piranha", "harpoonist"] else 0.08
+	var chance := 0.1 if kind in ["bad_block", "moss_square", "piranha", "harpoonist", "cinder"] else 0.08
 	# An area's own enemies drop its cards (Moss Covered Square: drop group "moss"; Piranha and
 	# Harpoonist Blocks: "lake"); the rest use the Drop pool.
-	var group: String = {"moss_square": "moss", "piranha": "lake", "harpoonist": "lake"}.get(kind, "drop")
+	var group: String = {"moss_square": "moss", "piranha": "lake", "harpoonist": "lake", "cinder": "forge"}.get(kind, "drop")
 	var left := CardCollection.pool(group).filter(func(a: String) -> bool: return not CardCollection.owned.has(a))
 	if randf() < chance and not left.is_empty():
 		_on_card_collected(left.pick_random())
 		return
-	var n := 1 if kind in ["bad_block", "moss_square", "piranha"] else randi_range(1, 2)
+	var n := 1 if kind in ["bad_block", "moss_square", "piranha", "cinder"] else randi_range(1, 2)
 	CardCollection.add_pixels(n)
 	hud.set_pixels(CardCollection.pixels)
 	CardFx.spawn(level, pos, "plus", 0.0, "+%d" % n)
@@ -900,7 +927,7 @@ func _play_floor_level() -> void:
 	seed_value = _floor_seeds[step - 1] if step <= _floor_seeds.size() else 0
 	_level_key = _area_key(id, step)
 	_replay_mode = ""
-	set_music({"moss": "music_moss", "lake": "music_lake"}.get(id, "music_level"))
+	set_music({"moss": "music_moss", "lake": "music_lake", "forge": "music_forge"}.get(id, "music_level"))
 	var ar := _area(id)
 	if id not in CardCollection.areas_played:
 		CardCollection.areas_played.append(id)   # town milestone: see enter_town
@@ -918,7 +945,11 @@ func _play_floor_level() -> void:
 	elif id == "lake":
 		text = LakeGen.lakeify(text, seed_value)
 		level.set_theme("lake")
-		$Background/Sky.modulate = Color(0.5, 0.62, 0.9)
+		$Background/Sky.modulate = SKY.lake
+	elif id == "forge":
+		text = ForgeGen.forgify(text, seed_value)
+		level.set_theme("forge")
+		$Background/Sky.modulate = SKY.forge
 	_floor = id
 	_floor_step = step
 	_carry_hearts = carry
@@ -935,10 +966,10 @@ func _play_boss(ar: Dictionary, carry: int) -> void:
 	_floor = ar.id
 	_floor_step = int(ar.levels) + 1
 	_carry_hearts = carry
-	set_music({"moss": "music_moss_boss", "lake": "music_lake_boss"}.get(ar.id, "music_boss"))
+	set_music({"moss": "music_moss_boss", "lake": "music_lake_boss", "forge": "music_forge_boss"}.get(ar.id, "music_boss"))
 	var rematch := _rematch
-	level.set_theme(ar.id if ar.id in ["moss", "lake"] else "")
-	$Background/Sky.modulate = {"moss": Color(0.55, 0.85, 0.7), "lake": Color(0.5, 0.62, 0.9)}.get(ar.id, Color.WHITE)
+	level.set_theme(ar.id if ar.id in ["moss", "lake", "forge"] else "")
+	$Background/Sky.modulate = SKY.get(ar.id, Color.WHITE)
 	load_level_text(FileAccess.get_file_as_string(ar.boss))
 	_rematch = rematch
 	_level_hearts = hearts

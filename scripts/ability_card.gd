@@ -15,12 +15,12 @@ const NAMES := {"dash": "Dash", "pound": "Ground Pound", "double_jump": "Double 
 	"portion_booster": "Portion Booster", "air_brake": "Air Brake", "momentum": "Momentum", "heart_box": "Heart Box",
 	"angry_dash": "Angry Block Dash", "personal_space": "Personal Space", "safety_bubble": "Safety Bubble",
 	"guard_block": "Guard Block", "long_blink": "Long Blink", "chain_dash": "Chain Dash",
-	"overgrowth": "Overgrowth", "bark_hide": "Bark Hide", "undertow": "Undertow", "geyser_jump": "Geyser Jump"}
+	"overgrowth": "Overgrowth", "bark_hide": "Bark Hide", "undertow": "Undertow", "geyser_jump": "Geyser Jump", "kiln_skin": "Kiln Skin", "hot_feet": "Hot Feet"}
 ## Card types, color coded: attacks are red, jumps are blue, movement is yellow, misc is gray.
 const TYPES := {"dash": "attack", "pound": "attack", "double_jump": "jump", "glide": "jump",
 	"quick": "movement", "tele_hop": "movement", "high_jump": "jump", "phase_jump": "jump", "shockwave": "attack", "stun_landing": "attack", "grip_and_go": "movement", "lucky_charm": "misc", "bounce_house": "misc", "secret_helper": "misc", "magnet": "misc", "wall_cling": "jump", "brick_drop": "attack", "slow_burst": "misc", "portion_booster": "misc", "air_brake": "movement", "momentum": "movement", "heart_box": "misc",
 	"angry_dash": "attack", "personal_space": "misc", "safety_bubble": "misc", "guard_block": "misc", "long_blink": "misc", "chain_dash": "attack",
-	"overgrowth": "attack", "bark_hide": "misc", "undertow": "attack", "geyser_jump": "jump"}
+	"overgrowth": "attack", "bark_hide": "misc", "undertow": "attack", "geyser_jump": "jump", "kiln_skin": "misc", "hot_feet": "attack"}
 const TYPE_NAMES := {"attack": "Attack card", "jump": "Jump card", "movement": "Movement card", "misc": "Misc card"}
 const TYPE_COLORS := {"attack": Color("e5484d"), "jump": Color("3d7be0"), "movement": Color("e0a400"),
 	"misc": Color("7d8597")}
@@ -93,11 +93,16 @@ const DESCRIPTIONS := {
 	"geyser_jump": "Passive: every jump (double jumps too) sprays water down from your feet. The jump "
 		+ "is 10% higher, and enemies just under you are pushed 3 tiles away (to the edge of their "
 		+ "floor or water, or a wall). Crazy Harry's reward.",
+	"kiln_skin": "Passive: your skin is fired hard as a kiln. Once every 12 seconds a hit costs no heart: "
+		+ "you hop back, and everything within 2.5 tiles is scorched (stunned for 1 second and pushed "
+		+ "2 tiles away). Found in the Ember Forge.",
+	"hot_feet": "Passive: stomping an enemy (or a boss) bounces you 30% higher and sets off a burst of "
+		+ "heat that stuns enemies within 2 tiles for 1 second. Anvil Annie's reward.",
 }
 const PAPER := Color("eef1fa")
 const EDGE := Color("1b2440")
 
-@export_enum("dash", "pound", "double_jump", "glide", "quick", "tele_hop", "high_jump", "phase_jump", "shockwave", "stun_landing", "grip_and_go", "lucky_charm", "bounce_house", "secret_helper", "magnet", "wall_cling", "brick_drop", "slow_burst", "portion_booster", "air_brake", "momentum", "heart_box", "angry_dash", "personal_space", "safety_bubble", "guard_block", "long_blink", "chain_dash", "overgrowth", "bark_hide", "undertow", "geyser_jump") var ability := "dash"
+@export_enum("dash", "pound", "double_jump", "glide", "quick", "tele_hop", "high_jump", "phase_jump", "shockwave", "stun_landing", "grip_and_go", "lucky_charm", "bounce_house", "secret_helper", "magnet", "wall_cling", "brick_drop", "slow_burst", "portion_booster", "air_brake", "momentum", "heart_box", "angry_dash", "personal_space", "safety_bubble", "guard_block", "long_blink", "chain_dash", "overgrowth", "bark_hide", "undertow", "geyser_jump", "kiln_skin", "hot_feet") var ability := "dash"
 
 var _t := 0.0
 
@@ -221,6 +226,19 @@ static func _draw_symbol(ci: CanvasItem, ability_name: String, o: Vector2, c: Co
 				ci.draw_rect(Rect2(o + Vector2(-7 + i * 6, -11), Vector2(b, b)), c)
 			ci.draw_rect(Rect2(o + Vector2(-2, -1), Vector2(4, 4)), c)
 			ci.draw_rect(Rect2(o + Vector2(4, -6), Vector2(1, 5)), EDGE)
+		"kiln_skin":
+			# A block inside a glowing kiln-brick shell, with heat lines.
+			ci.draw_rect(Rect2(o + Vector2(-9, -9), Vector2(18, 18)), c, false, 2.0)
+			ci.draw_rect(Rect2(o + Vector2(-3, -3), Vector2(6, 6)), c)
+			for i in 3:
+				ci.draw_rect(Rect2(o + Vector2(-6 + i * 5, -14 + (i % 2) * 2), Vector2(b, 3)), c)
+		"hot_feet":
+			# A block bouncing up off a flat enemy, with a burst under it.
+			ci.draw_rect(Rect2(o + Vector2(-3, -11), Vector2(6, 6)), c)
+			ci.draw_rect(Rect2(o + Vector2(-8, 6), Vector2(16, 4)), c)
+			for i in 5:
+				var a := PI + i * PI / 4.0
+				ci.draw_rect(Rect2(o + Vector2(cos(a) * 10.0 - 1, 4 + sin(a) * 6.0 - 1), Vector2(b, b)), c)
 		"geyser_jump":
 			# A block rising on a fountain of water that fans out below it.
 			ci.draw_rect(Rect2(o + Vector2(-3, -10), Vector2(6, 6)), c)

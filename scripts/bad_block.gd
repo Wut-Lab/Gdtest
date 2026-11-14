@@ -24,6 +24,14 @@ const SIGHT := 320.0
 ## Moss Covered Square (q, Mossy Cave): dark green and tired-looking. Walks like a Bad Block,
 ## and also hops the way it faces; where it lands, moss grows on the blocks.
 @export var mossy := false
+## Cinder Block (t, Ember Forge): sooty black with an ember glowing inside. Every few seconds it
+## flares red hot (it glows first, as a warning); stomping it while it's hot burns you instead.
+## Dashes still knock it out any time.
+@export var cinder := false
+const CINDER_COOL := 2.6
+const CINDER_WARN := 0.6
+const CINDER_HOT := 1.3
+var _heat_t := randf() * 4.0
 
 const HOP_SPEED := 520.0
 const HOP_SIDE := 135.0   # about 2 tiles per hop
@@ -189,12 +197,30 @@ func _floor_at(dx: float) -> bool:
 	return not hit.is_empty() and not hit.collider is Player
 
 
+## Cinder Block: 0 cool, 0..1 glowing (the warning), 2 red hot.
+func heat() -> float:
+	if not cinder:
+		return 0.0
+	var k := fposmod(_heat_t, CINDER_COOL + CINDER_WARN + CINDER_HOT)
+	if k < CINDER_COOL:
+		return 0.0
+	if k < CINDER_COOL + CINDER_WARN:
+		return (k - CINDER_COOL) / CINDER_WARN
+	return 2.0
+
+
 func _check_player() -> void:
+	_heat_t += get_physics_process_delta_time()
 	for b in _hit_area.get_overlapping_bodies():
 		if not b is Player:
 			continue
 		var p: Player = b
 		var feet := p.global_position.y + Player.SIZE / 2.0
+		if heat() >= 2.0 and not p.is_dashing():
+			# Red hot: landing on it burns too.
+			var hdx: float = p.global_position.x - global_position.x
+			hurt_player.emit(Vector2(signf(hdx) if absf(hdx) > 2.0 else -_dir, -1.0))
+			return
 		if p.is_dashing() or p.is_pounding() or (p.velocity.y > 0.0 and feet < global_position.y):
 			if p.is_dashing():
 				_die()
@@ -202,6 +228,7 @@ func _check_player() -> void:
 				return
 			if not p.is_pounding():
 				p.velocity.y = -p.jump_velocity * 0.6   # bounce off its squashed head
+				p.stomped()   # Hot Feet card
 			_die()
 			return
 		var dx: float = p.global_position.x - global_position.x
@@ -212,6 +239,9 @@ func _draw() -> void:
 	var h := SIZE / 2.0
 	if mossy:
 		_draw_mossy(h)
+		return
+	if cinder:
+		_draw_cinder(h)
 		return
 	if hard:
 		for sx in [-1.0, 1.0]:
@@ -242,6 +272,37 @@ func _draw() -> void:
 			draw_rect(Rect2(ex - 3.0 + i * 4.0, 6.0, 2.0, 2.0), EYES)
 		draw_rect(Rect2(ex - 8.0, 7.0, 2.0, 3.0), PUPIL)
 		draw_rect(Rect2(ex + 6.0, 7.0, 2.0, 3.0), PUPIL)
+	if _slow > 0.0:
+		CardFx.draw_slow(self, half_size(), _slow)
+	if _stun > 0.0:
+		CardFx.draw_stun(self, _bolts, _stun)
+
+
+## Cinder Block: sooty black with glowing cracks and ember eyes; flushes orange, then red hot.
+func _draw_cinder(h: float) -> void:
+	var ht := heat()
+	var body := Color("2a2526").lerp(Color("b5381a"), 1.0 if ht >= 2.0 else ht * 0.5)
+	draw_rect(Rect2(-h, -h, SIZE, SIZE), body)
+	draw_rect(Rect2(-h, -h, SIZE, 4), body.lightened(0.15))
+	var glow := Color("ff9a1f") if ht < 2.0 else Color("ffe08a")
+	var a := 0.6 + 0.4 * sin(_heat_t * (6.0 if ht == 0.0 else 22.0))
+	for seg in [[Vector2(-h + 3, -2), Vector2(-4, 3), Vector2(-2, h - 2)], [Vector2(h - 3, -6), Vector2(5, 0), Vector2(8, h - 3)]]:
+		draw_polyline(PackedVector2Array(seg), Color(glow, a), 2.0)
+	var ex := _dir * 3.0
+	if _stun > 0.0:
+		draw_rect(Rect2(ex - 8.0, -5.0, 6.0, 2.0), glow)
+		draw_rect(Rect2(ex + 2.0, -5.0, 6.0, 2.0), glow)
+	else:
+		draw_rect(Rect2(ex - 8.0, -7.0, 6.0, 5.0), glow)
+		draw_rect(Rect2(ex + 2.0, -7.0, 6.0, 5.0), glow)
+		draw_rect(Rect2(ex - 9.0, -9.0, 8.0, 2.0), Color("120e0e"))   # scowling brows
+		draw_rect(Rect2(ex + 1.0, -9.0, 8.0, 2.0), Color("120e0e"))
+		draw_rect(Rect2(ex - 4.0, 4.0, 8.0, 2.0), Color(glow, 0.8))   # a grim little mouth
+	if ht > 0.0:
+		for i in 3:   # heat haze, then flames licking off the top when it's red hot
+			var fx := -8.0 + i * 8.0
+			var fh := 4.0 + (6.0 if ht >= 2.0 else 2.0 * ht) * (0.6 + 0.4 * sin(_heat_t * 15.0 + i))
+			draw_rect(Rect2(fx - 1.5, -h - fh, 3, fh), Color("ff9a1f") if ht >= 2.0 else Color(1.0, 0.7, 0.3, 0.5 * ht))
 	if _slow > 0.0:
 		CardFx.draw_slow(self, half_size(), _slow)
 	if _stun > 0.0:
