@@ -839,7 +839,7 @@ def render_lake_music():
 
 
 def render_lake_boss_music():
-    """Captain Chomp: a pirate-shanty battle at 138 BPM in D minor, 16 bars (about 28 s) that
+    """Crazy Harry: a pirate-shanty battle at 138 BPM in D minor, 16 bars (about 28 s) that
     loop. Oom-pah bass, stomping kick, claps, an accordion-ish lead and twangy harp stabs."""
     bpm = 138
     beat = 60 / bpm
@@ -955,7 +955,7 @@ def sfx_harpoon_fire():
 
 
 def sfx_lake_boss_hit():
-    """Stomping Captain Chomp: a heavy wet slap, a squelch and an angry gurgle."""
+    """Stomping Crazy Harry: a heavy wet slap, a squelch and an angry gurgle."""
     r = np.random.default_rng(55)
     n = int(0.6 * SR)
     t = np.arange(n) / SR
@@ -972,7 +972,7 @@ def sfx_lake_boss_hit():
 
 
 def sfx_lake_boss_defeat():
-    """Captain Chomp beaten: a huge splash, bubbles sinking away, then a bright fanfare (E G B)."""
+    """Crazy Harry beaten: a huge splash, bubbles sinking away, then a bright fanfare (E G B)."""
     out = np.zeros(int(2.0 * SR))
     sp = sfx_splash()
     out[: len(sp)] += sp * 1.1

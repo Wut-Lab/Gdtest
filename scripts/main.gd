@@ -58,13 +58,13 @@ const AREAS := [
 	# Harder: more Bad Blocks (and Hard ones from the first level), slightly longer levels.
 	{"id": "lake", "name": "Cavern Lake", "first": 11, "levels": 5, "extra": 8,
 		"bad": [1, 1, 2, 2, 3], "hard": [1, 1, 1, 2, 2],
-		"boss": "res://levels/boss_lake.txt", "boss_name": "Captain Chomp"},
+		"boss": "res://levels/boss_lake.txt", "boss_name": "Crazy Harry"},
 ]
 const FLOOR_CLEAR_REWARD := 10
 ## Beating a boss the first time: these pixels plus its card (Dash first, if you lack it).
 const BOSS_REWARD := 25
 ## Each boss gives its area's own card if you don't have it yet, otherwise the boss's card.
-const BOSS_CARDS := {"basic": "chain_dash", "moss": "bark_hide"}
+const BOSS_CARDS := {"basic": "chain_dash", "moss": "bark_hide", "lake": "geyser_jump"}
 const AREA_CARDS := {"basic": "dash", "moss": "overgrowth", "lake": "undertow"}
 ## Chance Pork is in town on a visit, after the first.
 const PORK_CHANCE := 0.3
@@ -101,6 +101,7 @@ func _ready() -> void:
 	player = player_scene.instantiate() as Player
 	player.water = level.water
 	player.slip_check = level.is_slippery
+	player.geyser.connect(func(pos: Vector2, face: float) -> void: level.geyser(level.to_local(pos), face))
 	player.undertow.connect(func(a: Vector2, b: Vector2) -> void:
 		level.add_undertow(level.to_local(a), level.to_local(b)))
 	level.add_child(player)

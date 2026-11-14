@@ -15,12 +15,12 @@ const NAMES := {"dash": "Dash", "pound": "Ground Pound", "double_jump": "Double 
 	"portion_booster": "Portion Booster", "air_brake": "Air Brake", "momentum": "Momentum", "heart_box": "Heart Box",
 	"angry_dash": "Angry Block Dash", "personal_space": "Personal Space", "safety_bubble": "Safety Bubble",
 	"guard_block": "Guard Block", "long_blink": "Long Blink", "chain_dash": "Chain Dash",
-	"overgrowth": "Overgrowth", "bark_hide": "Bark Hide", "undertow": "Undertow"}
+	"overgrowth": "Overgrowth", "bark_hide": "Bark Hide", "undertow": "Undertow", "geyser_jump": "Geyser Jump"}
 ## Card types, color coded: attacks are red, jumps are blue, movement is yellow, misc is gray.
 const TYPES := {"dash": "attack", "pound": "attack", "double_jump": "jump", "glide": "jump",
 	"quick": "movement", "tele_hop": "movement", "high_jump": "jump", "phase_jump": "jump", "shockwave": "attack", "stun_landing": "attack", "grip_and_go": "movement", "lucky_charm": "misc", "bounce_house": "misc", "secret_helper": "misc", "magnet": "misc", "wall_cling": "jump", "brick_drop": "attack", "slow_burst": "misc", "portion_booster": "misc", "air_brake": "movement", "momentum": "movement", "heart_box": "misc",
 	"angry_dash": "attack", "personal_space": "misc", "safety_bubble": "misc", "guard_block": "misc", "long_blink": "misc", "chain_dash": "attack",
-	"overgrowth": "attack", "bark_hide": "misc", "undertow": "attack"}
+	"overgrowth": "attack", "bark_hide": "misc", "undertow": "attack", "geyser_jump": "jump"}
 const TYPE_NAMES := {"attack": "Attack card", "jump": "Jump card", "movement": "Movement card", "misc": "Misc card"}
 const TYPE_COLORS := {"attack": Color("e5484d"), "jump": Color("3d7be0"), "movement": Color("e0a400"),
 	"misc": Color("7d8597")}
@@ -90,11 +90,14 @@ const DESCRIPTIONS := {
 	"undertow": "Passive (needs Dash): every dash leaves a current along its path for 2.5 seconds. "
 		+ "Enemies caught in it are dragged back the way you came and slowed. Bosses are only slowed. "
 		+ "Found in Cavern Lake.",
+	"geyser_jump": "Passive: every jump (double jumps too) sprays water down from your feet. The jump "
+		+ "is 10% higher, and enemies just under you are pushed 3 tiles away (to the edge of their "
+		+ "floor or water, or a wall). Crazy Harry's reward.",
 }
 const PAPER := Color("eef1fa")
 const EDGE := Color("1b2440")
 
-@export_enum("dash", "pound", "double_jump", "glide", "quick", "tele_hop", "high_jump", "phase_jump", "shockwave", "stun_landing", "grip_and_go", "lucky_charm", "bounce_house", "secret_helper", "magnet", "wall_cling", "brick_drop", "slow_burst", "portion_booster", "air_brake", "momentum", "heart_box", "angry_dash", "personal_space", "safety_bubble", "guard_block", "long_blink", "chain_dash", "overgrowth", "bark_hide", "undertow") var ability := "dash"
+@export_enum("dash", "pound", "double_jump", "glide", "quick", "tele_hop", "high_jump", "phase_jump", "shockwave", "stun_landing", "grip_and_go", "lucky_charm", "bounce_house", "secret_helper", "magnet", "wall_cling", "brick_drop", "slow_burst", "portion_booster", "air_brake", "momentum", "heart_box", "angry_dash", "personal_space", "safety_bubble", "guard_block", "long_blink", "chain_dash", "overgrowth", "bark_hide", "undertow", "geyser_jump") var ability := "dash"
 
 var _t := 0.0
 
@@ -218,6 +221,14 @@ static func _draw_symbol(ci: CanvasItem, ability_name: String, o: Vector2, c: Co
 				ci.draw_rect(Rect2(o + Vector2(-7 + i * 6, -11), Vector2(b, b)), c)
 			ci.draw_rect(Rect2(o + Vector2(-2, -1), Vector2(4, 4)), c)
 			ci.draw_rect(Rect2(o + Vector2(4, -6), Vector2(1, 5)), EDGE)
+		"geyser_jump":
+			# A block rising on a fountain of water that fans out below it.
+			ci.draw_rect(Rect2(o + Vector2(-3, -10), Vector2(6, 6)), c)
+			ci.draw_rect(Rect2(o + Vector2(-1, -3), Vector2(2, 8)), c)
+			for i in 5:
+				var gx := -8.0 + i * 4.0
+				ci.draw_rect(Rect2(o + Vector2(gx, 5 + absf(i - 2.0) * -1.0 + 2.0), Vector2(b, b * 2.0)), c)
+			ci.draw_rect(Rect2(o + Vector2(-9, 9), Vector2(18, 1)), c)
 		"undertow":
 			# Wavy lines of a current, with a block being dragged back along them.
 			for row in 3:

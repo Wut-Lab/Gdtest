@@ -1,6 +1,6 @@
 class_name CrumbleBlock
 extends AnimatableBody2D
-## Mossy Cave: a cracked, mossy stone you can stand on (and jump up through, like a floating
+## Mossy Cave (and Cavern Lake, as wet blue-grey stone): a cracked, mossy stone you can stand on (and jump up through, like a floating
 ## platform). Step on it and it shakes for a moment, then crumbles away; it grows back a few
 ## seconds later.
 
@@ -14,6 +14,8 @@ var _shake := -1.0      # counting up while it shakes; -1 when still
 var _gone := 0.0        # seconds left until it grows back
 var _col: CollisionShape2D
 var _t := 0.0
+## Cavern Lake look: wet blue-grey stone with water beading on top instead of moss.
+var wet := false
 
 
 func _ready() -> void:
@@ -65,10 +67,19 @@ func _draw() -> void:
 	var o := Vector2(randf_range(-1.5, 1.5), 0) if _shake >= 0.0 else Vector2.ZERO
 	var h := SIZE / 2.0
 	draw_rect(Rect2(o + Vector2(-h, -h), Vector2(SIZE, SIZE)), EDGE)
-	draw_rect(Rect2(o + Vector2(-h + 2, -h + 2), Vector2(SIZE - 4, SIZE - 4)), Color("6f7a6a"))
-	draw_rect(Rect2(o + Vector2(-h + 2, -h + 2), Vector2(SIZE - 4, 4)), Color("5fa84a"))   # moss on top
-	draw_rect(Rect2(o + Vector2(-h + 4, -h + 6), Vector2(5, 3)), Color("5fa84a"))
-	draw_rect(Rect2(o + Vector2(h - 10, -h + 6), Vector2(4, 4)), Color("4b8a3a"))
+	if wet:
+		draw_rect(Rect2(o + Vector2(-h + 2, -h + 2), Vector2(SIZE - 4, SIZE - 4)), Color("62708c"))
+		draw_rect(Rect2(o + Vector2(-h + 2, -h + 2), Vector2(SIZE - 4, 3)), Color("a9d6f5"))   # wet shine
+		draw_rect(Rect2(o + Vector2(-h + 2, -h + 5), Vector2(SIZE - 4, 2)), Color("7d8fb3"))
+		draw_rect(Rect2(o + Vector2(-h + 5, -h + 8), Vector2(4, 2)), Color(0.75, 0.9, 1.0, 0.7))
+		draw_rect(Rect2(o + Vector2(h - 9, -h + 11), Vector2(3, 2)), Color(0.75, 0.9, 1.0, 0.7))
+		var drip_y := fmod(_t * 18.0, 10.0)
+		draw_rect(Rect2(o + Vector2(h - 8, h + drip_y), Vector2(2, 3)), Color(0.7, 0.88, 1.0, 1.0 - drip_y / 10.0))   # a drip
+	else:
+		draw_rect(Rect2(o + Vector2(-h + 2, -h + 2), Vector2(SIZE - 4, SIZE - 4)), Color("6f7a6a"))
+		draw_rect(Rect2(o + Vector2(-h + 2, -h + 2), Vector2(SIZE - 4, 4)), Color("5fa84a"))   # moss on top
+		draw_rect(Rect2(o + Vector2(-h + 4, -h + 6), Vector2(5, 3)), Color("5fa84a"))
+		draw_rect(Rect2(o + Vector2(h - 10, -h + 6), Vector2(4, 4)), Color("4b8a3a"))
 	# Cracks, which widen as it shakes.
 	var k := 1.0 + (2.0 * _shake / HOLD if _shake >= 0.0 else 0.0)
 	draw_polyline(PackedVector2Array([o + Vector2(-4, -6), o + Vector2(0, 2), o + Vector2(-3, 8), o + Vector2(2, 14)]), EDGE, k)

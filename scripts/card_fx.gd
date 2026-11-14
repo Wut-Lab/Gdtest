@@ -31,7 +31,7 @@ static func spawn(parent: Node, at: Vector2, fx_kind: String, fx_reach := 160.0,
 	fx.kind = fx_kind
 	fx.reach = fx_reach
 	fx.text = fx_text
-	fx._life = {"shock": 0.4, "lucky": 0.5, "slow": 0.45, "pop": 0.4, "bark": 0.6, "boom": 0.9, "plus": 0.8}.get(fx_kind, 0.35)
+	fx._life = {"shock": 0.4, "lucky": 0.5, "slow": 0.45, "pop": 0.4, "spray": 0.4, "bark": 0.6, "boom": 0.9, "plus": 0.8}.get(fx_kind, 0.35)
 	fx.z_index = 5
 	parent.add_child(fx)
 	fx.global_position = at
@@ -117,6 +117,13 @@ func _draw() -> void:
 				var bh := h * (1.0 - i * 0.3)
 				draw_rect(Rect2(bx - 3.0, -bh, 6.0, bh), c)
 		draw_rect(Rect2(-x, -2.0, x * 2.0, 2.0), Color(SHOCK, 0.5 * (1.0 - k)))
+	elif kind == "spray":
+		# Geyser Jump: a fan of water drops bursting down and out from under the jump.
+		for i in 12:
+			var a := lerpf(0.35, PI - 0.35, float(i) / 11.0)
+			var p := Vector2(cos(a), sin(a)) * (4.0 + 46.0 * k) + Vector2(0, 40.0 * k * k)
+			draw_rect(Rect2(p - Vector2(2, 2), Vector2(4, 5)), Color(0.6, 0.85, 1.0, 1.0 - k))
+		draw_rect(Rect2(-14.0 - 20.0 * k, -2.0, 28.0 + 40.0 * k, 3.0), Color(0.85, 0.95, 1.0, 0.8 * (1.0 - k)))
 	elif kind == "pop":
 		for i in 8:
 			var a := i * TAU / 8.0

@@ -21,7 +21,7 @@ extends Node2D
 ##   !  town: dungeon gate     $  town: shop     &  town: card hall
 ##   ~  still water (you float)   < >  shallow river running left / right (carries you)
 ##   |  waterfall (pushes you down)   a  Piranha Block (in water)   u  Harpoonist Block
-##   ,  shallow spikes (Cavern Lake)   x  Captain Chomp, the Cavern Lake boss (in his lake)
+##   ,  shallow spikes (Cavern Lake)   x  Crazy Harry, the Cavern Lake boss (in his lake)
 
 signal goal_reached
 signal heart_collected
@@ -124,6 +124,20 @@ func add_overgrowth(pos: Vector2) -> void:
 var _currents: Array[Dictionary] = []
 const UNDERTOW_TIME := 2.5
 const UNDERTOW_PULL := 150.0
+
+
+## Geyser Jump card: a jump from pos (the player's feet) sprays water down, pushing enemies under
+## it 3 tiles away (sideways, out from under you).
+func geyser(pos: Vector2, face: float) -> void:
+	CardFx.spawn(self, pos, "spray")
+	for t in get_tree().get_nodes_in_group("card_targets"):
+		if not t.visible or not t.has_method("half_size") or not t.has_method("shove"):
+			continue
+		var half: Vector2 = t.half_size()
+		var dx: float = t.position.x - pos.x
+		var top: float = t.position.y - half.y
+		if absf(dx) < half.x + 26.0 and top > pos.y - 10.0 and top < pos.y + 72.0:
+			t.shove(signf(dx) if absf(dx) > 2.0 else face, 3)
 
 
 func add_undertow(a: Vector2, b: Vector2) -> void:
@@ -396,6 +410,7 @@ func load_map_text(text: String) -> void:
 	_place_spikes(spikes, vspikes, platforms, bad_blocks)
 	for cell in crumbles:
 		var cb := CrumbleBlock.new()
+		cb.wet = theme == "lake"
 		cb.position = Vector2(cell.x * T + T / 2.0, cell.y * T + T / 2.0)
 		_obstacles.add_child(cb)
 	for cell in simple_blocks:

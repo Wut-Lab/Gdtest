@@ -6,6 +6,8 @@ extends CharacterBody2D
 signal fell
 ## Overgrowth card: landed from a jump here (feet).
 signal grew_moss(pos: Vector2)
+## Geyser Jump card: a jump sprayed water down from feet (pos).
+signal geyser(pos: Vector2, face: float)
 ## Undertow card: a dash finished, leaving a current from start to end.
 signal undertow(start: Vector2, end: Vector2)
 signal bounced
@@ -189,11 +191,12 @@ var _air_jump := true      # double jump still available this time in the air
 var _jump_sfx := _make_sfx("res://audio/jump.wav", -8.0)
 var _land_sfx := _make_sfx("res://audio/land.wav", -6.0)
 var _hurt_sfx := _make_sfx("res://audio/hurt.wav", -4.0)
+var _spray_sfx := _make_sfx("res://audio/splash.wav", -14.0)
 
 
 func _ready() -> void:
 	add_to_group("player")
-	for p in [_jump_sfx, _land_sfx, _hurt_sfx]:
+	for p in [_jump_sfx, _land_sfx, _hurt_sfx, _spray_sfx]:
 		add_child(p)
 
 
@@ -419,6 +422,15 @@ func _run_speed() -> float:
 
 
 ## Launch speed of a jump: High Jump makes it 20% higher.
+## Geyser Jump card: every jump (double jumps too) is 10% higher and sprays water down.
+func _geyser() -> void:
+	if "geyser_jump" not in abilities:
+		return
+	velocity.y *= sqrt(1.1)
+	geyser.emit(global_position + Vector2(0.0, SIZE / 2.0), _face)
+	_play(_spray_sfx, 1.6)
+
+
 func _jump_speed() -> float:
 	return jump_velocity * (sqrt(1.0 + _pct(high_jump - 1.0)) if "high_jump" in abilities else 1.0)
 
@@ -506,6 +518,7 @@ func _physics_process(delta: float) -> void:
 		_jump_buffer = maxf(_jump_buffer - delta, 0.0)
 	if _jump_buffer > 0.0 and _coyote > 0.0:
 		velocity.y = -_jump_speed()
+		_geyser()
 		_jump_buffer = 0.0
 		_coyote = 0.0
 		_bouncing = false
@@ -528,6 +541,7 @@ func _physics_process(delta: float) -> void:
 			and not _pounding and _stun == 0.0 and Input.is_action_just_pressed("jump"):
 		# Double jump card: one extra jump in the air, 75% as high as a full jump.
 		velocity.y = -_jump_speed() * sqrt(_pct(0.75))   # 75% of a full jump's height
+		_geyser()
 		_air_jump = false
 		_jump_buffer = 0.0
 		_bouncing = false

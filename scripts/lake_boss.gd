@@ -1,6 +1,6 @@
 class_name LakeBoss
 extends CharacterBody2D
-## Captain Chomp (x, Cavern Lake boss; placeholder name): a giant Piranha Block with a saddle,
+## Crazy Harry (x, Cavern Lake boss): a giant Piranha Block with a saddle,
 ## ridden by a Harpoonist. He lives in the arena's lake.
 ##
 ## Stage 1 (5 to 3 hearts): he swims at you like a Piranha Block, bites on touch and leaps out of
