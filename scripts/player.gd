@@ -23,6 +23,8 @@ const SIZE := 24.0
 @export var jump_velocity := 760.0
 @export var gravity := 2200.0
 @export var max_fall_speed := 900.0
+## Vine Platform vines: how hard they drag on sideways speed in the air (higher = more).
+@export var vine_drag := 7.0
 ## Extra gravity while rising after jump is released, for short hops.
 @export var short_hop_gravity := 2.6
 ## You can still jump this long after running off a ledge.
@@ -124,6 +126,8 @@ var water: Water
 var invincible := 0.0
 ## Phase Jump card: phased out (nothing can hurt you) right now.
 var phased := false
+## Vine Platform: seconds left tangled in hanging vines (they drag on your sideways speed in the air).
+var in_vines := 0.0
 var _phase_look := 1.0   # how solid you're drawn: dips when phasing, then fades back in
 
 var _coyote := 0.0
@@ -225,6 +229,7 @@ func reset_to(pos: Vector2) -> void:
 	_air_jump = true
 	invincible = 0.0
 	phased = false
+	in_vines = 0.0
 	_phase_look = 1.0
 	_shake_left = 0.0
 	camera.position = Vector2.ZERO
@@ -517,6 +522,10 @@ func _physics_process(delta: float) -> void:
 		velocity.y -= gravity * 2.0 * sub * delta
 		velocity.y *= exp(-5.0 * sub * delta)
 		velocity.x *= exp(-1.5 * sub * delta)
+	if in_vines > 0.0:
+		in_vines = maxf(in_vines - delta, 0.0)
+		if not on_floor and _dash == 0.0:
+			velocity.x *= exp(-vine_drag * delta)
 	if velocity.y >= 0.0:
 		_bouncing = false
 

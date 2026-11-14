@@ -661,12 +661,13 @@ func _on_chest_opened(index: int) -> void:
 ## drop a card 10% of the time, otherwise 1 pixel. Cards come from the Drop pool, ones this
 ## file doesn't own yet.
 func _on_obstacle_broken(pos: Vector2, kind: String) -> void:
-	var chance := 0.1 if kind == "bad_block" else 0.08
-	var left := CardCollection.pool("drop").filter(func(a: String) -> bool: return not CardCollection.owned.has(a))
+	var chance := 0.1 if kind in ["bad_block", "moss_square"] else 0.08
+	# A Moss Covered Square drops this area's cards (drop group "moss"); the rest use the Drop pool.
+	var left := CardCollection.pool("moss" if kind == "moss_square" else "drop").filter(func(a: String) -> bool: return not CardCollection.owned.has(a))
 	if randf() < chance and not left.is_empty():
 		_on_card_collected(left.pick_random())
 		return
-	var n := 1 if kind == "bad_block" else randi_range(1, 2)
+	var n := 1 if kind in ["bad_block", "moss_square"] else randi_range(1, 2)
 	CardCollection.add_pixels(n)
 	hud.set_pixels(CardCollection.pixels)
 	CardFx.spawn(level, pos, "plus", 0.0, "+%d" % n)
@@ -826,7 +827,7 @@ func _play_floor_level() -> void:
 	hud.set_seed(seed_value)
 	var text := LevelGen.generate(seed_value)
 	if id == "moss":
-		text = _mossify(text, seed_value)
+		text = _mossify(_add_moss_obstacles(text, seed_value), seed_value).replace("`", "=")
 		level.set_theme("moss")
 		$Background/Sky.modulate = Color(0.55, 0.85, 0.7)
 	_floor = id
@@ -865,6 +866,74 @@ func _on_boss_defeated() -> void:
 
 
 ## Mossy Cave: most floating platforms become crumbling blocks.
+## Mossy Cave: every map also gets 1-2 Moss Covered Squares (q, on flat ground) and 1-2 Vine
+## Platforms (v, floating over flat ground with room for their vines), away from start and goal.
+func _add_moss_obstacles(text: String, s: int) -> String:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = s * 53 + 11
+	var g: Array = []
+	for line in text.split("\n"):
+		g.append(line.split(""))
+	var at := func(x: int, y: int) -> String:
+		return g[y][x] if y >= 0 and y < g.size() and x >= 0 and x < g[y].size() else "?"
+	var keep_away: Array[Vector2i] = []
+	for y in g.size():
+		for x in g[y].size():
+			if g[y][x] in ["P", "G", "@", "1", "2", "3"]:
+				keep_away.append(Vector2i(x, y))
+	var far := func(x: int, y: int) -> bool:
+		for k in keep_away:
+			if absi(k.x - x) < (10 if g[k.y][k.x] == "P" else 6) and absi(k.y - y) < 6:
+				return false
+		return true
+	var squares: Array[Vector2i] = []
+	var vines: Array[Vector2i] = []
+	# Strict rules first (5 flat tiles for a square; 7 free rows for vines); tight maps such as
+	# the climbs fall back to looser ones (3 flat tiles; 3 free rows) so every map gets some.
+	for loose in [false, true]:
+		for y in range(2, g.size() - 1):
+			for x in range(3, g[y].size() - 3):
+				if not far.call(x, y):
+					continue
+				if squares.is_empty() or not loose:
+					var flat := true
+					for dx in (range(-1, 2) if loose else range(-2, 3)):
+						if at.call(x + dx, y) != "." or at.call(x + dx, y + 1) not in ["#", "="]:
+							flat = false
+					if flat and not (loose and Vector2i(x, y) in squares):
+						squares.append(Vector2i(x, y))
+				if vines.is_empty() or not loose:
+					var room := true
+					for dx in range(-1, 2):
+						for dy in (range(-1, 2) if loose else range(-2, 5)):
+							if at.call(x + dx, y + dy) != ".":
+								room = false
+						if not loose and at.call(x + dx, y + 5) not in ["#", "="] \
+								and at.call(x + dx, y + 6) not in ["#", "="]:
+							room = false
+					if room:
+						vines.append(Vector2i(x, y))
+		if not squares.is_empty() and not vines.is_empty():
+			break
+	for pair in [[squares, "q"], [vines, "v"]]:
+		var spots: Array = pair[0]
+		for i in rng.randi_range(1, 2):
+			if spots.is_empty():
+				break
+			var c: Vector2i = spots[rng.randi_range(0, spots.size() - 1)]
+			g[c.y][c.x] = pair[1]
+			if pair[1] == "q":
+				for dx in range(-3, 4):   # its floor never crumbles (see _mossify)
+					if at.call(c.x + dx, c.y + 1) == "=":
+						g[c.y + 1][c.x + dx] = "`"
+			keep_away.append(c)
+			spots = spots.filter(func(o: Vector2i) -> bool: return absi(o.x - c.x) >= 6 or absi(o.y - c.y) >= 6)
+	var out := PackedStringArray()
+	for row in g:
+		out.append("".join(row))
+	return "\n".join(out)
+
+
 func _mossify(text: String, s: int) -> String:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = s * 31 + 7

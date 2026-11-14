@@ -74,6 +74,18 @@ var _back_doors: Array[Vector2i] = []
 ## Mossy blocks (o): ground blocks with moss on them, e.g. by the town pond after the Mossy Cave.
 var _moss_cells: Array[Vector2i] = []
 var _moss_layer: Node2D
+var _mossy_cells := {}
+## Ground cells a Moss Covered Square has landed on: a thick patch of moss grows on top.
+var _moss_patches := {}
+
+
+## A Moss Covered Square landed with its feet at pos: moss grows on the block(s) under it.
+func add_moss_patch(pos: Vector2) -> void:
+	for dx in [-BadBlock.SIZE / 2.0 + 2.0, BadBlock.SIZE / 2.0 - 2.0]:
+		var cell := ground.local_to_map(ground.to_local(to_global(pos + Vector2(dx, 4.0))))
+		if ground.get_cell_source_id(cell) != -1:
+			_moss_patches[cell] = true
+	_moss_layer.queue_redraw()
 var _has_boss := false
 
 
@@ -137,6 +149,9 @@ func load_map_text(text: String) -> void:
 	var platforms := {}   # cell -> spikes on top?
 	var bad_blocks: Array[Vector2i] = []
 	_hard_cells.clear()
+	_mossy_cells.clear()
+	_moss_patches.clear()
+	var vine_cells: Array[Vector2i] = []
 	var doors := {}   # cell -> door character
 	var checkpoints: Array[Vector2i] = []
 	var water_cells: Array[Vector2i] = []
@@ -181,6 +196,11 @@ func load_map_text(text: String) -> void:
 					_moss_cells.append(Vector2i(x, y))
 				"m":
 					bosses.append(Vector2i(x, y))
+				"q":
+					bad_blocks.append(Vector2i(x, y))
+					_mossy_cells[Vector2i(x, y)] = true
+				"v":
+					vine_cells.append(Vector2i(x, y))
 				"d":
 					_back_doors.append(Vector2i(x, y))
 				"~":
@@ -217,6 +237,10 @@ func load_map_text(text: String) -> void:
 		var cb := CrumbleBlock.new()
 		cb.position = Vector2(cell.x * T + T / 2.0, cell.y * T + T / 2.0)
 		_obstacles.add_child(cb)
+	for cell in vine_cells:
+		var vp := VinePlatform.new()
+		vp.position = Vector2(cell.x * T + T / 2.0, cell.y * T + VinePlatform.THICK / 2.0)
+		_obstacles.add_child(vp)
 	_has_boss = not bosses.is_empty()
 	for cell in bosses:
 		var boss := BigBadSquare.new()
@@ -284,9 +308,12 @@ func _place_spikes(cells: Array[Vector2i], vertical_cells: Array[Vector2i], plat
 	for cell in bad_blocks:
 		var e := BadBlock.new()
 		e.hard = _hard_cells.has(cell)
+		e.mossy = _mossy_cells.has(cell)
+		e.landed.connect(add_moss_patch)
 		e.position = Vector2(cell.x * T + T / 2.0, (cell.y + 1) * T - BadBlock.SIZE / 2.0)
 		e.hurt_player.connect(func(push: Vector2) -> void: player_hurt.emit(push))
-		e.broken.connect(func(pos: Vector2) -> void: obstacle_broken.emit(pos, "bad_block"))
+		e.broken.connect(func(pos: Vector2) -> void:
+			obstacle_broken.emit(pos, "moss_square" if e.mossy else "bad_block"))
 		_obstacles.add_child(e)
 	for cell in platforms:
 		var p := SpikePlatform.new()
@@ -473,6 +500,14 @@ func _draw_back_door(cell: Vector2i) -> void:
 func _draw_moss_blocks() -> void:
 	for cell in _moss_cells:
 		_draw_moss_block(_moss_layer, cell)
+	for cell in _moss_patches:
+		var x: float = cell.x * T
+		var y: float = cell.y * T
+		_moss_layer.draw_rect(Rect2(x - 1, y - 5, T + 2, 11), Color("3f8f2f"))
+		_moss_layer.draw_rect(Rect2(x + 2, y + 6, 6, 5), Color("3f8f2f"))
+		_moss_layer.draw_rect(Rect2(x + 20, y + 6, 8, 7), Color("3f8f2f"))
+		for i in 5:
+			_moss_layer.draw_rect(Rect2(x + 2 + i * 6, y - 9 + (i * 7) % 3, 3, 5), Color("7fd45f"))
 
 
 func _draw_moss_block(c: CanvasItem, cell: Vector2i) -> void:
