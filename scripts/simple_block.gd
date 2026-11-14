@@ -11,9 +11,9 @@ extends StaticBody2D
 ##   reset(): a new run of the level started (put it back the way it began).
 
 const SIZE := 32.0
-const BODY := Color("8a93b8")
-const TOP := Color("b6bdd9")
-const SHADE := Color("5b6386")
+const BODY := Color("c99a5b")
+const TOP := Color("e6c08a")
+const SHADE := Color("8e6633")
 const EDGE := Color("1b2440")
 
 var _origin := Vector2.ZERO

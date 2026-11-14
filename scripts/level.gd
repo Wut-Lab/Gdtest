@@ -460,6 +460,10 @@ func _hide_goal() -> void:
 ## The boss is beaten: the exit cube appears in front of the door on his side (the rightmost).
 func open_boss_exit() -> void:
 	if _back_doors.is_empty():
+		# No door (a map made in the editor): the exit appears where its G was placed.
+		goal.show()
+		goal.set_deferred("monitoring", true)
+		CardFx.spawn(self, goal.position, "pop")
 		return
 	var cell: Vector2i = _back_doors[0]
 	for c in _back_doors:

@@ -336,6 +336,15 @@ button:disabled { opacity: 0.4; }
     { ch: 'k', label: 'Hard Bad Block' },
     { ch: 'T', label: 'Spiked-top platform' },
     { ch: 'B', label: 'Spiked-bottom platform' },
+    { ch: 'n', label: 'Simple block' },
+    { ch: 'c', label: 'Crumbling block' },
+    { ch: 'o', label: 'Mossy block' },
+    { ch: 'v', label: 'Vine platform' },
+    { ch: 'q', label: 'Moss Covered Square' },
+    { ch: '~', label: 'Water' },
+    { ch: 'm', label: 'Big Bad Square (boss)' },
+    { ch: 'y', label: 'Old Mossback (boss)' },
+    { ch: 'd', label: 'Boss door' },
     { ch: '1', label: 'Red warp' },
     { ch: '2', label: 'Yellow warp' },
     { ch: '3', label: 'Blue warp' },
@@ -558,6 +567,61 @@ button:disabled { opacity: 0.4; }
         if (c === '.') return;
         g.fillStyle = hc[c]; g.fillRect(ox + i * b, oy + j * b, Math.ceil(b), Math.ceil(b));
       }));
+    } else if (ch === 'n') {
+      // Simple Block: warm tan stone with an outline and four rivets.
+      g.fillStyle = '#c99a5b'; g.fillRect(x, y, s, s);
+      g.fillStyle = '#e6c08a'; g.fillRect(x, y, s, s * 0.16);
+      g.fillStyle = '#8e6633'; g.fillRect(x, y + s * 0.84, s, s * 0.16);
+      g.strokeStyle = '#1b2440'; g.lineWidth = Math.max(1, s / 16); g.strokeRect(x + 0.5, y + 0.5, s - 1, s - 1);
+      g.fillStyle = '#8e6633';
+      for (const [fx, fy] of [[0.22, 0.3], [0.7, 0.3], [0.22, 0.66], [0.7, 0.66]]) g.fillRect(x + fx * s, y + fy * s, s * 0.1, s * 0.1);
+    } else if (ch === 'c') {
+      // Crumbling block: grey cracked stone with moss on top.
+      g.fillStyle = '#1b2440'; g.fillRect(x, y, s, s);
+      g.fillStyle = '#6f7a6a'; g.fillRect(x + s * 0.06, y + s * 0.06, s * 0.88, s * 0.88);
+      g.fillStyle = '#5fa84a'; g.fillRect(x + s * 0.06, y + s * 0.06, s * 0.88, s * 0.13);
+      g.strokeStyle = '#1b2440'; g.lineWidth = Math.max(1, s / 18); g.beginPath();
+      g.moveTo(x + s * 0.3, y + s * 0.3); g.lineTo(x + s * 0.5, y + s * 0.55); g.lineTo(x + s * 0.42, y + s * 0.85);
+      g.moveTo(x + s * 0.5, y + s * 0.55); g.lineTo(x + s * 0.75, y + s * 0.62); g.stroke();
+    } else if (ch === 'o') {
+      // Mossy block: ground wrapped in moss.
+      g.fillStyle = col.stone; g.fillRect(x, y, s, s);
+      g.fillStyle = '#4f9a3c'; g.fillRect(x, y, s, s * 0.22); g.fillRect(x, y, s * 0.12, s * 0.6); g.fillRect(x + s * 0.88, y, s * 0.12, s * 0.75);
+      g.fillStyle = '#6cc04f'; for (const fx of [0.15, 0.45, 0.75]) g.fillRect(x + fx * s, y + s * 0.4, s * 0.12, s * 0.1);
+    } else if (ch === 'v') {
+      // Vine platform: dark green slab (3 tiles wide in the game) with moss and hanging vines.
+      g.fillStyle = '#3f7f31';
+      for (const fx of [-0.1, 0.2, 0.5, 0.8, 1.05]) g.fillRect(x + fx * s, y + s * 0.4, Math.max(1, s / 16), s * (0.6 + (fx * 7 % 1) * 0.4));
+      g.fillStyle = '#2f5a2a'; g.fillRect(x - s * 0.15, y, s * 1.3, s * 0.4);
+      g.fillStyle = '#4f9a3c'; g.fillRect(x - s * 0.15, y, s * 1.3, s * 0.12);
+      g.fillStyle = '#eef1fa'; g.fillRect(x + s * 0.32, y + s * 0.18, s * 0.12, s * 0.12); g.fillRect(x + s * 0.56, y + s * 0.18, s * 0.12, s * 0.12);
+      g.fillStyle = '#1d3a1b'; g.fillRect(x + s * 0.32, y + s * 0.18, s * 0.12, s * 0.05); g.fillRect(x + s * 0.56, y + s * 0.18, s * 0.12, s * 0.05);
+    } else if (ch === 'q') {
+      // Moss Covered Square: dark green, moss on its head, tired eyes.
+      const b = s * 0.8, o = (s - b) / 2;
+      g.fillStyle = '#2f5a2a'; g.fillRect(x + o, y + s - b, b, b);
+      g.fillStyle = '#4f9a3c'; g.fillRect(x + o - 1, y + s - b - 1, b + 2, b * 0.2);
+      g.fillStyle = '#eef1fa'; g.fillRect(x + s * 0.28, y + s * 0.5, s * 0.18, s * 0.16); g.fillRect(x + s * 0.54, y + s * 0.5, s * 0.18, s * 0.16);
+      g.fillStyle = '#1d3a1b'; g.fillRect(x + s * 0.28, y + s * 0.5, s * 0.18, s * 0.08); g.fillRect(x + s * 0.54, y + s * 0.5, s * 0.18, s * 0.08);
+      g.fillStyle = '#1b2440'; g.fillRect(x + s * 0.34, y + s * 0.58, s * 0.07, s * 0.08); g.fillRect(x + s * 0.6, y + s * 0.58, s * 0.07, s * 0.08);
+    } else if (ch === '~') {
+      // Water: blue with a light wavy top.
+      g.fillStyle = 'rgba(77,163,255,0.55)'; g.fillRect(x, y, s, s);
+      g.fillStyle = '#9fd0ff'; g.fillRect(x, y, s, Math.max(2, s * 0.1));
+    } else if (ch === 'm' || ch === 'y') {
+      // Bosses: a big square (2x2 in the game) standing on this cell, with a crown of hearts.
+      const moss = ch === 'y', b = s * 0.95, o = (s - b) / 2;
+      g.fillStyle = moss ? '#2f5a2a' : '#b8323a'; g.fillRect(x + o, y + s - b, b, b);
+      g.fillStyle = moss ? '#4f9a3c' : '#e5484d'; g.fillRect(x + o, y + s - b, b, b * 0.2);
+      g.fillStyle = '#eef1fa'; g.fillRect(x + s * 0.2, y + s * 0.42, s * 0.24, s * 0.2); g.fillRect(x + s * 0.56, y + s * 0.42, s * 0.24, s * 0.2);
+      g.fillStyle = '#1b2440'; g.fillRect(x + s * 0.28, y + s * 0.5, s * 0.1, s * 0.12); g.fillRect(x + s * 0.62, y + s * 0.5, s * 0.1, s * 0.12);
+      g.fillRect(x + s * 0.3, y + s * 0.74, s * 0.4, s * 0.1);
+      g.fillStyle = '#f2545b'; for (const fx of [0.18, 0.43, 0.68]) g.fillRect(x + fx * s, y - s * 0.18, s * 0.16, s * 0.14);
+    } else if (ch === 'd') {
+      // Boss-room door: a wooden door in the back wall.
+      g.fillStyle = '#8a5a32'; g.fillRect(x + s * 0.12, y, s * 0.76, s);
+      g.fillStyle = '#5a3a22'; g.fillRect(x + s * 0.2, y + s * 0.08, s * 0.6, s * 0.92);
+      g.fillStyle = '#e0a35a'; g.fillRect(x + s * 0.66, y + s * 0.55, s * 0.08, s * 0.08);
     } else if (ch === 'G') {
       const p = s * 0.75, o = (s - p) / 2;
       g.globalAlpha = 0.3; g.fillStyle = col.goal; g.fillRect(x, y, s, s);
