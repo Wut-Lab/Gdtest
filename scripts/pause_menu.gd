@@ -219,29 +219,90 @@ var _filter_toggles := {}
 ## The Filters mini menu: All, then one toggle per card type (pick any), Save and Back.
 func _build_filters() -> VBoxContainer:
 	var page := _page_box("Filters")
+	page.add_theme_constant_override("separation", 6)
+	var hint := Label.new()
+	hint.text = "Show these card types:"
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint.add_theme_font_size_override("font_size", 14)
+	hint.add_theme_color_override("font_color", Color("a9b3d1"))
+	page.add_child(hint)
+	var list := VBoxContainer.new()
+	list.add_theme_constant_override("separation", 2)
+	list.custom_minimum_size = Vector2(BUTTON_SIZE.x, 0)
+	list.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	page.add_child(list)
 	for f in FILTERS:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 10)
+		var box := CheckBox.new()
+		box.text = "All cards" if f == "all" else FILTERS[f]
+		box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		box.custom_minimum_size = Vector2(0, 36)
+		box.add_theme_color_override("font_color", Color("eef1fa"))
+		box.add_theme_color_override("font_pressed_color", Color("eef1fa"))
+		box.add_theme_color_override("font_hover_color", Color.WHITE)
+		box.pressed.connect(_toggle_filter.bind(f))
+		# Plain rows (the theme draws buttons as green blocks): a faint highlight on hover only.
+		var hover := StyleBoxFlat.new()
+		hover.bg_color = Color(1, 1, 1, 0.06)
+		hover.set_corner_radius_all(4)
+		for st in ["normal", "pressed", "focus", "disabled"]:
+			box.add_theme_stylebox_override(st, StyleBoxEmpty.new())
+		box.add_theme_stylebox_override("hover", hover)
+		box.add_theme_stylebox_override("hover_pressed", hover)
+		box.add_theme_icon_override("unchecked", _check_icon(false))
+		box.add_theme_icon_override("checked", _check_icon(true))
+		var swatch := ColorRect.new()
+		swatch.color = AbilityCard.TYPE_COLORS[f] if f != "all" else Color(0, 0, 0, 0)
+		swatch.custom_minimum_size = Vector2(6, 22)
+		swatch.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		swatch.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(swatch)
+		row.add_child(box)
+		list.add_child(row)
+		if f == "all":
+			list.add_child(HSeparator.new())
+		_filter_toggles[f] = box
+	var sep := HSeparator.new()
+	page.add_child(sep)
+	var buttons := HBoxContainer.new()
+	buttons.add_theme_constant_override("separation", 10)
+	buttons.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	page.add_child(buttons)
+	for pair in [["Back", func() -> void: _show("Equip")], ["Save", func() -> void:
+			_equip_filters = _pending_filters.duplicate()
+			_refresh_equip()
+			_show("Equip")]]:
 		var b := Button.new()
-		b.text = FILTERS[f]
-		b.toggle_mode = true
-		b.custom_minimum_size = Vector2(BUTTON_SIZE.x, 36)
-		b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		if f != "all":
-			var sb := StyleBoxFlat.new()
-			sb.bg_color = AbilityCard.TYPE_COLORS[f]
-			sb.set_corner_radius_all(6)
-			b.add_theme_stylebox_override("pressed", sb)
-			b.add_theme_stylebox_override("hover_pressed", sb)
-			b.add_theme_color_override("font_pressed_color", Color.WHITE)
-			b.add_theme_color_override("font_hover_pressed_color", Color.WHITE)
-		b.pressed.connect(_toggle_filter.bind(f))
-		page.add_child(b)
-		_filter_toggles[f] = b
-	_button(page, "Save", func() -> void:
-		_equip_filters = _pending_filters.duplicate()
-		_refresh_equip()
-		_show("Equip"))
-	_button(page, "Back", func() -> void: _show("Equip"))
+		b.text = pair[0]
+		b.custom_minimum_size = Vector2((BUTTON_SIZE.x - 10) / 2.0, 40)
+		b.pressed.connect(pair[1])
+		buttons.add_child(b)
 	return page
+
+
+## A clear 20 px checkbox: a light outline, filled green with a dark tick when checked.
+func _check_icon(on: bool) -> Texture2D:
+	var n := 20
+	var img := Image.create(n, n, false, Image.FORMAT_RGBA8)
+	var edge := Color("a9b3d1")
+	var fill := Color("79e0c0")
+	for y in n:
+		for x in n:
+			var border := x < 2 or y < 2 or x >= n - 2 or y >= n - 2
+			if on:
+				img.set_pixel(x, y, fill)
+			elif border:
+				img.set_pixel(x, y, edge)
+	if on:
+		var tick := Color("1b2440")
+		for i in 5:   # short stroke down-right, then a long one up-right
+			for t in 2:
+				img.set_pixel(4 + i, 9 + i + t, tick)
+		for i in 8:
+			for t in 2:
+				img.set_pixel(8 + i, 13 - i + t, tick)
+	return ImageTexture.create_from_image(img)
 
 
 func _open_filters() -> void:
