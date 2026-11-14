@@ -13,6 +13,13 @@ const MARGIN := 14.0
 const GAP := 12.0
 const SMALL := Vector2(76, 72)
 const BIG := Vector2(96, 72)
+const MINI := Vector2(64, 33)   # Pause and Tune, stacked in one column
+
+## The HUD's Pause and Tune buttons. While the bar shows, they hide and these bar keys stand in.
+var pause_source: Button
+var tune_source: Button
+var _pause_key: TouchScreenButton
+var _tune_key: TouchScreenButton
 
 @onready var pad: Node2D = $Pad
 @onready var left: TouchScreenButton = $Pad/Left
@@ -44,6 +51,8 @@ func _ready() -> void:
 	_setup_key(brick, SMALL, "BRICK", 0.0, Color("e5484d"))
 	_setup_key(angry, SMALL, "ANGRY", 0.0, Color("b8323a"))
 	_setup_key(push, SMALL, "PUSH", 0.0, Color("7d8597"))
+	_pause_key = _mini_key("PAUSE", func() -> void: pause_source.pressed.emit())
+	_tune_key = _mini_key("TUNE", func() -> void: tune_source.pressed.emit())
 	pad.visible = DisplayServer.is_touchscreen_available()
 	set_abilities([])
 	get_viewport().size_changed.connect(_layout)
@@ -75,6 +84,31 @@ func _setup_key(b: TouchScreenButton, key_size: Vector2, text: String, arrow: fl
 	b.pressed.connect(key.press.bind(true))
 	b.released.connect(key.press.bind(false))
 	_keys[b] = key
+
+
+func _mini_key(text: String, action: Callable) -> TouchScreenButton:
+	var b := TouchScreenButton.new()
+	pad.add_child(b)
+	_setup_key(b, MINI, text, 0.0, Color("2a3354"))
+	_keys[b].font_size = 12
+	b.pressed.connect(func() -> void:
+		if b.visible:
+			action.call())
+	return b
+
+
+## Mirror the HUD's Pause and Tune buttons: show the bar keys only while the source would
+## show, and hide the source while the bar is up.
+func _process(_delta: float) -> void:
+	var bar_up := visible and pad.visible
+	for pair in [[pause_source, _pause_key], [tune_source, _tune_key]]:
+		var src: Button = pair[0]
+		if src == null:
+			continue
+		src.modulate.a = 0.0 if bar_up else 1.0
+		src.mouse_filter = Control.MOUSE_FILTER_IGNORE if bar_up else Control.MOUSE_FILTER_STOP
+		if pair[1].visible != src.visible:
+			pair[1].visible = src.visible
 
 
 ## Dims a card's button while it can't be used (recharging, or Angry at your last heart).
@@ -118,7 +152,7 @@ func _layout() -> void:
 	# Card buttons fill in leftward from Jump, only the ones showing. On narrow screens the gaps
 	# between them shrink so they never reach the arrows.
 	var shown := _card_buttons
-	var room := x - BIG.x / 2.0 - (right.position.x + SMALL.x / 2.0 + GAP)
+	var room := x - BIG.x / 2.0 - (right.position.x + SMALL.x / 2.0 + GAP) - MINI.x - GAP
 	var gap := GAP
 	if shown.size() > 0:
 		gap = clampf((room - shown.size() * SMALL.x) / shown.size(), 2.0, GAP)
@@ -127,6 +161,10 @@ func _layout() -> void:
 		b.position = Vector2(x, cy)
 		if b.visible:
 			x -= SMALL.x + gap
+	# Pause over Tune, in one column just left of the card buttons.
+	x += SMALL.x / 2.0 - MINI.x / 2.0
+	_pause_key.position = Vector2(x, cy - MINI.y / 2.0 - 3.0)
+	_tune_key.position = Vector2(x, cy + MINI.y / 2.0 + 3.0)
 	# Those were centers; buttons are placed by their top-left corner.
 	for b in _keys:
 		b.position -= _keys[b].key_size / 2.0

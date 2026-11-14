@@ -9,6 +9,7 @@ const INK := Color("eef1fa")
 
 var key_size := Vector2(76, 70)
 var label := ""
+var font_size := 17
 var arrow := 0.0            # -1 left, 1 right, 0 none
 var face := Color("2a3354")
 var text_color := INK
@@ -55,6 +56,6 @@ func _draw() -> void:
 			draw_rect(Rect2(x - 2.5, mid.y - h, 5.0, h * 2.0), text_color)
 	elif label != "":
 		var font := ThemeDB.fallback_font
-		var fs := 17
+		var fs := font_size
 		var w := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 		draw_string(font, mid + Vector2(-w / 2.0, fs * 0.35), label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, text_color)

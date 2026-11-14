@@ -183,6 +183,8 @@ func _ready() -> void:
 	_on_screen_changed()
 	_start_music()
 	$TouchControls.bar_changed.connect(_fit_to_bar)
+	$TouchControls.pause_source = hud.pause_button
+	$TouchControls.tune_source = hud.tune_button
 	add_child(ScreenBorder.new())
 	hud.set_pixels(CardCollection.pixels)
 	_setup_web_bridge()

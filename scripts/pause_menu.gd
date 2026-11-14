@@ -63,6 +63,7 @@ func _ready() -> void:
 	_button(paused, "Continue", func() -> void: continue_pressed.emit())
 	_button(paused, "Cards", func() -> void: _show("Equip" if _in_town else "Cards"))
 	_button(paused, "Options", func() -> void: _show("Options"))
+	_button(paused, "Controls", func() -> void: _show("Controls"))
 	_save_quit = _button(paused, "Save and Quit", func() -> void: save_quit_pressed.emit())
 	_save_quit.hide()
 	_quit = _button(paused, "Back to Town", func() -> void: quit_pressed.emit())
@@ -132,7 +133,9 @@ func _ready() -> void:
 	_sound_toggle = _button(sound, "Sound: On", _toggle_sound)
 	_button(sound, "Back", func() -> void: _show("Options"))
 
-	for page in [paused, cards, card, equip, filter_page, options, sound]:
+	var controls := _build_controls()
+
+	for page in [paused, cards, card, equip, filter_page, options, sound, controls]:
 		panel.add_child(page)   # only the open page is visible, and the panel fits it
 
 	_music_slider.value_changed.connect(func(v: float) -> void:
@@ -482,7 +485,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		match _page:
 			"Sound": _show("Options")
 			"Options": _options_back()
-			"Cards", "Equip": _show("Paused")
+			"Cards", "Equip", "Controls": _show("Paused")
 			"Filters": _show("Equip")
 			"Card": _card_back()
 			_: continue_pressed.emit()
@@ -537,6 +540,44 @@ func _play_preview() -> void:
 
 
 # ---------- Building blocks, so every page looks the same ----------
+
+## Controls page: one table (so the columns line up) of action, keyboard and gamepad, in groups.
+func _build_controls() -> VBoxContainer:
+	var page := _page_box("Controls")
+	page.add_theme_constant_override("separation", 6)
+	var groups := [
+		["Moving", [["Move left / right", "A / D", "D-pad"], ["Jump (hold for higher)", "W or Space", "A"]]],
+		["Card abilities", [["Card slot 1", "J", "X"], ["Card slot 2", "K", "B"], ["Card slot 3", "L", "Y"]]],
+		["Other", [["Pause / back", "Esc or P", "Start"], ["Restart run", "R", "—"], ["Enter a door (town)", "E or W", "—"]]],
+	]
+	var rows := [["", "Keyboard", "Gamepad", "head"]]
+	for g in groups:
+		rows.append([g[0], "", "", "group"])
+		for r in g[1]:
+			rows.append(r + ["row"])
+	var grid := GridContainer.new()
+	grid.columns = 3
+	grid.add_theme_constant_override("h_separation", 22)
+	grid.add_theme_constant_override("v_separation", 1)
+	for row in rows:
+		for i in 3:
+			var l := Label.new()
+			l.text = row[i]
+			l.add_theme_font_size_override("font_size", 15)
+			match row[3]:
+				"head": l.add_theme_color_override("font_color", Color("a9b3d1"))
+				"group": l.add_theme_color_override("font_color", Color("79e2c2"))
+			grid.add_child(l)
+	page.add_child(grid)
+	var note := Label.new()
+	note.text = "Slot keys use the card equipped in that slot, if it has a button."
+	note.add_theme_font_size_override("font_size", 13)
+	note.add_theme_color_override("font_color", Color("a9b3d1"))
+	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	page.add_child(note)
+	_button(page, "Back", func() -> void: _show("Paused"))
+	return page
+
 
 func _page_box(title: String) -> VBoxContainer:
 	var box := VBoxContainer.new()
