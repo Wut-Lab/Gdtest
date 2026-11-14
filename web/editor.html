@@ -342,6 +342,12 @@ button:disabled { opacity: 0.4; }
     { ch: 'v', label: 'Vine platform' },
     { ch: 'q', label: 'Moss Covered Square' },
     { ch: '~', label: 'Water' },
+    { ch: '>', label: 'River (flows right)' },
+    { ch: '<', label: 'River (flows left)' },
+    { ch: '|', label: 'Waterfall' },
+    { ch: ',', label: 'Shallow spikes' },
+    { ch: 'a', label: 'Piranha Block (in water)' },
+    { ch: 'u', label: 'Harpoonist Block' },
     { ch: 'm', label: 'Big Bad Square (boss)' },
     { ch: 'y', label: 'Old Mossback (boss)' },
     { ch: 'd', label: 'Boss door' },
@@ -608,6 +614,38 @@ button:disabled { opacity: 0.4; }
       // Water: blue with a light wavy top.
       g.fillStyle = 'rgba(77,163,255,0.55)'; g.fillRect(x, y, s, s);
       g.fillStyle = '#9fd0ff'; g.fillRect(x, y, s, Math.max(2, s * 0.1));
+    } else if (ch === '<' || ch === '>') {
+      // River: a shallow band of water along the bottom of the cell, with an arrow for its flow.
+      g.fillStyle = 'rgba(77,158,242,0.65)'; g.fillRect(x, y + s * 0.55, s, s * 0.45);
+      g.fillStyle = '#d9f0ff'; g.fillRect(x, y + s * 0.55, s, Math.max(1, s * 0.06));
+      const d = ch === '>' ? 1 : -1, cx = x + s / 2;
+      g.fillStyle = '#ffffff'; g.beginPath();
+      g.moveTo(cx + d * s * 0.25, y + s * 0.77); g.lineTo(cx - d * s * 0.1, y + s * 0.62); g.lineTo(cx - d * s * 0.1, y + s * 0.92); g.fill();
+    } else if (ch === '|') {
+      // Waterfall: a pale curtain of falling streaks.
+      g.fillStyle = 'rgba(158,209,255,0.6)'; g.fillRect(x + s * 0.12, y, s * 0.76, s);
+      g.fillStyle = '#e6f5ff'; for (const fx of [0.25, 0.47, 0.69]) g.fillRect(x + fx * s, y + s * 0.1 + fx * s * 0.4, Math.max(1, s * 0.06), s * 0.4);
+    } else if (ch === ',') {
+      // Shallow spikes: a low row of steel spikes on the floor.
+      g.fillStyle = '#4a5468'; g.fillRect(x, y + s * 0.9, s, s * 0.1);
+      g.fillStyle = '#c8d0de';
+      for (let i = 0; i < 4; i++) { const px = x + s * (0.12 + i * 0.25); g.beginPath(); g.moveTo(px - s * 0.1, y + s * 0.9); g.lineTo(px + s * 0.1, y + s * 0.9); g.lineTo(px, y + s * 0.62); g.fill(); }
+    } else if (ch === 'a') {
+      // Piranha Block: slate-blue fish block with a big toothy underbite, in water.
+      g.fillStyle = 'rgba(77,163,255,0.45)'; g.fillRect(x, y, s, s);
+      g.fillStyle = '#3c4660'; g.beginPath(); g.moveTo(x + s * 0.12, y + s * 0.5); g.lineTo(x, y + s * 0.3); g.lineTo(x, y + s * 0.7); g.fill();
+      g.fillStyle = '#5d6b8a'; g.fillRect(x + s * 0.12, y + s * 0.25, s * 0.78, s * 0.55);
+      g.fillStyle = '#c9a227'; g.fillRect(x + s * 0.12, y + s * 0.62, s * 0.78, s * 0.18);
+      g.fillStyle = '#ffde59'; g.fillRect(x + s * 0.62, y + s * 0.33, s * 0.16, s * 0.14);
+      g.fillStyle = '#f4f1e6'; for (const fx of [0.45, 0.6, 0.75]) { g.beginPath(); g.moveTo(x + fx * s - s * 0.05, y + s * 0.62); g.lineTo(x + fx * s + s * 0.05, y + s * 0.62); g.lineTo(x + fx * s, y + s * 0.5); g.fill(); }
+    } else if (ch === 'u') {
+      // Harpoonist Block: a brown block in goggles holding a harpoon gun.
+      const b = s * 0.8, o = (s - b) / 2;
+      g.fillStyle = '#8a5a32'; g.fillRect(x + o, y + s - b, b, b);
+      g.fillStyle = '#2b2b2b'; g.fillRect(x + o, y + s * 0.38, b, s * 0.08);
+      g.fillStyle = '#8fd3ff'; g.fillRect(x + s * 0.24, y + s * 0.32, s * 0.2, s * 0.18); g.fillRect(x + s * 0.52, y + s * 0.32, s * 0.2, s * 0.18);
+      g.fillStyle = '#6d7685'; g.fillRect(x + s * 0.55, y + s * 0.66, s * 0.45, s * 0.1);
+      g.fillStyle = '#c8d0de'; g.beginPath(); g.moveTo(x + s, y + s * 0.71); g.lineTo(x + s * 0.88, y + s * 0.6); g.lineTo(x + s * 0.88, y + s * 0.82); g.fill();
     } else if (ch === 'm' || ch === 'y') {
       // Bosses: a big square (2x2 in the game) standing on this cell, with a crown of hearts.
       const moss = ch === 'y', b = s * 0.95, o = (s - b) / 2;

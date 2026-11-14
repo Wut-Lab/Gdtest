@@ -216,7 +216,7 @@ func in_water() -> float:
 func _submerged() -> float:
 	if water == null or water.is_empty():
 		return 0.0
-	var top := water.surface_at(position.x)
+	var top := water.surface_near(position.x, position.y - SIZE / 2.0, position.y + SIZE / 2.0)
 	if top == INF:
 		return 0.0
 	return clampf((position.y + SIZE / 2.0 - top) / SIZE, 0.0, 1.0)
@@ -562,8 +562,19 @@ func _physics_process(delta: float) -> void:
 	if velocity.y >= 0.0:
 		_bouncing = false
 
+	# Running water carries you along (on top of your own speed, like a conveyor), and a
+	# waterfall pushes you down.
+	var flow := 0.0
+	if water != null and not water.is_empty() and _dash == 0.0:
+		flow = water.flow_at(position + Vector2(0.0, SIZE / 2.0 - 2.0)) * Water.FLOW_SPEED
+		if water.in_fall(position):
+			velocity.y = minf(velocity.y + Water.FALL_PULL * delta, max_fall_speed)
+	velocity.x += flow
 	var before := velocity
 	move_and_slide()
+	if not is_zero_approx(velocity.x):
+		velocity.x -= flow   # (a wall stopped you: stay stopped)
+	before.x -= flow
 	var bounced_now := _apply_rubber(before, on_floor)
 	_hit_obstacles()
 	if _angry > 0.0:

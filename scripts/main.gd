@@ -55,6 +55,9 @@ const AREAS := [
 		"boss": "res://levels/boss_basic.txt", "boss_name": "Big Bad Square"},
 	{"id": "moss", "name": "Mossy Cave", "first": 6, "levels": 5,
 		"boss": "res://levels/boss_moss.txt", "boss_name": "Old Mossback"},
+	# Harder: more Bad Blocks (and Hard ones from the first level), slightly longer levels.
+	{"id": "lake", "name": "Cavern Lake", "first": 11, "levels": 5, "extra": 8,
+		"bad": [1, 1, 2, 2, 3], "hard": [1, 1, 1, 2, 2]},
 ]
 const FLOOR_CLEAR_REWARD := 10
 ## Beating a boss the first time: these pixels plus its card (Dash first, if you lack it).
@@ -62,6 +65,8 @@ const BOSS_REWARD := 25
 ## Each boss gives its area's own card if you don't have it yet, otherwise the boss's card.
 const BOSS_CARDS := {"basic": "chain_dash", "moss": "bark_hide"}
 const AREA_CARDS := {"basic": "dash", "moss": "overgrowth"}
+## Chance Pork is in town on a visit, after the first.
+const PORK_CHANCE := 0.3
 ## Longest level a run may roll, in tiles.
 const MAX_LEVEL_TILES := 240
 ## Extra Bad Blocks added to an area's 1st..5th level: a little harder nearer the boss.
@@ -71,6 +76,8 @@ var _floor_step := 0
 var _floor_seeds: Array[int] = []
 ## Hearts carried into the next level of a floor (-1 = start fresh).
 var _carry_hearts := -1
+## The top heart is cracked in half (a harpoon takes a heart and a half).
+var _cracked := false
 var _rematch := false   # a Rematch: straight to the boss, no rewards
 var _level_hearts := 0  # hearts at the start of this level (Save and Quit goes back to it)
 var player: Player
@@ -107,12 +114,13 @@ func _ready() -> void:
 		_hook_button_haptics(n)
 	level.goal_reached.connect(_on_goal_reached)
 	level.heart_collected.connect(_on_heart_collected)
-	level.heart_check = func() -> bool: return hearts < _start_hearts()   # no pickups at full health
+	level.heart_check = func() -> bool: return hearts < _start_hearts() or _cracked   # no pickups at full health
 	level.card_collected.connect(_on_card_collected)
 	level.chest_opened.connect(_on_chest_opened)
 	level.obstacle_broken.connect(_on_obstacle_broken)
 	level.pixel_collected.connect(_on_pixel_collected)
 	level.player_hurt.connect(_on_player_hurt)
+	level.player_harpooned.connect(func(push: Vector2) -> void: _on_player_hurt(push, true))
 	level.door_near.connect(_on_door_near)
 	level.checkpoint_reached.connect(_on_checkpoint)
 	level.boss_defeated.connect(_on_boss_defeated)
@@ -152,7 +160,7 @@ func _ready() -> void:
 	hud.set_player_color(player.color)
 	hud.player_color_changed.connect(_on_player_color_changed)
 	hud.set_stats(0.0, 0)
-	hud.set_hearts(hearts, _start_hearts())
+	hud.set_hearts(hearts, _start_hearts(), _cracked)
 	hud.show_main_menu(player.color)
 	$TouchControls.hide()   # touch controls only while playing, so menus get the whole screen
 	hud.main_menu.play_pressed.connect(enter_town)
@@ -311,12 +319,22 @@ func enter_town(at_door := "") -> void:
 	# Area milestones: the first time you play an area, a little of it shows up in town.
 	if "moss" not in CardCollection.areas_played:
 		town = town.replace("o", ".")   # mossy blocks by the pond
+	if "lake" in CardCollection.areas_played:
+		town = _flood_rubber(town)   # the rubber blocks float in little pools
 	if not CardCollection.larry_here():
 		town = town.replace("f", ".").replace("l", ".")   # Larry's hut: your 3rd Shop card
 	# Romeo sits on the right hill, then the left, switching every 2 levels you complete.
 	town = town.replace("[" if CardCollection.clears / 2 % 2 == 0 else "]", ".")
 	_larry_shown = CardCollection.larry_here()
 	level.load_map_text(town)
+	if "lake" in CardCollection.areas_played:
+		# Pork the friendly piranha: in the pond the first time, then now and then in any pool.
+		if "pork" not in CardCollection.areas_played:
+			CardCollection.areas_played.append("pork")
+			CardCollection.save()
+			level.add_pork(0)
+		elif randf() < PORK_CHANCE:
+			level.add_pork(randi_range(0, level.water.bodies().size() - 1))
 	for d in level.get_doors():
 		if d.kind == "paul":
 			d.closed = not CardCollection.milestone(10)   # his shutter stays down until 10 levels
@@ -333,6 +351,7 @@ func enter_town(at_door := "") -> void:
 	player.active = true
 	player.abilities.assign(CardCollection.equipped)
 	hearts = _start_hearts()
+	_cracked = false
 	_show_abilities()
 	hud.set_pixels(CardCollection.pixels)
 	hud.hide_menus()
@@ -419,8 +438,10 @@ func new_run() -> void:
 	hits = 0
 	player.abilities.assign(CardCollection.equipped)   # equipped from the collection
 	hearts = _carry_hearts if _carry_hearts > 0 else _start_hearts()
+	if _carry_hearts <= 0:
+		_cracked = false
 	_show_abilities()
-	hud.set_hearts(hearts, maxi(hearts, _start_hearts()))
+	hud.set_hearts(hearts, maxi(hearts, _start_hearts()), _cracked)
 	level.reset_pickups()
 	if _level_key == "custom":
 		_sync_chests()   # editor test levels refill their chests every run
@@ -534,7 +555,7 @@ func _pay_angry_heart() -> bool:
 		hud.toast("Too angry to risk your last heart!")
 		return false
 	hearts -= 1
-	hud.set_hearts(hearts, _start_hearts())
+	hud.set_hearts(hearts, _start_hearts(), _cracked)
 	hud.hearts_display.flash()
 	Haptics.hurt()
 	return true
@@ -586,7 +607,8 @@ func _on_checkpoint(spot: Vector2) -> void:
 
 
 ## Touched a spike: lose a heart and get knocked away, unless still blinking from the last hit.
-func _on_player_hurt(push: Vector2) -> void:
+## heavy: a harpoon, a heart and a half.
+func _on_player_hurt(push: Vector2, heavy := false) -> void:
 	if state != State.PLAY or player.is_safe():
 		return
 	if player.try_guard(push):
@@ -600,7 +622,7 @@ func _on_player_hurt(push: Vector2) -> void:
 	hits += 1
 	player.knock_back(push)
 	player.slow_burst()
-	_lose_heart()
+	_lose_heart(false, heavy)
 
 
 ## Hearts at the start of a run: 2, plus 1 for the Heart Box card.
@@ -608,15 +630,22 @@ func _start_hearts() -> int:
 	return START_HEARTS + (1 if "heart_box" in player.abilities else 0)
 
 
-func _lose_heart(from_fall := false) -> void:
+func _lose_heart(from_fall := false, heavy := false) -> void:
 	hearts -= 1
+	if heavy:
+		# A heart and a half: crack the next heart, or finish off one that's already cracked.
+		if _cracked:
+			hearts -= 1
+		_cracked = not _cracked
+	if hearts <= 0:
+		_cracked = false
 	if hearts <= 0:
 		Haptics.lose()
 	elif from_fall:
 		Haptics.fall()
 	else:
 		Haptics.hurt()
-	hud.set_hearts(hearts, _start_hearts())
+	hud.set_hearts(hearts, _start_hearts(), _cracked)
 	hud.hearts_display.flash()
 	if hearts <= 0:
 		state = State.OUT
@@ -634,8 +663,11 @@ func _lose_heart(from_fall := false) -> void:
 
 
 func _on_heart_collected() -> void:
-	hearts = mini(hearts + 1, _start_hearts())
-	hud.set_hearts(hearts, _start_hearts())
+	if _cracked and hearts >= _start_hearts():
+		_cracked = false   # full but cracked: mends the crack
+	else:
+		hearts = mini(hearts + 1, _start_hearts())
+	hud.set_hearts(hearts, _start_hearts(), _cracked)
 
 
 ## Chests this save file already opened stay open (and empty).
@@ -677,13 +709,15 @@ func _on_chest_opened(index: int) -> void:
 ## drop a card 10% of the time, otherwise 1 pixel. Cards come from the Drop pool, ones this
 ## file doesn't own yet.
 func _on_obstacle_broken(pos: Vector2, kind: String) -> void:
-	var chance := 0.1 if kind in ["bad_block", "moss_square"] else 0.08
-	# A Moss Covered Square drops this area's cards (drop group "moss"); the rest use the Drop pool.
-	var left := CardCollection.pool("moss" if kind == "moss_square" else "drop").filter(func(a: String) -> bool: return not CardCollection.owned.has(a))
+	var chance := 0.1 if kind in ["bad_block", "moss_square", "piranha", "harpoonist"] else 0.08
+	# An area's own enemies drop its cards (Moss Covered Square: drop group "moss"; Piranha and
+	# Harpoonist Blocks: "lake"); the rest use the Drop pool.
+	var group: String = {"moss_square": "moss", "piranha": "lake", "harpoonist": "lake"}.get(kind, "drop")
+	var left := CardCollection.pool(group).filter(func(a: String) -> bool: return not CardCollection.owned.has(a))
 	if randf() < chance and not left.is_empty():
 		_on_card_collected(left.pick_random())
 		return
-	var n := 1 if kind in ["bad_block", "moss_square"] else randi_range(1, 2)
+	var n := 1 if kind in ["bad_block", "moss_square", "piranha"] else randi_range(1, 2)
 	CardCollection.add_pixels(n)
 	hud.set_pixels(CardCollection.pixels)
 	CardFx.spawn(level, pos, "plus", 0.0, "+%d" % n)
@@ -857,21 +891,25 @@ func _play_floor_level() -> void:
 	seed_value = _floor_seeds[step - 1] if step <= _floor_seeds.size() else 0
 	_level_key = _area_key(id, step)
 	_replay_mode = ""
-	set_music("music_moss" if id == "moss" else "music_level")
+	set_music({"moss": "music_moss"}.get(id, "music_level"))
 	var ar := _area(id)
 	if id not in CardCollection.areas_played:
 		CardCollection.areas_played.append(id)   # town milestone: see enter_town
 		CardCollection.save()
-	if step > int(ar.levels):
+	if step > int(ar.levels) and ar.has("boss"):
 		_play_boss(ar, carry)
 		return
 	hud.set_seed(seed_value)
 	var text := LevelGen.generate(seed_value, ar.get("extra", 0))   # Basic levels run 10-15 tiles longer
-	text = _harden(text, step, seed_value)
+	text = _harden(text, step, seed_value, ar)
 	if id == "moss":
 		text = _mossify(_add_moss_obstacles(text, seed_value), seed_value).replace("`", "=")
 		level.set_theme("moss")
 		$Background/Sky.modulate = Color(0.55, 0.85, 0.7)
+	elif id == "lake":
+		text = LakeGen.lakeify(text, seed_value)
+		level.set_theme("lake")
+		$Background/Sky.modulate = Color(0.5, 0.62, 0.9)
 	_floor = id
 	_floor_step = step
 	_carry_hearts = carry
@@ -912,8 +950,9 @@ func _on_boss_defeated() -> void:
 ## Mossy Cave: most floating platforms become crumbling blocks.
 ## Levels get a little harder nearer the boss: later levels gain 1-2 more Bad Blocks on flat
 ## ground, and the last one's first Bad Block is a Hard one (faster, horned).
-func _harden(text: String, step: int, s: int) -> String:
-	var n: int = EXTRA_BAD_BLOCKS[clampi(step - 1, 0, EXTRA_BAD_BLOCKS.size() - 1)]
+func _harden(text: String, step: int, s: int, ar := {}) -> String:
+	var table: Array = ar.get("bad", EXTRA_BAD_BLOCKS)
+	var n: int = table[clampi(step - 1, 0, table.size() - 1)]
 	if n == 0:
 		return text
 	var rng := RandomNumberGenerator.new()
@@ -951,7 +990,11 @@ func _harden(text: String, step: int, s: int) -> String:
 	for row in g:
 		out.append("".join(row))
 	var res := "\n".join(out)
-	if step >= EXTRA_BAD_BLOCKS.size():
+	# Hard Bad Blocks: one in an area's last level, or the area's own count (Cavern Lake: from
+	# the first level on).
+	var hard: int = ar.hard[clampi(step - 1, 0, ar.hard.size() - 1)] if ar.has("hard") \
+		else (1 if step >= EXTRA_BAD_BLOCKS.size() else 0)
+	for i in hard:
 		var k := res.find("e")
 		if k != -1:
 			res = res.substr(0, k) + "k" + res.substr(k + 1)
@@ -1020,6 +1063,34 @@ func _add_moss_obstacles(text: String, s: int) -> String:
 						g[c.y + 1][c.x + dx] = "`"
 			keep_away.append(c)
 			spots = spots.filter(func(o: Vector2i) -> bool: return absi(o.x - c.x) >= 6 or absi(o.y - c.y) >= 6)
+	var out := PackedStringArray()
+	for row in g:
+		out.append("".join(row))
+	return "\n".join(out)
+
+
+## Cavern Lake milestone: the ground around each group of rubber blocks on the town floor turns
+## into a little pool, so the rubber floats on the water.
+func _flood_rubber(town: String) -> String:
+	var g: Array = []
+	for line in town.split("\n"):
+		g.append(line.split(""))
+	for y in range(1, g.size() - 3):
+		var x := 0
+		while x < g[y].size():
+			if g[y][x] in ["R", "r"] and g[y - 1][x] == ".":
+				var x1 := x
+				while x1 + 1 < g[y].size() and g[y][x1 + 1] == g[y][x]:
+					x1 += 1
+				var keep: bool = g[y][x] == "R" or CardCollection.milestone(10)   # r is ground before 10 levels
+				if keep:
+					for px in range(x - 2, x1 + 3):
+						for py in [y, y + 1, y + 2]:
+							if (py > y or px < x or px > x1) and g[py][px] == "#":
+								g[py][px] = "~"
+				x = x1 + 1
+			else:
+				x += 1
 	var out := PackedStringArray()
 	for row in g:
 		out.append("".join(row))

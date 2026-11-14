@@ -19,6 +19,9 @@ extends Node2D
 ##   @  checkpoint (falls send you back here once you've touched it)
 ##   c  crumbling block (Mossy Cave): holds a moment after you land, then falls; grows back
 ##   !  town: dungeon gate     $  town: shop     &  town: card hall
+##   ~  still water (you float)   < >  shallow river running left / right (carries you)
+##   |  waterfall (pushes you down)   a  Piranha Block (in water)   u  Harpoonist Block
+##   ,  shallow spikes (Cavern Lake)
 
 signal goal_reached
 signal heart_collected
@@ -26,6 +29,8 @@ signal card_collected(ability: String)
 signal chest_opened(index: int)
 signal pixel_collected(index: int)
 signal player_hurt(push: Vector2)
+## A Harpoonist's harpoon hit the player: a heart and a half.
+signal player_harpooned(push: Vector2)
 ## A breakable obstacle or enemy was destroyed: kind is "spike" or "bad_block".
 signal obstacle_broken(pos: Vector2, kind: String)
 ## The player walked up to (or away from) a town building's door.
@@ -246,7 +251,10 @@ func load_map_text(text: String) -> void:
 	_boss_blocks.clear()
 	var doors := {}   # cell -> door character
 	var checkpoints: Array[Vector2i] = []
-	var water_cells: Array[Vector2i] = []
+	var water_cells := {}   # cell -> "~", "<", ">" or "|"
+	var piranhas: Array[Vector2i] = []
+	var harpoonists: Array[Vector2i] = []
+	var shallow: Array[Vector2i] = []
 	var crumbles: Array[Vector2i] = []
 	var bosses: Array[Vector2i] = []
 	_back_doors.clear()
@@ -299,8 +307,20 @@ func load_map_text(text: String) -> void:
 					vine_cells.append(Vector2i(x, y))
 				"d":
 					_back_doors.append(Vector2i(x, y))
-				"~":
-					water_cells.append(Vector2i(x, y))
+				"~", "<", ">", "|":
+					water_cells[Vector2i(x, y)] = ch
+				"a":
+					piranhas.append(Vector2i(x, y))
+					# A piranha swims in the same water as its neighbours (a lake by default).
+					var kind := "~"
+					for nx in [x - 1, x + 1]:
+						if nx >= 0 and nx < line.length() and line[nx] in ["<", ">", "~"]:
+							kind = line[nx]
+					water_cells[Vector2i(x, y)] = kind
+				"u":
+					harpoonists.append(Vector2i(x, y))
+				",":
+					shallow.append(Vector2i(x, y))
 				"!", "$", "&", "%", "(", ")", "{", "}", "[", "]", "f", "l":
 					doors[Vector2i(x, y)] = ch
 				"T", "B":
@@ -363,10 +383,73 @@ func load_map_text(text: String) -> void:
 		mb.defeated.connect(func(_pos: Vector2) -> void: boss_defeated.emit())
 		mb.landed.connect(func(pos: Vector2) -> void: add_moss_patch(pos, MossBoss.SIZE / 2.0 - 4.0, true))
 		_obstacles.add_child(mb)
-	water.setup(water_cells)
+	water.setup(water_cells, true)
+	for cell in shallow:
+		var sp := ShallowSpikes.new()
+		sp.position = Vector2(cell.x * T + T / 2.0, (cell.y + 1) * T)
+		sp.hurt_player.connect(func(push: Vector2) -> void: player_hurt.emit(push))
+		_obstacles.add_child(sp)
+	for cell in harpoonists:
+		var hb := Harpoonist.new()
+		hb.position = Vector2(cell.x * T + T / 2.0, (cell.y + 1) * T - Harpoonist.SIZE / 2.0)
+		hb.hurt_player.connect(func(push: Vector2) -> void: player_hurt.emit(push))
+		hb.harpooned.connect(func(push: Vector2) -> void: player_harpooned.emit(push))
+		hb.broken.connect(func(pos: Vector2) -> void: obstacle_broken.emit(pos, "harpoonist"))
+		_obstacles.add_child(hb)
+	for cell in piranhas:
+		var pb := _make_piranha(cell, water_cells)
+		pb.hurt_player.connect(func(push: Vector2) -> void: player_hurt.emit(push))
+		pb.broken.connect(func(pos: Vector2) -> void: obstacle_broken.emit(pos, "piranha"))
+		_obstacles.add_child(pb)
 	_moss_layer.queue_redraw()
 	_update_walls()
 	queue_redraw()
+
+
+## A piranha for the water at this cell: it swims along the row of water it starts in (a lake's
+## surface row, or its stretch of river).
+func _make_piranha(cell: Vector2i, cells: Dictionary, friendly := false) -> Piranha:
+	var pb := Piranha.new()
+	pb.friendly = friendly
+	var kind: String = cells.get(cell, "~")
+	var row := cell.y
+	if kind == "~":
+		while cells.get(Vector2i(cell.x, row - 1), "") == "~":
+			row -= 1   # up to the surface
+	var a := cell.x
+	var b := cell.x
+	while cells.get(Vector2i(a - 1, row), "") == kind:
+		a -= 1
+	while cells.get(Vector2i(b + 1, row), "") == kind:
+		b += 1
+	pb.x0 = a * T
+	pb.x1 = (b + 1) * T
+	if kind == "~":
+		pb.surface_y = row * T
+		pb.home_y = row * T + 18.0
+	else:
+		pb.surface_y = (row + 1) * T - Water.RIVER_DEPTH
+		pb.home_y = (row + 1) * T - Piranha.H / 2.0 - 1.0
+	pb.position = Vector2(cell.x * T + T / 2.0, pb.home_y)
+	return pb
+
+
+## Pork, the friendly piranha, swimming in pond number i (town).
+func add_pork(i: int) -> void:
+	var ponds := water.bodies()
+	if ponds.is_empty():
+		return
+	var pond: Dictionary = ponds[clampi(i, 0, ponds.size() - 1)]
+	var cells := {}
+	for c in pond.cells:
+		cells[c] = "~"
+	var start_cell: Vector2i = pond.cells[0]
+	for c in pond.cells:
+		if c.y < start_cell.y or (c.y == start_cell.y and absf(c.x * T - (pond.x0 + pond.x1) / 2.0) < absf(start_cell.x * T - (pond.x0 + pond.x1) / 2.0)):
+			start_cell = c
+	var pork := _make_piranha(start_cell, cells, true)
+	pork.name = "Pork"
+	_obstacles.add_child(pork)
 
 
 ## Pads float in their cell like the goal. Each pad links to the next one of its color
@@ -578,13 +661,15 @@ func _update_walls() -> void:
 
 func set_theme(t: String) -> void:
 	theme = t
-	ground.modulate = Color(0.62, 0.86, 0.6) if t == "moss" else Color.WHITE
+	ground.modulate = {"moss": Color(0.62, 0.86, 0.6), "lake": Color(0.5, 0.66, 0.98)}.get(t, Color.WHITE)
 	queue_redraw()
 
 
 func _draw() -> void:
 	if theme == "moss":
 		_draw_moss()
+	elif theme == "lake":
+		_draw_lake()
 	for cell in _back_doors:
 		_draw_back_door(cell)
 	# A faint tile grid behind the level.
@@ -658,6 +743,25 @@ func _draw_moss_block(c: CanvasItem, cell: Vector2i) -> void:
 		c.draw_rect(Rect2(x + rng.randi_range(2, T - 6), y - 3 - rng.randi_range(2, 6), 3, 5), Color("6cc04f"))
 	for i in 3:
 		c.draw_rect(Rect2(x + rng.randi_range(4, T - 8), y + rng.randi_range(8, T - 8), 4, 3), Color("6cc04f"))
+
+
+## Cavern Lake: damp stone, little stalactites hanging under ledges and wet shine on top.
+func _draw_lake() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 11
+	for cell in ground.get_used_cells():
+		var x := cell.x * T
+		var y := cell.y * T
+		if ground.get_cell_source_id(cell + Vector2i.UP) == -1:
+			draw_rect(Rect2(x, y, T, 2), Color(0.8, 0.92, 1.0, 0.5))
+			if rng.randf() < 0.3:
+				draw_rect(Rect2(x + rng.randi_range(3, T - 9), y + 4, 6, 2), Color(0.85, 0.95, 1.0, 0.35))
+		if ground.get_cell_source_id(cell + Vector2i.DOWN) == -1 and rng.randf() < 0.4:
+			var sx := x + rng.randi_range(4, T - 10)
+			var len := rng.randi_range(8, 18)
+			draw_colored_polygon(PackedVector2Array([Vector2(sx, y + T), Vector2(sx + 8, y + T),
+				Vector2(sx + 4, y + T + len)]), Color("7d8fb3"))
+			draw_rect(Rect2(sx + 3, y + T + len + 3, 2, 3), Color(0.7, 0.88, 1.0, 0.8))   # a drip
 
 
 ## Mossy Cave: tufts of moss along every top surface and a few vines hanging under ledges.

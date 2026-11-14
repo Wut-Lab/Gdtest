@@ -26,7 +26,8 @@ static func size(block: float) -> Vector2:
 
 ## Draws a heart with its top-left corner at `pos`. An empty heart is a dark slot with a
 ## faint rim, so lost hearts still show how many you had.
-static func draw(canvas: CanvasItem, pos: Vector2, block: float, full := true) -> void:
+## half = true: only the left half is full (a heart and a half lost to a harpoon).
+static func draw(canvas: CanvasItem, pos: Vector2, block: float, full := true, half := false) -> void:
 	for y in PATTERN.size():
 		var row: String = PATTERN[y]
 		for x in row.length():
@@ -34,8 +35,8 @@ static func draw(canvas: CanvasItem, pos: Vector2, block: float, full := true) -
 			if ch == ".":
 				continue
 			var c := EMPTY
-			if full:
+			if full and (not half or x < 4):
 				c = LIGHT if ch == "L" else (SHADE if ch == "S" else BODY)
-			elif ch != "B":
+			elif ch != "B" or (half and x >= 4 and y == 0):
 				c = EMPTY_EDGE
 			canvas.draw_rect(Rect2(pos + Vector2(x, y) * block, Vector2(block, block)), c)

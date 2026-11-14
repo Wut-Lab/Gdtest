@@ -387,9 +387,10 @@ func set_seed(seed_value: int) -> void:
 	seed_label.visible = seed_value > 0
 
 
-func set_hearts(hearts: int, slots: int) -> void:
+func set_hearts(hearts: int, slots: int, half := false) -> void:
 	hearts_display.slots = slots
 	hearts_display.hearts = hearts
+	hearts_display.half = half
 
 
 func hide_menus() -> void:

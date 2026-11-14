@@ -10,6 +10,11 @@ var hearts := 3:
 	set(v):
 		hearts = v
 		_resize()
+## The top heart is cracked in half.
+var half := false:
+	set(v):
+		half = v
+		queue_redraw()
 var slots := 3:
 	set(v):
 		slots = v
@@ -48,4 +53,4 @@ func _draw() -> void:
 		var pos := Vector2(i * w, 0)
 		if i == hearts and _flash > 0.0:   # the heart just lost shakes
 			pos.x += sin(_flash * 60.0) * 3.0
-		HeartArt.draw(self, pos, BLOCK, i < hearts)
+		HeartArt.draw(self, pos, BLOCK, i < hearts, half and i == hearts - 1)
