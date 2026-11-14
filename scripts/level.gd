@@ -242,6 +242,7 @@ func load_map_text(text: String) -> void:
 	_overgrowth_cd = 0.0
 	var vine_cells: Array[Vector2i] = []
 	var moss_bosses: Array[Vector2i] = []
+	var simple_blocks: Array[Vector2i] = []
 	_boss_blocks.clear()
 	var doors := {}   # cell -> door character
 	var checkpoints: Array[Vector2i] = []
@@ -282,6 +283,8 @@ func load_map_text(text: String) -> void:
 					checkpoints.append(Vector2i(x, y))
 				"c":
 					crumbles.append(Vector2i(x, y))
+				"n":
+					simple_blocks.append(Vector2i(x, y))
 				"o":
 					cells[Vector2i(x, y)] = "#"
 					_moss_cells.append(Vector2i(x, y))
@@ -330,6 +333,10 @@ func load_map_text(text: String) -> void:
 		var cb := CrumbleBlock.new()
 		cb.position = Vector2(cell.x * T + T / 2.0, cell.y * T + T / 2.0)
 		_obstacles.add_child(cb)
+	for cell in simple_blocks:
+		var sb := SimpleBlock.new()
+		sb.position = Vector2(cell.x * T + T / 2.0, cell.y * T + T / 2.0)
+		_obstacles.add_child(sb)
 	for cell in vine_cells:
 		var vp := VinePlatform.new()
 		vp.position = Vector2(cell.x * T + T / 2.0, cell.y * T + VinePlatform.THICK / 2.0)
