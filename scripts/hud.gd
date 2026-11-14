@@ -190,6 +190,9 @@ func _on_color_input() -> void:
 
 ## Town hides the run's timer, falls, hearts and seed.
 func set_town_mode(on: bool) -> void:
+	if on:
+		for old in get_tree().get_nodes_in_group("hud_banner"):
+			old.queue_free()   # no leftover level banner in town
 	for n in [time_label, falls_label, hearts_display]:
 		n.visible = not on
 	if on:

@@ -4,6 +4,8 @@ extends Control
 ##   Paused:  Continue, Cards, Options, Back (to the main menu)
 ##   Cards:   the player and their 0–3 equipped ability cards (tap one to see it), Back
 ##   Card:    one card, large, with what it does, Back
+##   Equip:   (Cards in town) the player and 3 slots on the left, owned cards on the right:
+##            tap a card to equip it in the first empty slot, tap a slot to take it back off
 ##   Options: Sound, Back
 ## The main menu opens the same Options page on its own; Back then closes the menu.
 ##   Sound:   Music Volume, Sound Volume, Sound: On/Off, Back
@@ -59,7 +61,7 @@ func _ready() -> void:
 
 	var paused := _page_box("Paused")
 	_button(paused, "Continue", func() -> void: continue_pressed.emit())
-	_button(paused, "Cards", func() -> void: _show("Cards"))
+	_button(paused, "Cards", func() -> void: _show("Equip" if _in_town else "Cards"))
 	_button(paused, "Options", func() -> void: _show("Options"))
 	_save_quit = _button(paused, "Save and Quit", func() -> void: save_quit_pressed.emit())
 	_save_quit.hide()
@@ -113,6 +115,8 @@ func _ready() -> void:
 	card.add_child(_card_text)
 	_button(card, "Back", _card_back)
 
+	var equip := _build_equip()
+
 	var options := _page_box("Options")
 	_button(options, "Sound", func() -> void: _show("Sound"))
 	_button(options, "Back", _options_back)
@@ -127,7 +131,7 @@ func _ready() -> void:
 	_sound_toggle = _button(sound, "Sound: On", _toggle_sound)
 	_button(sound, "Back", func() -> void: _show("Options"))
 
-	for page in [paused, cards, card, options, sound]:
+	for page in [paused, cards, card, equip, options, sound]:
 		panel.add_child(page)   # only the open page is visible, and the panel fits it
 
 	_music_slider.value_changed.connect(func(v: float) -> void:
@@ -147,6 +151,119 @@ func _ready() -> void:
 
 
 var _save_quit: Button
+## In town the Cards page lets you change your equipped cards.
+var _in_town := false
+var _equip_preview: PlayerPreview
+var _equip_count: Label
+var _equip_slots: Array[Button] = []
+var _equip_list: VBoxContainer
+
+
+func set_town(on: bool) -> void:
+	_in_town = on
+
+
+## The town Cards page: you on the left with your 3 slots under you, your other cards on the right.
+func _build_equip() -> VBoxContainer:
+	var page := _page_box("Equip")
+	(page.get_child(0) as Label).text = "Cards"
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	page.add_child(row)
+	var left := VBoxContainer.new()
+	left.add_theme_constant_override("separation", 8)
+	row.add_child(left)
+	_equip_preview = PlayerPreview.new()
+	_equip_preview.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	left.add_child(_equip_preview)
+	_equip_count = Label.new()
+	_equip_count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_equip_count.add_theme_font_size_override("font_size", 14)
+	_equip_count.add_theme_color_override("font_color", Color("a9b3d1"))
+	left.add_child(_equip_count)
+	for i in 3:
+		var slot := _card_button(EQUIP_WIDTH)
+		slot.pressed.connect(_unequip.bind(i))
+		left.add_child(slot)
+		_equip_slots.append(slot)
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(EQUIP_WIDTH, 300)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	row.add_child(scroll)
+	_equip_list = VBoxContainer.new()
+	_equip_list.add_theme_constant_override("separation", 6)
+	scroll.add_child(_equip_list)
+	_button(page, "Back", func() -> void: _show("Paused"))
+	return page
+
+
+const EQUIP_WIDTH := 190.0
+
+
+## A card row: its picture and its name. Empty ability = an empty slot.
+func _card_button(width: float) -> Button:
+	var b := Button.new()
+	b.custom_minimum_size = Vector2(width, 44)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	row.offset_left = 6
+	b.add_child(row)
+	var icon := CardIcon.new()
+	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(icon)
+	var name_label := Label.new()
+	name_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	name_label.add_theme_font_size_override("font_size", 14)
+	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(name_label)
+	return b
+
+
+func _set_card_button(b: Button, ability: String) -> void:
+	var row := b.get_child(0)
+	(row.get_child(0) as CardIcon).ability = ability
+	var l := row.get_child(1) as Label
+	l.text = AbilityCard.NAMES[ability] if ability != "" else "Empty slot"
+	l.modulate.a = 1.0 if ability != "" else 0.5
+	b.set_meta("ability", ability)
+
+
+func _refresh_equip() -> void:
+	var eq := CardCollection.equipped
+	_equip_count.text = "Equipped %d of %d" % [eq.size(), CardCollection.MAX_EQUIPPED]
+	for i in 3:
+		_set_card_button(_equip_slots[i], eq[i] if i < eq.size() else "")
+		_equip_slots[i].disabled = i >= eq.size()
+	for c in _equip_list.get_children():
+		_equip_list.remove_child(c)
+		c.queue_free()
+	var full := eq.size() >= CardCollection.MAX_EQUIPPED
+	for a in CardCollection.ALL:
+		if a in CardCollection.owned and a not in eq:
+			var b := _card_button(EQUIP_WIDTH - 12)
+			_set_card_button(b, a)
+			b.disabled = full
+			b.pressed.connect(_equip.bind(a))
+			_equip_list.add_child(b)
+	if _equip_list.get_child_count() == 0:
+		var none := Label.new()
+		none.text = "No other cards yet."
+		none.add_theme_color_override("font_color", Color("a9b3d1"))
+		_equip_list.add_child(none)
+
+
+func _equip(ability: String) -> void:
+	if CardCollection.toggle_equip(ability):
+		_refresh_equip()
+
+
+func _unequip(i: int) -> void:
+	if i < CardCollection.equipped.size():
+		CardCollection.toggle_equip(CardCollection.equipped[i])
+		_refresh_equip()
 
 
 ## Save and Quit only shows during a dungeon run.
@@ -186,6 +303,8 @@ func set_cards(abilities: Array[String], player_color: Color) -> void:
 		_slot_names[i].modulate.a = 1.0 if a != "" else 0.5
 		_slot_buttons[i].disabled = a == ""
 	_abilities = abilities.duplicate()
+	_equip_preview.color = player_color
+	_refresh_equip()
 
 
 func _open_card(i: int) -> void:
@@ -230,7 +349,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		match _page:
 			"Sound": _show("Options")
 			"Options": _options_back()
-			"Cards": _show("Paused")
+			"Cards", "Equip": _show("Paused")
 			"Card": _card_back()
 			_: continue_pressed.emit()
 

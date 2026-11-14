@@ -226,6 +226,8 @@ func reset_to(pos: Vector2) -> void:
 	invincible = 0.0
 	phased = false
 	_phase_look = 1.0
+	_shake_left = 0.0
+	camera.position = Vector2.ZERO
 	camera.reset_smoothing()
 
 

@@ -314,6 +314,7 @@ func enter_town(at_door := "") -> void:
 		if d.kind == at_door:
 			spot = d.position + Vector2(0, -12)
 	player.reset_to(spot)
+	_unstick.call_deferred()
 	player.active = true
 	player.abilities.assign(CardCollection.equipped)
 	hearts = _start_hearts()
@@ -437,6 +438,16 @@ func _end_talk() -> void:
 	get_viewport().gui_release_focus()
 
 
+## Safety net: if the player ever lands inside the ground (back from a level), lift them out.
+func _unstick() -> void:
+	await get_tree().physics_frame
+	for i in 16:
+		if not player.test_move(player.global_transform, Vector2.ZERO):
+			return
+		player.position.y -= 8.0
+	player.reset_to(level.start.position)
+
+
 ## Pause the game and open the pause menu (Pause button, Esc or P).
 func pause() -> void:
 	if state not in [State.PLAY, State.TOWN] or get_tree().paused:
@@ -445,6 +456,9 @@ func pause() -> void:
 	hud.pause_button.hide()
 	hud.tune_button.hide()
 	$TouchControls.hide()
+	for b in get_tree().get_nodes_in_group("hud_banner"):
+		b.queue_free()   # banners would draw over the menu
+	hud.pause_menu.set_town(state == State.TOWN)
 	hud.pause_menu.set_cards(player.abilities, player.color)
 	hud.pause_menu.open()
 	hud.pause_menu.set_save_quit(state == State.PLAY and _floor != "")
