@@ -97,6 +97,20 @@ body {
   }
 })();
 </script>
+<script>
+// Sideways phone: go fullscreen on the first tap (browsers only allow it from a tap).
+// iPhones don't support this for web pages; there it quietly does nothing.
+(() => {
+  const go = () => {
+    const el = document.documentElement;
+    const req = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (!req || document.fullscreenElement || document.webkitFullscreenElement) return;
+    if (!matchMedia('(pointer: coarse)').matches || innerWidth <= innerHeight) return;
+    try { const p = req.call(el, { navigationUI: 'hide' }); if (p && p.catch) p.catch(() => {}); } catch (e) {}
+  };
+  window.addEventListener('touchend', go, { capture: true, passive: true });
+})();
+</script>
 <script src="index.js"></script>
 <script>
 (() => {

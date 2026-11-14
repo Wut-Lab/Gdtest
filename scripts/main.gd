@@ -225,11 +225,15 @@ func _on_screen_changed() -> void:
 	var win := get_window()
 	var portrait := win.size.y > win.size.x
 	var base := Vector2i(544, 960) if portrait else Vector2i(960, 544)
+	if not portrait and DisplayServer.is_touchscreen_available():
+		base = Vector2i(820, 464)   # sideways phone: a smaller base makes menus and buttons bigger
 	if win.content_scale_size != base:
 		win.content_scale_size = base   # fires size_changed again, which lands below
 		return
 	var visible := get_viewport().get_visible_rect().size
 	var z := maxf(1.0, visible.y / 760.0)
+	if not portrait and DisplayServer.is_touchscreen_available():
+		z = 1.15   # sideways phone (on top of the bigger base above): see less of the level, everything bigger
 	if _level_key.begins_with("boss_"):
 		z = minf(z, visible.x / level.get_bounds().size.x)   # boss rooms: always see the whole arena
 	player.camera.zoom = Vector2(z, z)
