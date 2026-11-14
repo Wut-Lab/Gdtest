@@ -116,6 +116,7 @@ func _ready() -> void:
 	_button(card, "Back", _card_back)
 
 	var equip := _build_equip()
+	var filter_page := _build_filters()
 
 	var options := _page_box("Options")
 	_button(options, "Sound", func() -> void: _show("Sound"))
@@ -131,7 +132,7 @@ func _ready() -> void:
 	_sound_toggle = _button(sound, "Sound: On", _toggle_sound)
 	_button(sound, "Back", func() -> void: _show("Options"))
 
-	for page in [paused, cards, card, equip, options, sound]:
+	for page in [paused, cards, card, equip, filter_page, options, sound]:
 		panel.add_child(page)   # only the open page is visible, and the panel fits it
 
 	_music_slider.value_changed.connect(func(v: float) -> void:
@@ -167,33 +168,6 @@ func set_town(on: bool) -> void:
 func _build_equip() -> VBoxContainer:
 	var page := _page_box("Equip")
 	(page.get_child(0) as Label).text = "Cards"
-	# Filters for the card list: All, then one per card type.
-	var filters := HBoxContainer.new()
-	filters.add_theme_constant_override("separation", 4)
-	filters.alignment = BoxContainer.ALIGNMENT_CENTER
-	page.add_child(filters)
-	var group := ButtonGroup.new()
-	for f in FILTERS:
-		var fb := Button.new()
-		fb.text = FILTERS[f]
-		fb.toggle_mode = true
-		fb.button_group = group
-		fb.button_pressed = f == "all"
-		fb.custom_minimum_size = Vector2(0, 30)
-		fb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		fb.add_theme_font_size_override("font_size", 13)
-		if f != "all":
-			var col: Color = AbilityCard.TYPE_COLORS[f]
-			fb.add_theme_color_override("font_pressed_color", Color.WHITE)
-			var sb := StyleBoxFlat.new()
-			sb.bg_color = col
-			sb.set_corner_radius_all(6)
-			fb.add_theme_stylebox_override("pressed", sb)
-			fb.add_theme_stylebox_override("hover_pressed", sb)
-		fb.pressed.connect(func() -> void:
-			_equip_filter = f
-			_refresh_equip())
-		filters.add_child(fb)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 12)
 	page.add_child(row)
@@ -213,10 +187,18 @@ func _build_equip() -> VBoxContainer:
 		slot.pressed.connect(_unequip.bind(i))
 		left.add_child(slot)
 		_equip_slots.append(slot)
+	var right := VBoxContainer.new()
+	right.add_theme_constant_override("separation", 6)
+	row.add_child(right)
+	_filter_button = Button.new()
+	_filter_button.custom_minimum_size = Vector2(EQUIP_WIDTH, 30)
+	_filter_button.add_theme_font_size_override("font_size", 14)
+	_filter_button.pressed.connect(_open_filters)
+	right.add_child(_filter_button)
 	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(EQUIP_WIDTH, 300)
+	scroll.custom_minimum_size = Vector2(EQUIP_WIDTH, 264)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	row.add_child(scroll)
+	right.add_child(scroll)
 	_equip_list = VBoxContainer.new()
 	_equip_list.add_theme_constant_override("separation", 6)
 	scroll.add_child(_equip_list)
@@ -226,7 +208,63 @@ func _build_equip() -> VBoxContainer:
 
 const EQUIP_WIDTH := 190.0
 const FILTERS := {"all": "All", "attack": "Attack", "movement": "Movement", "jump": "Jump", "misc": "Misc"}
-var _equip_filter := "all"
+## Card types shown in the list; empty = all of them.
+var _equip_filters: Array[String] = []
+## The Filters page's choices, kept until Save.
+var _pending_filters: Array[String] = []
+var _filter_button: Button
+var _filter_toggles := {}
+
+
+## The Filters mini menu: All, then one toggle per card type (pick any), Save and Back.
+func _build_filters() -> VBoxContainer:
+	var page := _page_box("Filters")
+	for f in FILTERS:
+		var b := Button.new()
+		b.text = FILTERS[f]
+		b.toggle_mode = true
+		b.custom_minimum_size = Vector2(BUTTON_SIZE.x, 36)
+		b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		if f != "all":
+			var sb := StyleBoxFlat.new()
+			sb.bg_color = AbilityCard.TYPE_COLORS[f]
+			sb.set_corner_radius_all(6)
+			b.add_theme_stylebox_override("pressed", sb)
+			b.add_theme_stylebox_override("hover_pressed", sb)
+			b.add_theme_color_override("font_pressed_color", Color.WHITE)
+			b.add_theme_color_override("font_hover_pressed_color", Color.WHITE)
+		b.pressed.connect(_toggle_filter.bind(f))
+		page.add_child(b)
+		_filter_toggles[f] = b
+	_button(page, "Save", func() -> void:
+		_equip_filters = _pending_filters.duplicate()
+		_refresh_equip()
+		_show("Equip"))
+	_button(page, "Back", func() -> void: _show("Equip"))
+	return page
+
+
+func _open_filters() -> void:
+	_pending_filters = _equip_filters.duplicate()
+	_sync_filter_toggles()
+	_show("Filters")
+
+
+func _toggle_filter(f: String) -> void:
+	if f == "all":
+		_pending_filters.clear()
+	elif f in _pending_filters:
+		_pending_filters.erase(f)
+	else:
+		_pending_filters.append(f)
+		if _pending_filters.size() == FILTERS.size() - 1:
+			_pending_filters.clear()   # every type picked = All
+	_sync_filter_toggles()
+
+
+func _sync_filter_toggles() -> void:
+	for f in _filter_toggles:
+		_filter_toggles[f].set_pressed_no_signal(_pending_filters.is_empty() if f == "all" else f in _pending_filters)
 
 
 ## A card row: its picture and its name. Empty ability = an empty slot.
@@ -270,9 +308,11 @@ func _refresh_equip() -> void:
 		_equip_list.remove_child(c)
 		c.queue_free()
 	var full := eq.size() >= CardCollection.MAX_EQUIPPED
+	var names := _equip_filters.map(func(f: String) -> String: return FILTERS[f])
+	_filter_button.text = "Filters: All" if names.is_empty() else "Filters: " + ", ".join(names)
 	for a in CardCollection.ALL:
 		if a in CardCollection.owned and a not in eq \
-				and (_equip_filter == "all" or AbilityCard.TYPES[a] == _equip_filter):
+				and (_equip_filters.is_empty() or AbilityCard.TYPES[a] in _equip_filters):
 			var b := _card_button(EQUIP_WIDTH - 12)
 			_set_card_button(b, a)
 			b.disabled = full
@@ -280,7 +320,7 @@ func _refresh_equip() -> void:
 			_equip_list.add_child(b)
 	if _equip_list.get_child_count() == 0:
 		var none := Label.new()
-		none.text = "No other cards yet." if _equip_filter == "all" else "No %s cards here." % FILTERS[_equip_filter]
+		none.text = "No other cards yet." if _equip_filters.is_empty() else "No cards of those types here."
 		none.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		none.custom_minimum_size = Vector2(EQUIP_WIDTH - 12, 0)
 		none.add_theme_color_override("font_color", Color("a9b3d1"))
@@ -382,6 +422,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			"Sound": _show("Options")
 			"Options": _options_back()
 			"Cards", "Equip": _show("Paused")
+			"Filters": _show("Equip")
 			"Card": _card_back()
 			_: continue_pressed.emit()
 
