@@ -180,7 +180,8 @@ func _start_music() -> void:
 	set_music("music")
 
 
-## Switch tracks: "music" (town), "music_level" (practice and dungeon levels) or
+## Switch tracks: "music" (town), "music_level" (practice and dungeon levels), "music_moss" and
+## "music_moss_boss" (Mossy Cave), or
 ## "music_saved" (saved levels in the Replay Room). Starts the new one from the top.
 func set_music(track: String) -> void:
 	var music: AudioStreamPlayer = get_node_or_null("Music")
@@ -856,7 +857,7 @@ func _play_floor_level() -> void:
 	seed_value = _floor_seeds[step - 1] if step <= _floor_seeds.size() else 0
 	_level_key = _area_key(id, step)
 	_replay_mode = ""
-	set_music("music_level")
+	set_music("music_moss" if id == "moss" else "music_level")
 	var ar := _area(id)
 	if id not in CardCollection.areas_played:
 		CardCollection.areas_played.append(id)   # town milestone: see enter_town
@@ -887,7 +888,7 @@ func _play_boss(ar: Dictionary, carry: int) -> void:
 	_floor = ar.id
 	_floor_step = int(ar.levels) + 1
 	_carry_hearts = carry
-	set_music("music_boss")
+	set_music("music_moss_boss" if ar.id == "moss" else "music_boss")
 	var rematch := _rematch
 	level.set_theme("moss" if ar.id == "moss" else "")
 	$Background/Sky.modulate = Color(0.55, 0.85, 0.7) if ar.id == "moss" else Color.WHITE

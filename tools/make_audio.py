@@ -5,7 +5,8 @@
 
 Writes audio/music.ogg (a soft, happy loop, exactly 3:00 at 96 BPM) and audio/jump.wav,
 audio/land.wav, audio/hurt.wav, audio/buy.wav, audio/ding.wav, the boss sounds (boss_hit, boss_charge,
-boss_crash, boss_defeat) and the boss track music_boss.ogg. Everything is synthesized here, so edit this file and rerun
+boss_crash, boss_defeat) and the boss track music_boss.ogg, plus the Mossy Cave tracks
+(music_moss, music_moss_boss, both with crickets) and Old Mossback's moss_* sounds. Everything is synthesized here, so edit this file and rerun
 it to change the sound, then run `godot --headless --path . --import`.
 """
 import os
@@ -456,6 +457,254 @@ def render_boss_music():
     return buf
 
 
+# ---------- Mossy Cave: crickets, a cave track, a boss track and Old Mossback's sounds ----------
+
+def cricket_layer(total, seed, voices=3, gain=1.0):
+    """A field of crickets: each one sings short pulsed chirps at its own pitch and pace,
+    with quiet gaps so it never turns into a steady whine."""
+    r = np.random.default_rng(seed)
+    out = np.zeros(total)
+    for v in range(voices):
+        f = r.uniform(3900, 5200)          # carrier pitch
+        rate = r.uniform(26, 34)           # pulses per second inside a chirp
+        pulses = int(r.integers(2, 5))     # pulses per chirp
+        gap = r.uniform(0.35, 0.7)         # time between chirps
+        level = r.uniform(0.5, 1.0)
+        t = r.uniform(0, 1.5)
+        n_chirp = int(pulses / rate * SR)
+        tt = np.arange(n_chirp) / SR
+        env = np.clip(np.sin(np.pi * rate * tt), 0, 1) ** 2
+        chirp = np.sin(2 * np.pi * f * tt) * env + 0.25 * np.sin(4 * np.pi * f * tt) * env
+        while t < total / SR:
+            if r.random() < 0.12:                    # a little rest now and then
+                t += r.uniform(1.5, 4.0)
+                continue
+            i = int(t * SR)
+            x = chirp * level * r.uniform(0.75, 1.0)
+            out[i:i + len(x)] += x[: total - i]
+            t += gap * r.uniform(0.9, 1.1)
+    return out * gain
+
+
+def echo(x, delay, fb, mix):
+    """Simple cave echo: repeats that fade."""
+    d = int(delay * SR)
+    y = x.copy()
+    for k in range(1, 6):
+        g = mix * fb ** (k - 1)
+        if d * k >= len(x):
+            break
+        y[d * k:] += x[: len(x) - d * k] * g
+    return y
+
+
+def drip(f, _d=0):
+    """A water drop in the cave: a quick pitch-rising blip."""
+    w = sweep(f, f * 1.9, 0.07)
+    t = np.arange(len(w)) / SR
+    return w * np.minimum(t / 0.002, 1) * np.exp(-t / 0.025)
+
+
+def render_moss_music():
+    """Mossy Cave levels: 104 BPM in D dorian, 32 bars (about 74 s). Soft and echoey: deep pad,
+    plodding bass, a mallet line with cave echo, water drips, light woody percussion, crickets."""
+    bpm = 104
+    beat = 60 / bpm
+    slot = beat / 2
+    bar = beat * 4
+    prog = [(50, "min"), (55, "maj"), (50, "min"), (48, "maj"),
+            (53, "maj"), (55, "maj"), (57, "min"), (50, "min")] * 4   # Dm G Dm C F G Am Dm
+    total = int(len(prog) * bar * SR)
+    buf = np.zeros(total + 4 * SR)
+    mel_buf = np.zeros_like(buf)
+
+    def put(sound, t, gain, into=None):
+        b = buf if into is None else into
+        i = int(t * SR)
+        x = sound * gain
+        b[i:i + len(x)] += x[: len(b) - i]
+
+    r = np.random.default_rng(31)
+    # D dorian, in scale steps from D4.
+    dorian = [0, 2, 3, 5, 7, 9, 10]
+    def dd(step):
+        return 62 + 12 * (step // 7) + dorian[step % 7]
+    phrases = [
+        [(0, 3, 4), (3, 1, 3), (4, 4, 2)],
+        [(0, 2, 1), (2, 2, 2), (4, 4, 0)],
+        [(0, 3, 4), (3, 1, 5), (4, 2, 4), (6, 2, 2)],
+        [(0, 6, 0)],
+    ]
+    for bi, (root, q) in enumerate(prog):
+        t0 = bi * bar
+        sec = bi // 8
+        tones = [root + x for x in TRIAD[q]]
+        for m in tones:
+            put(pad(midi_hz(m), bar * 0.98), t0, 0.05)
+        put(pad(midi_hz(root - 12), bar * 0.98), t0, 0.04)
+        # Plodding bass on beats 1 and 3, a pickup on the "and" of 4.
+        for k, iv in ((0, 0), (4, 7), (7, 12)):
+            put(bass(midi_hz(root - 12 + iv), slot * 1.6), t0 + k * slot, 0.16 if k != 7 else 0.08)
+        if sec >= 1:   # mallet line, through the echo
+            for st, ln, d in phrases[bi % 4]:
+                put(pluck(midi_hz(dd(d)), ln * slot), t0 + st * slot, 0.11, mel_buf)
+        if sec == 2:   # third section: a soft bell counter-line an octave up
+            for k in (2, 6):
+                put(bell(midi_hz(tones[(bi + k) % 3] + 24), slot), t0 + k * slot, 0.035, mel_buf)
+        # Woody percussion: a soft kick on 1, a click on the off-beats.
+        if sec >= 1:
+            put(kick(), t0, 0.16)
+            put(kick(), t0 + 5 * slot, 0.09)
+        for k in (1, 3, 5, 7):
+            put(noise_hit(0.012, n_sec=0.05), t0 + k * slot, 0.05)
+        # Water drips at random spots.
+        for _ in range(int(r.integers(0, 3))):
+            put(drip(r.uniform(900, 1500)), t0 + r.uniform(0, bar), 0.12, mel_buf)
+    buf += echo(mel_buf, slot * 1.5, 0.45, 0.5)
+    tail = buf[total:]
+    buf = buf[:total]
+    buf[: len(tail)] += tail
+    buf *= 0.62 / np.max(np.abs(buf))
+    buf += cricket_layer(total, 101, voices=4, gain=0.035)
+    return buf
+
+
+def render_moss_boss_music():
+    """Old Mossback: 132 BPM in D minor, 16 bars (about 29 s) that loop. Heavy, stomping and
+    woody, with log-drum toms, a growling bass and crickets that never stop."""
+    bpm = 132
+    beat = 60 / bpm
+    slot = beat / 2
+    bar = beat * 4
+    prog = [(50, "min"), (46, "maj"), (48, "maj"), (45, "maj")] * 4   # Dm Bb C A
+    total = int(len(prog) * bar * SR)
+    buf = np.zeros(total + 4 * SR)
+    stab_buf = np.zeros_like(buf)
+
+    def put(sound, t, gain, into=None):
+        b = buf if into is None else into
+        i = int(t * SR)
+        x = sound * gain
+        b[i:i + len(x)] += x[: len(b) - i]
+
+    def tom(f):
+        w = sweep(f, f * 0.6, 0.3)
+        t = np.arange(len(w)) / SR
+        return w * np.exp(-t / 0.09)
+
+    riff = [0, 0, 0, 3, 0, 0, 5, 3]
+    for bi, (root, q) in enumerate(prog):
+        t0 = bi * bar
+        tones = [root + x for x in TRIAD[q]]
+        for m in tones:
+            put(pad(midi_hz(m), bar * 0.95), t0, 0.04)
+        for k in range(8):
+            f = midi_hz(root - 24 + riff[k])
+            put(bass(f, slot * 0.7), t0 + k * slot, 0.22)
+            put(bass(f * 2, slot * 0.5), t0 + k * slot, 0.05)
+        for k in (0, 3, 6):
+            for m in tones:
+                put(pluck(midi_hz(m + 12), slot * 0.5), t0 + k * slot, 0.05, stab_buf)
+        if bi >= 4:   # log-drum toms
+            for k, f in ((1, 160), (3, 130), (5, 160), (6, 110), (7, 95)):
+                put(tom(f), t0 + k * slot, 0.12)
+        if bi >= 8 and bi % 2 == 1:
+            put(lead(midi_hz(root + 24 + 7), bar * 0.4), t0 + bar / 2, 0.07)
+        for k in range(8):
+            t = t0 + k * slot
+            if k in (0, 3, 4):
+                put(kick(), t, 0.32)
+            if k in (2, 6):
+                put(clap(), t, 0.08)
+            put(noise_hit(0.015, n_sec=0.05), t + slot / 2, 0.06)
+    buf += echo(stab_buf, slot * 0.75, 0.35, 0.5)
+    tail = buf[total:]
+    buf = buf[:total]
+    buf[: len(tail)] += tail
+    buf *= 0.66 / np.max(np.abs(buf))
+    buf += cricket_layer(total, 202, voices=3, gain=0.03)
+    return buf
+
+
+def rustle(dur, decay):
+    """Leaves and moss shaking."""
+    r = np.random.default_rng(int(dur * 1000 + decay * 1e4))
+    n = int(dur * SR)
+    x = np.diff(r.standard_normal(n), prepend=0)
+    t = np.arange(n) / SR
+    grain = 0.5 + 0.5 * (r.random(n) < 0.08)
+    return x * grain * np.exp(-t / decay)
+
+
+def sfx_moss_hit():
+    """Stomping Old Mossback: a hollow wooden knock, a bark crunch and a puff of leaves."""
+    out = np.zeros(int(0.45 * SR))
+    for f, g in ((190, 1.0), (410, 0.45), (690, 0.2)):   # hollow log knock
+        t = np.arange(int(0.3 * SR)) / SR
+        out[: len(t)] += np.sin(2 * np.pi * f * t) * np.exp(-t / (0.09 / (1 + f / 600))) * g
+    out[: int(0.2 * SR)] += noise_hit(0.04, bright=False, n_sec=0.2) * 0.5
+    out += rustle(0.45, 0.12) * 0.12
+    return out * 0.7
+
+
+def sfx_moss_land():
+    """His heavy landing: a soft, deep thud with mossy rustling."""
+    w = sweep(110, 45, 0.35)
+    t = np.arange(len(w)) / SR
+    out = w * np.minimum(t / 0.003, 1) * np.exp(-t / 0.1)
+    out += noise_hit(0.08, bright=False, n_sec=0.35) * 0.45
+    out += rustle(0.35, 0.1) * 0.15
+    return out * 0.8
+
+
+def sfx_moss_throw():
+    """Throwing a square: a quick airy whoosh."""
+    n = int(0.3 * SR)
+    t = np.arange(n) / SR
+    x = rng.standard_normal(n)
+    out = np.zeros(n)
+    # Sweep a resonant band upward by mixing smoothed noise with its derivative.
+    for k in range(4):
+        sm = np.convolve(x, np.ones(12 - 3 * k) / (12 - 3 * k), "same")
+        seg = (t >= k * 0.06) & (t < (k + 1) * 0.06 + 0.08)
+        out[seg] += sm[seg]
+    env = np.sin(np.pi * np.clip(t / 0.3, 0, 1)) ** 1.5
+    return out * env * 0.5
+
+
+def sfx_moss_crack():
+    """Bark splitting (his blocks crumble, or a hard smash): a sharp crack and creak."""
+    out = np.zeros(int(0.6 * SR))
+    for st in (0.0, 0.035, 0.09):
+        c = noise_hit(0.012, n_sec=0.08) * (1.0 if st == 0 else 0.6)
+        i = int(st * SR)
+        out[i:i + len(c)] += c
+    creak = sweep(140, 95, 0.45, shape="square")
+    t = np.arange(len(creak)) / SR
+    creak *= (0.5 + 0.5 * np.sign(np.sin(2 * np.pi * 38 * t))) * np.exp(-t / 0.18) * 0.2
+    i = int(0.05 * SR)
+    out[i:i + len(creak)] += creak
+    out += noise_hit(0.15, bright=False, n_sec=0.6) * 0.25
+    return out * 0.75
+
+
+def sfx_moss_defeat():
+    """Old Mossback beaten: a long creak, a crumbling fall, then a gentle three-note bell."""
+    out = np.zeros(int(1.8 * SR))
+    creak = sweep(180, 70, 0.7, shape="square")
+    t = np.arange(len(creak)) / SR
+    creak *= (0.5 + 0.5 * np.sign(np.sin(2 * np.pi * 30 * t))) * np.exp(-t / 0.35) * 0.25
+    out[: len(creak)] += creak
+    i = int(0.25 * SR)
+    fall = noise_hit(0.3, bright=False, n_sec=0.8) * 0.5 + rustle(0.8, 0.3) * 0.2
+    out[i:i + len(fall)] += fall
+    for start, m in ((0.75, 74), (0.92, 77), (1.09, 81)):   # D F A
+        b = bell(midi_hz(m + 12), 0.5)
+        i = int(start * SR)
+        out[i:i + len(b)] += b[: len(out) - i] * 0.42
+    return out * 0.8
+
+
 def write_wav(path, x, rate=SR):
     x = np.clip(x, -1, 1)
     with wave.open(path, "wb") as f:
@@ -495,6 +744,17 @@ def main():
                     "-q:a", "2", os.path.join(OUT, "music_boss.ogg")], check=True)
     os.remove(tmp)
     print("AUDIO OK: music_boss %.1fs" % (len(m) / SR))
+    for name, fn in (("moss_hit", sfx_moss_hit), ("moss_land", sfx_moss_land),
+                     ("moss_throw", sfx_moss_throw), ("moss_crack", sfx_moss_crack),
+                     ("moss_defeat", sfx_moss_defeat)):
+        write_wav(os.path.join(OUT, name + ".wav"), fn())
+    for name, fn in (("music_moss", render_moss_music), ("music_moss_boss", render_moss_boss_music)):
+        m = fn()
+        write_wav(tmp, m)
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", tmp, "-c:a", "libvorbis",
+                        "-q:a", "2", os.path.join(OUT, name + ".ogg")], check=True)
+        os.remove(tmp)
+        print("AUDIO OK: %s %.1fs" % (name, len(m) / SR))
 
 
 if __name__ == "__main__":

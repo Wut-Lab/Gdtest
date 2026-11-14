@@ -63,10 +63,10 @@ var _throw_in := 1.5
 var _heights := {}
 ## Squares in the air: {from, to (global), cell, t}.
 var _shots: Array = []
-var _hit_sfx := BigBadSquare._sfx("boss_hit", 0.0)
-var _crash_sfx := BigBadSquare._sfx("boss_crash", -4.0)
-var _land_sfx := BigBadSquare._sfx("land", -2.0)
-var _throw_sfx := BigBadSquare._sfx("jump", -6.0)
+var _hit_sfx := BigBadSquare._sfx("moss_hit", 0.0)
+var _crash_sfx := BigBadSquare._sfx("moss_crack", -2.0)
+var _land_sfx := BigBadSquare._sfx("moss_land", -1.0)
+var _throw_sfx := BigBadSquare._sfx("moss_throw", -3.0)
 
 
 func _ready() -> void:
@@ -200,7 +200,7 @@ func _physics_process(delta: float) -> void:
 				_mode = "hang"
 				_mode_t = 0.0
 				_throw_in = 1.0
-				_land_sfx.pitch_scale = 0.8
+				_land_sfx.pitch_scale = 0.9
 				_land_sfx.play()
 				if _player:
 					_player.shake(4.0, 0.2)
@@ -217,7 +217,7 @@ func _physics_process(delta: float) -> void:
 func _move() -> void:
 	move_and_slide()
 	if is_on_floor() and not _was_on_floor:
-		_land_sfx.pitch_scale = randf_range(0.55, 0.65)
+		_land_sfx.pitch_scale = randf_range(0.9, 1.05)
 		_land_sfx.play()
 		landed.emit(global_position + Vector2(0.0, SIZE / 2.0))
 		if _player:
@@ -233,7 +233,7 @@ func _start_leap() -> void:
 	_leap_from = position
 	velocity = Vector2.ZERO
 	collision_mask = 0
-	_throw_sfx.pitch_scale = 0.6
+	_throw_sfx.pitch_scale = 0.8
 	_throw_sfx.play()
 
 
@@ -298,7 +298,7 @@ func _throw() -> void:
 	_shots.append({"from": global_position + Vector2(0.0, SIZE / 2.0),
 		"to": parent.to_global(Vector2(col * T + T / 2.0, cell.y * T + T / 2.0)),
 		"cell": cell, "t": 0.0, "block": block})
-	_throw_sfx.pitch_scale = randf_range(0.75, 0.9)
+	_throw_sfx.pitch_scale = randf_range(0.95, 1.1)
 	_throw_sfx.play()
 
 
@@ -383,7 +383,7 @@ func _take_stomp() -> void:
 		_shots.clear()
 		defeated.emit(global_position)
 		CardFx.spawn(get_parent(), global_position, "boom")
-		var boom := BigBadSquare._sfx("boss_defeat", 0.0)
+		var boom := BigBadSquare._sfx("moss_defeat", 0.0)
 		get_parent().add_child(boom)
 		boom.finished.connect(boom.queue_free)
 		boom.play()
