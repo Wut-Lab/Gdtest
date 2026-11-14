@@ -4,6 +4,8 @@ extends CharacterBody2D
 ## Select the Player scene and tune the feel in the Inspector, or use the in-game Tune panel.
 
 signal fell
+## Overgrowth card: landed from a jump here (feet).
+signal grew_moss(pos: Vector2)
 signal bounced
 signal teleported
 signal wall_bounced
@@ -133,7 +135,9 @@ var slip_check: Callable
 
 
 ## Floor grip: 1 normally, much less standing on a moss patch (slow to start, slow to stop).
-func _grip(on_floor: bool) -> float:
+func _grip(on_floor: bool, starting := false) -> float:
+	if starting and "bark_hide" in abilities:
+		return 1.0   # Bark Hide: moss never slows your take-off
 	if on_floor and slip_check.is_valid() and slip_check.call(global_position + Vector2(0.0, SIZE / 2.0 + 6.0)):
 		return moss_grip
 	return 1.0
@@ -163,6 +167,8 @@ var pay_heart: Callable = func() -> bool: return true
 var last_ground := Vector2.ZERO
 ## Guard Block: the shield is up (Main sets it at the start and the checkpoint).
 var guard_up := false
+## Bark Hide card: the bark is still on (it takes the first hit of each level).
+var bark_up := false
 var _bubble := 0.0
 var _brick: Node = null
 var _takeoff_x := 0.0   # Grip and Go: where you left the ground
@@ -323,6 +329,20 @@ func try_guard(push: Vector2) -> bool:
 	return true
 
 
+## Bark Hide card: the bark takes the hit and breaks off. Returns true if it did.
+func try_bark(push: Vector2) -> bool:
+	if "bark_hide" not in abilities or not bark_up:
+		return false
+	bark_up = false
+	velocity = Vector2(push.x * 180.0, -220.0)
+	_stun = 0.1
+	invincible = 0.8
+	CardFx.spawn(get_parent(), global_position, "bark")
+	_play(_land_sfx, 0.7)
+	shake(4.0, 0.2)
+	return true
+
+
 ## Lucky Charm card: maybe shrug off an obstacle's hit. Returns true if it was shrugged off:
 ## no heart lost, just a little push away and a moment of safety.
 func try_shrug_off(push: Vector2) -> bool:
@@ -463,7 +483,7 @@ func _physics_process(delta: float) -> void:
 			_momentum = 0.0
 		_face = signf(dir)
 		_momentum += delta
-		var acc := ground_accel * _grip(on_floor) if on_floor else air_accel * (2.5 if "air_brake" in abilities else 1.0)
+		var acc := ground_accel * _grip(on_floor, true) if on_floor else air_accel * (2.5 if "air_brake" in abilities else 1.0)
 		velocity.x = move_toward(velocity.x, dir * _run_speed(), acc * delta)
 	else:
 		_momentum = 0.0
@@ -563,6 +583,9 @@ func _physics_process(delta: float) -> void:
 				_puff()
 				_play(_jump_sfx, 0.9)
 
+	if "overgrowth" in abilities and not bounced_now and is_on_floor() and not _was_on_floor \
+			and before.y > 250.0 and _floor_is_ground():
+		grew_moss.emit(global_position + Vector2(0.0, SIZE / 2.0))
 	if not bounced_now and is_on_floor() and not _was_on_floor and before.y > 250.0:
 		var amount := clampf((before.y - 200.0) / 700.0, 0.0, 1.0)
 		_squash = Vector2(1.0 + 0.4 * amount, 1.0 - 0.35 * amount)
@@ -854,6 +877,16 @@ func _draw() -> void:
 		var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.02)
 		draw_rect(rect.grow(4.0 + 2.0 * pulse), Color(1.0, 0.2, 0.15, 0.35))
 		draw_rect(rect.grow(2.0), Color(1.0, 0.25, 0.2, 0.6), false, 2.0)
+	if bark_up and "bark_hide" in abilities:
+		# Bark Hide: a brown bark shell around you, cracked, with moss on top.
+		var bk := rect.grow(4.0)
+		draw_rect(bk, Color("7a5230"))
+		draw_rect(Rect2(bk.position, Vector2(bk.size.x, 4)), Color("4f9a3c"))
+		for i in 3:
+			draw_rect(Rect2(bk.position + Vector2(3 + i * 9, -3), Vector2(3, 4)), Color("6cc04f"))
+		draw_rect(Rect2(bk.position + Vector2(5, 8), Vector2(2, 9)), Color("4a2f1a"))
+		draw_rect(Rect2(bk.position + Vector2(bk.size.x - 8, 12), Vector2(2, 10)), Color("4a2f1a"))
+		draw_rect(Rect2(bk.position + Vector2(0, bk.size.y - 3), Vector2(bk.size.x, 3)), Color("4a2f1a"))
 	if guard_up and "guard_block" in abilities:
 		# Guard Block: a thin blue shield outline while it's up.
 		draw_rect(rect.grow(3.0), Color(0.55, 0.8, 1.0, 0.7), false, 2.0)

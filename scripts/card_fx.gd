@@ -5,6 +5,7 @@ extends Node2D
 ##   "zap":   a Stunning Landing burst of electric sparks at the feet.
 ##   "slow":  a Slow Burst ring spreading out to the edge of its square.
 ##   "pop":   a squashed Bad Block bursting into little red blocks.
+##   "bark":  Bark Hide breaking off: brown bark chunks and green moss bits flying out.
 ##   "boom":  a beaten boss bursting into big red blocks with a white flash.
 ##   "plus":  floating "+N" text for pixels from a broken obstacle (set `text`).
 ##   "lucky": a Lucky Charm gold ring and sparkles when a hit is shrugged off.
@@ -30,7 +31,7 @@ static func spawn(parent: Node, at: Vector2, fx_kind: String, fx_reach := 160.0,
 	fx.kind = fx_kind
 	fx.reach = fx_reach
 	fx.text = fx_text
-	fx._life = {"shock": 0.4, "lucky": 0.5, "slow": 0.45, "pop": 0.4, "boom": 0.9, "plus": 0.8}.get(fx_kind, 0.35)
+	fx._life = {"shock": 0.4, "lucky": 0.5, "slow": 0.45, "pop": 0.4, "bark": 0.6, "boom": 0.9, "plus": 0.8}.get(fx_kind, 0.35)
 	fx.z_index = 5
 	parent.add_child(fx)
 	fx.global_position = at
@@ -121,6 +122,14 @@ func _draw() -> void:
 			var a := i * TAU / 8.0
 			var p := Vector2(cos(a), sin(a)) * (6.0 + 26.0 * k) + Vector2(0, 30.0 * k * k)
 			draw_rect(Rect2(p - Vector2(3, 3), Vector2(6, 6)), Color("e5484d", 1.0 - k))
+	elif kind == "bark":
+		for i in 10:
+			var a := i * TAU / 10.0 + 0.2
+			var p := Vector2(cos(a), sin(a)) * (10.0 + (34.0 + (i % 3) * 10.0) * k) + Vector2(0, 70.0 * k * k)
+			var sz := 8.0 if i % 2 == 0 else 5.0
+			draw_set_transform(p, a + k * 5.0)
+			draw_rect(Rect2(-sz / 2.0, -sz / 2.0, sz, sz), Color("7a5230" if i % 3 else "5fb047", 1.0 - k * k))
+		draw_set_transform(Vector2.ZERO)
 	elif kind == "boom":
 		if k < 0.25:
 			var r := 20.0 + 140.0 * k

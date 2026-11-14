@@ -14,11 +14,13 @@ const NAMES := {"dash": "Dash", "pound": "Ground Pound", "double_jump": "Double 
 	"quick": "Quick", "tele_hop": "Tele-hop", "high_jump": "High Jump", "phase_jump": "Phase Jump", "shockwave": "Shockwave", "stun_landing": "Stunning Landing", "grip_and_go": "Grip and Go", "lucky_charm": "Lucky Charm", "bounce_house": "Bounce House", "secret_helper": "Secret Helper", "magnet": "Magnet", "wall_cling": "Wall Cling", "brick_drop": "Brick Drop", "slow_burst": "Slow Burst",
 	"portion_booster": "Portion Booster", "air_brake": "Air Brake", "momentum": "Momentum", "heart_box": "Heart Box",
 	"angry_dash": "Angry Block Dash", "personal_space": "Personal Space", "safety_bubble": "Safety Bubble",
-	"guard_block": "Guard Block", "long_blink": "Long Blink", "chain_dash": "Chain Dash"}
+	"guard_block": "Guard Block", "long_blink": "Long Blink", "chain_dash": "Chain Dash",
+	"overgrowth": "Overgrowth", "bark_hide": "Bark Hide"}
 ## Card types, color coded: attacks are red, jumps are blue, movement is yellow, misc is gray.
 const TYPES := {"dash": "attack", "pound": "attack", "double_jump": "jump", "glide": "jump",
 	"quick": "movement", "tele_hop": "movement", "high_jump": "jump", "phase_jump": "jump", "shockwave": "attack", "stun_landing": "attack", "grip_and_go": "movement", "lucky_charm": "misc", "bounce_house": "misc", "secret_helper": "misc", "magnet": "misc", "wall_cling": "jump", "brick_drop": "attack", "slow_burst": "misc", "portion_booster": "misc", "air_brake": "movement", "momentum": "movement", "heart_box": "misc",
-	"angry_dash": "attack", "personal_space": "misc", "safety_bubble": "misc", "guard_block": "misc", "long_blink": "misc", "chain_dash": "attack"}
+	"angry_dash": "attack", "personal_space": "misc", "safety_bubble": "misc", "guard_block": "misc", "long_blink": "misc", "chain_dash": "attack",
+	"overgrowth": "attack", "bark_hide": "misc"}
 const TYPE_NAMES := {"attack": "Attack card", "jump": "Jump card", "movement": "Movement card", "misc": "Misc card"}
 const TYPE_COLORS := {"attack": Color("e5484d"), "jump": Color("3d7be0"), "movement": Color("e0a400"),
 	"misc": Color("7d8597")}
@@ -79,11 +81,17 @@ const DESCRIPTIONS := {
 	"chain_dash": "Passive (needs Dash): when a dash knocks out an enemy or breaks a spike square, "
 		+ "you get your dash straight back and a small hop, so you can chain dashes through a group. "
 		+ "Big Bad Square's reward.",
+	"overgrowth": "Passive: when you land from a jump, moss grows on the ground around you for 5 seconds. "
+		+ "Enemies that step onto it get tangled and can't move for 1.5 seconds. Your own moss is never "
+		+ "slippery. One patch at a time. Found in the Mossy Cave.",
+	"bark_hide": "Passive: you wear a mossy bark hide. The first hit you take in each level (boss fights "
+		+ "too) breaks the bark off and costs no heart; it grows back for the next level. Moss patches "
+		+ "also stop slowing your take-off (you still slide to a halt). The Mossy Cave boss's reward.",
 }
 const PAPER := Color("eef1fa")
 const EDGE := Color("1b2440")
 
-@export_enum("dash", "pound", "double_jump", "glide", "quick", "tele_hop", "high_jump", "phase_jump", "shockwave", "stun_landing", "grip_and_go", "lucky_charm", "bounce_house", "secret_helper", "magnet", "wall_cling", "brick_drop", "slow_burst", "portion_booster", "air_brake", "momentum", "heart_box", "angry_dash", "personal_space", "safety_bubble", "guard_block", "long_blink", "chain_dash") var ability := "dash"
+@export_enum("dash", "pound", "double_jump", "glide", "quick", "tele_hop", "high_jump", "phase_jump", "shockwave", "stun_landing", "grip_and_go", "lucky_charm", "bounce_house", "secret_helper", "magnet", "wall_cling", "brick_drop", "slow_burst", "portion_booster", "air_brake", "momentum", "heart_box", "angry_dash", "personal_space", "safety_bubble", "guard_block", "long_blink", "chain_dash", "overgrowth", "bark_hide") var ability := "dash"
 
 var _t := 0.0
 
@@ -191,6 +199,22 @@ static func _draw_symbol(ci: CanvasItem, ability_name: String, o: Vector2, c: Co
 			for i in 3:
 				ci.draw_rect(Rect2(o + Vector2(-9 + i * 6, -3), Vector2(5, 5)), Color(c, 1.0 - i * 0.3))
 			ci.draw_rect(Rect2(o + Vector2(-9, 5), Vector2(18, b)), c)
+		"overgrowth":
+			# Tufts of moss spreading along the ground, with a block caught in them.
+			ci.draw_rect(Rect2(o + Vector2(-9, 4), Vector2(18, b)), c)
+			for i in 5:
+				ci.draw_rect(Rect2(o + Vector2(-9 + i * 4, 4 - (3 + (i * 2) % 3) * 1.0), Vector2(b, 4)), c)
+			ci.draw_rect(Rect2(o + Vector2(-3, -7), Vector2(6, 6)), c)
+			ci.draw_rect(Rect2(o + Vector2(-5, -2), Vector2(b, 5)), Color(c, 0.7))
+			ci.draw_rect(Rect2(o + Vector2(3, -2), Vector2(b, 5)), Color(c, 0.7))
+		"bark_hide":
+			# A block inside a thick, cracked bark shell with moss on top.
+			ci.draw_rect(Rect2(o + Vector2(-8, -6), Vector2(16, 14)), c, false, 3.0)
+			ci.draw_rect(Rect2(o + Vector2(-9, -9), Vector2(18, b)), c)
+			for i in 3:
+				ci.draw_rect(Rect2(o + Vector2(-7 + i * 6, -11), Vector2(b, b)), c)
+			ci.draw_rect(Rect2(o + Vector2(-2, -1), Vector2(4, 4)), c)
+			ci.draw_rect(Rect2(o + Vector2(4, -6), Vector2(1, 5)), EDGE)
 		"chain_dash":
 			# A chevron, a block, then another chevron: dash, hit, dash again.
 			for cx in [-9.0, 5.0]:

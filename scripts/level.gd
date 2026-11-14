@@ -79,6 +79,56 @@ var _mossy_cells := {}
 var _moss_patches := {}
 
 
+## Overgrowth card: the player's own moss patch {x0, x1, y, left (seconds), caught (enemies
+## already tangled by it)}, or empty. Enemies that step on it are tangled for a moment.
+var _overgrowth := {}
+const OVERGROWTH_TIME := 5.0
+const OVERGROWTH_TANGLE := 1.5
+
+
+## The player landed at pos (feet) with Overgrowth: moss covers the ground 1.5 tiles each way,
+## as far as that floor goes. A new patch replaces the old one.
+func add_overgrowth(pos: Vector2) -> void:
+	var cell := ground.local_to_map(ground.to_local(to_global(pos + Vector2(0.0, 6.0))))
+	if ground.get_cell_source_id(cell) == -1:
+		return
+	var x0 := pos.x
+	var x1 := pos.x
+	for side in [-1, 1]:
+		var reach := 0.0
+		while reach < T * 1.5:
+			var c := ground.local_to_map(ground.to_local(to_global(pos + Vector2(side * (reach + 8.0), 6.0))))
+			if ground.get_cell_source_id(c) == -1 or ground.get_cell_source_id(c + Vector2i.UP) != -1:
+				break
+			reach += 8.0
+		if side < 0:
+			x0 = pos.x - reach
+		else:
+			x1 = pos.x + reach
+	_overgrowth = {"x0": x0, "x1": x1, "y": cell.y * float(T), "left": OVERGROWTH_TIME, "caught": []}
+	_moss_layer.queue_redraw()
+
+
+func _physics_process(delta: float) -> void:
+	if _overgrowth.is_empty():
+		return
+	_overgrowth.left -= delta
+	if _overgrowth.left <= 0.0:
+		_overgrowth = {}
+		_moss_layer.queue_redraw()
+		return
+	for t in get_tree().get_nodes_in_group("card_targets"):
+		if not (t is BadBlock or t is BigBadSquare) or not t.visible or t in _overgrowth.caught:
+			continue
+		var half: Vector2 = t.half_size()
+		var feet: float = t.position.y + half.y
+		if absf(feet - _overgrowth.y) < 6.0 and t.position.x + half.x > _overgrowth.x0 \
+				and t.position.x - half.x < _overgrowth.x1:
+			_overgrowth.caught.append(t)
+			t.stun(OVERGROWTH_TANGLE * (0.5 if t is BigBadSquare else 1.0))   # bosses shake it off sooner
+	_moss_layer.queue_redraw()
+
+
 ## True if the ground at this spot (local to the level) has a slippery moss patch on it.
 func is_slippery(pos: Vector2) -> bool:
 	return not _moss_patches.is_empty() \
@@ -160,6 +210,7 @@ func load_map_text(text: String) -> void:
 	_hard_cells.clear()
 	_mossy_cells.clear()
 	_moss_patches.clear()
+	_overgrowth = {}
 	var vine_cells: Array[Vector2i] = []
 	var doors := {}   # cell -> door character
 	var checkpoints: Array[Vector2i] = []
@@ -509,6 +560,22 @@ func _draw_back_door(cell: Vector2i) -> void:
 func _draw_moss_blocks() -> void:
 	for cell in _moss_cells:
 		_draw_moss_block(_moss_layer, cell)
+	if not _overgrowth.is_empty():
+		# Overgrowth: bright leafy moss that withers away over its last second.
+		var fade := clampf(_overgrowth.left, 0.0, 1.0)
+		var grow := clampf((OVERGROWTH_TIME - _overgrowth.left) / 0.2, 0.0, 1.0)
+		var mid: float = (_overgrowth.x0 + _overgrowth.x1) / 2.0
+		var hw: float = (_overgrowth.x1 - _overgrowth.x0) / 2.0 * grow
+		var oy: float = _overgrowth.y
+		_moss_layer.draw_rect(Rect2(mid - hw, oy - 4, hw * 2.0, 8), Color("58c244", fade))
+		var lx := mid - hw + 3.0
+		var n := 0
+		while lx < mid + hw - 3.0:
+			_moss_layer.draw_rect(Rect2(lx, oy - 8 - (n * 5) % 4, 3, 6), Color("9be87a", fade))
+			if n % 4 == 1:
+				_moss_layer.draw_rect(Rect2(lx - 1, oy - 12, 4, 4), Color("f2e27a", fade))   # little flowers
+			lx += 7.0
+			n += 1
 	for cell in _moss_patches:
 		var x: float = cell.x * T
 		var y: float = cell.y * T

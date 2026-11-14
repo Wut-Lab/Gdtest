@@ -58,7 +58,13 @@ const AREAS := [
 const FLOOR_CLEAR_REWARD := 10
 ## Beating a boss the first time: these pixels plus its card (Dash first, if you lack it).
 const BOSS_REWARD := 25
-const BOSS_CARDS := {"basic": "chain_dash"}
+## Each boss gives its area's own card if you don't have it yet, otherwise the boss's card.
+const BOSS_CARDS := {"basic": "chain_dash", "moss": "bark_hide"}
+const AREA_CARDS := {"basic": "dash", "moss": "overgrowth"}
+## Longest level a run may roll, in tiles.
+const MAX_LEVEL_TILES := 240
+## Extra Bad Blocks added to an area's 1st..5th level: a little harder nearer the boss.
+const EXTRA_BAD_BLOCKS := [0, 1, 1, 2, 2]
 var _floor := ""   # the area being played ("" = none)
 var _floor_step := 0
 var _floor_seeds: Array[int] = []
@@ -91,6 +97,9 @@ func _ready() -> void:
 
 	player.reset_to(level.start.position)
 	player.fell.connect(_on_player_fell)
+	player.grew_moss.connect(func(pos: Vector2) -> void:
+		if state == State.PLAY:
+			level.add_overgrowth(level.to_local(pos)))
 	player.pay_heart = _pay_angry_heart
 	get_tree().node_added.connect(_hook_button_haptics)
 	for n in find_children("*", "BaseButton", true, false):
@@ -401,6 +410,7 @@ func new_run() -> void:
 	_respawn = level.start.position
 	_bubble_used = false
 	player.guard_up = true
+	player.bark_up = true   # Bark Hide grows back for every level
 	player.active = true
 	run_time = 0.0
 	falls = 0
@@ -580,6 +590,9 @@ func _on_player_hurt(push: Vector2) -> void:
 	if player.try_guard(push):
 		hud.toast("Guard Block!")
 		return   # Guard Block: the shield took it
+	if player.try_bark(push):
+		hud.toast("Bark Hide broke!")
+		return   # Bark Hide: the bark took it
 	if player.try_shrug_off(push):
 		return   # Lucky Charm: shrugged it off
 	hits += 1
@@ -786,10 +799,16 @@ func _pickup_key() -> String:
 ## Five fresh random levels for a run through an area.
 func _roll_floor_seeds(id: String) -> void:
 	_floor_seeds.clear()
+	var extra: int = _area(id).get("extra", 0)
+	var lengths := {}
 	while _floor_seeds.size() < int(_area(id).levels):
 		var s := LevelGen.random_seed()
-		if s not in _floor_seeds:
+		var w := LevelGen.generate(s, extra).find("\n")
+		if s not in _floor_seeds and w <= MAX_LEVEL_TILES:
 			_floor_seeds.append(s)
+			lengths[s] = w
+	# Shorter levels first, so the run builds up toward the boss.
+	_floor_seeds.sort_custom(func(a: int, b: int) -> bool: return lengths[a] < lengths[b])
 	CardCollection.opened_chests = CardCollection.opened_chests.filter(
 		func(k: String) -> bool: return not k.begins_with("run:"))
 
@@ -846,6 +865,7 @@ func _play_floor_level() -> void:
 		return
 	hud.set_seed(seed_value)
 	var text := LevelGen.generate(seed_value, ar.get("extra", 0))   # Basic levels run 10-15 tiles longer
+	text = _harden(text, step, seed_value)
 	if id == "moss":
 		text = _mossify(_add_moss_obstacles(text, seed_value), seed_value).replace("`", "=")
 		level.set_theme("moss")
@@ -886,6 +906,54 @@ func _on_boss_defeated() -> void:
 
 
 ## Mossy Cave: most floating platforms become crumbling blocks.
+## Levels get a little harder nearer the boss: later levels gain 1-2 more Bad Blocks on flat
+## ground, and the last one's first Bad Block is a Hard one (faster, horned).
+func _harden(text: String, step: int, s: int) -> String:
+	var n: int = EXTRA_BAD_BLOCKS[clampi(step - 1, 0, EXTRA_BAD_BLOCKS.size() - 1)]
+	if n == 0:
+		return text
+	var rng := RandomNumberGenerator.new()
+	rng.seed = s * 17 + step
+	var g: Array = []
+	for line in text.split("\n"):
+		g.append(line.split(""))
+	var spots: Array[Vector2i] = []
+	var busy: Array[Vector2i] = []
+	for y in g.size():
+		for x in g[y].size():
+			if g[y][x] not in [".", "#", "=", "*"]:
+				busy.append(Vector2i(x, y))
+	for y in range(2, g.size() - 1):
+		for x in range(3, mini(g[y].size(), g[y + 1].size()) - 3):
+			var ok := true
+			for dx in range(-2, 3):
+				if g[y][x + dx] != "." or g[y + 1][x + dx] not in ["#", "="]:
+					ok = false
+			if not ok:
+				continue
+			for b in busy:   # clear of the start, goal, pads, checkpoint and other obstacles
+				if absi(b.x - x) < (10 if g[b.y][b.x] == "P" else 5) and absi(b.y - y) < 5:
+					ok = false
+					break
+			if ok:
+				spots.append(Vector2i(x, y))
+	for i in n:
+		if spots.is_empty():
+			break
+		var c: Vector2i = spots[rng.randi_range(0, spots.size() - 1)]
+		g[c.y][c.x] = "e"
+		spots = spots.filter(func(o: Vector2i) -> bool: return absi(o.x - c.x) >= 6 or absi(o.y - c.y) >= 5)
+	var out := PackedStringArray()
+	for row in g:
+		out.append("".join(row))
+	var res := "\n".join(out)
+	if step >= EXTRA_BAD_BLOCKS.size():
+		var k := res.find("e")
+		if k != -1:
+			res = res.substr(0, k) + "k" + res.substr(k + 1)
+	return res
+
+
 ## Mossy Cave: every map also gets 1-2 Moss Covered Squares (q, on flat ground) and 1-2 Vine
 ## Platforms (v, floating over flat ground with room for their vines), away from start and goal.
 func _add_moss_obstacles(text: String, s: int) -> String:
@@ -985,7 +1053,7 @@ func _floor_level_won() -> void:
 		if wins >= 2 and CardCollection.is_beaten(key):
 			# The second win: every card he gives is yours now.
 			var got := []
-			for c in ["dash", BOSS_CARDS.get(ar.id, "")]:
+			for c in [AREA_CARDS.get(ar.id, ""), BOSS_CARDS.get(ar.id, "")]:
 				if c != "" and not CardCollection.owns(c):
 					_on_card_collected(c)
 					got.append(AbilityCard.NAMES[c])
@@ -1003,7 +1071,9 @@ func _floor_level_won() -> void:
 		if ar.has("boss"):
 			px += BOSS_REWARD
 			news = "%s beaten!" % ar.boss_name
-			var card: String = "dash" if not CardCollection.owns("dash") else BOSS_CARDS.get(ar.id, "")
+			var card: String = AREA_CARDS.get(ar.id, "")
+			if card == "" or CardCollection.owns(card):
+				card = BOSS_CARDS.get(ar.id, "")
 			if card != "" and not CardCollection.owns(card):
 				_on_card_collected(card)
 		CardCollection.add_pixels(px)
