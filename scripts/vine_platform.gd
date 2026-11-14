@@ -6,7 +6,7 @@ extends StaticBody2D
 
 const T := 32.0
 const WIDTH := 96.0
-const THICK := 12.0
+const THICK := 16.0
 const BODY := Color("2f5a2a")
 const SHADE := Color("1d3a1b")
 const MOSS := Color("4f9a3c")
@@ -81,6 +81,16 @@ func _draw() -> void:
 	draw_rect(Rect2(-w, -THICK / 2.0, WIDTH, THICK), BODY)
 	draw_rect(Rect2(-w, THICK / 2.0 - 3.0, WIDTH, 3), SHADE)
 	draw_rect(Rect2(-w - 1.0, -THICK / 2.0 - 3.0, WIDTH + 2.0, 6), MOSS)
+	# The same tired, half-shut eyes as the Moss Covered Square, looking toward the player.
+	var look := 0.0
+	if _player:
+		look = clampf((_player.global_position.x - global_position.x) / 60.0, -1.0, 1.0)
+	for ex in [-13.0, 4.0]:
+		var e: float = ex + look * 4.0
+		draw_rect(Rect2(e, -4.0, 9.0, 9.0), Color("eef1fa"))
+		draw_rect(Rect2(e, -4.0, 9.0, 4.0), SHADE)                 # heavy eyelid
+		draw_rect(Rect2(e + 3.0 + look * 2.0, 0.0, 3.0, 4.0), Color("1b2440"))
+		draw_rect(Rect2(e + 1.0, 6.0, 7.0, 1.0), SHADE)            # bag under the eye
 	var x := -w + 4.0
 	while x < w - 4.0:
 		draw_rect(Rect2(x, -THICK / 2.0 - 6.0, 3, 4), LEAF)

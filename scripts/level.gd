@@ -79,8 +79,17 @@ var _mossy_cells := {}
 var _moss_patches := {}
 
 
-## A Moss Covered Square landed with its feet at pos: moss grows on the block(s) under it.
+## True if the ground at this spot (local to the level) has a slippery moss patch on it.
+func is_slippery(pos: Vector2) -> bool:
+	return not _moss_patches.is_empty() \
+		and _moss_patches.has(ground.local_to_map(ground.to_local(pos)))
+
+
+## A Moss Covered Square landed with its feet at pos: about half the time, slippery moss grows
+## on the block(s) under it.
 func add_moss_patch(pos: Vector2) -> void:
+	if randf() >= 0.5:
+		return
 	for dx in [-BadBlock.SIZE / 2.0 + 2.0, BadBlock.SIZE / 2.0 - 2.0]:
 		var cell := ground.local_to_map(ground.to_local(to_global(pos + Vector2(dx, 4.0))))
 		if ground.get_cell_source_id(cell) != -1:

@@ -61,11 +61,13 @@ static func is_diagonal(seed_value: int) -> bool:
 	return t.randf() >= 1.0 - DIAGONAL_CHANCE
 
 
-static func generate(seed_value: int) -> String:
+## extra: make the level about this many tiles longer (10-15 for 12), with plain features
+## added before the goal (climbs get extra steps instead).
+static func generate(seed_value: int, extra := 0) -> String:
 	if is_vertical(seed_value):
-		return generate_vertical(seed_value)
+		return generate_vertical(seed_value, false, extra)
 	if is_diagonal(seed_value):
-		return generate_vertical(seed_value, true)
+		return generate_vertical(seed_value, true, extra)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value
 	var cols: Array = []   # each column is an Array of ROWS one-character strings
@@ -84,6 +86,17 @@ static func generate(seed_value: int) -> String:
 		_landing(cols, st, rng)
 	for i in rng.randi_range(1, 2):
 		_plain_feature(cols, st, rng)
+	if extra > 0:
+		var base := cols.size()
+		while cols.size() < base + extra - 2:
+			var before := cols.size()
+			var keep := st.duplicate()
+			_plain_feature(cols, st, rng)
+			if cols.size() > base + extra + 3:
+				# Too long: take that feature back and finish with plain ground.
+				cols.resize(before)
+				st = keep
+				_flat(cols, st.h, base + extra - before)
 
 	# Goal at the end, on a flat run with a little ground past it.
 	var h: int = st.h
@@ -360,7 +373,7 @@ static func _pick(rng: RandomNumberGenerator, weights: Dictionary) -> String:
 ##   - Same required groups as horizontal levels: 1–4 obstacles, 1–2 teleporter pairs and 3–15
 ##     basic special blocks (rubber pads, rubber wall bumps, one-way block platforms).
 ## Diagonal levels use the same rules in a wide space, with every step heading right.
-static func generate_vertical(seed_value: int, diagonal := false) -> String:
+static func generate_vertical(seed_value: int, diagonal := false, extra := 0) -> String:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value
 	var gw := D_MAX_WIDTH if diagonal else V_WIDTH
@@ -410,6 +423,9 @@ static func generate_vertical(seed_value: int, diagonal := false) -> String:
 		_v_piece(g, st, rng, piece)
 	for i in rng.randi_range(2, 3):
 		_v_step(g, st, rng, rng.randi_range(1, 3) if diagonal else 3, rng.randi_range(3, 5), "=")
+	for i in extra / 3:   # a longer climb: more steps, while there's room above
+		if st.cur.y > 16:
+			_v_step(g, st, rng, rng.randi_range(1, 3) if diagonal else 3, rng.randi_range(3, 5), "=")
 	# The goal on a last, wider platform.
 	var top: Dictionary = _v_step(g, st, rng, 3, 6, "=")
 	g[top.y - 1][top.x + 3] = "G"
@@ -417,9 +433,12 @@ static func generate_vertical(seed_value: int, diagonal := false) -> String:
 		var w: Dictionary = st.wide[rng.randi_range(0, st.wide.size() - 1)]
 		_v_put(g, w.x + w.w - 1, w.y - 1, "e")
 	# A checkpoint on the platform closest to halfway up, where there's room for it.
-	var half: int = (floor_y + top.y) / 2
-	var path: Array = st.path.duplicate()
-	path.sort_custom(func(a, b) -> bool: return absi(a.y - half) < absi(b.y - half))
+	# Closest to the middle of the route (the platforms in the order you climb them).
+	var all_path: Array = st.path
+	var mid_i := all_path.size() / 2
+	var order := range(all_path.size())
+	order.sort_custom(func(a: int, b: int) -> bool: return absi(a - mid_i) < absi(b - mid_i))
+	var path: Array = order.map(func(i: int) -> Dictionary: return all_path[i])
 	for p in path:
 		var cx: int = p.x + p.w / 2
 		if p.w >= 3 and p.y < floor_y and g[p.y][cx] in ["=", "^"] \

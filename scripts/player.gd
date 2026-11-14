@@ -126,6 +126,19 @@ var water: Water
 var invincible := 0.0
 ## Phase Jump card: phased out (nothing can hurt you) right now.
 var phased := false
+## Set by main: true if the ground at a spot is slippery (a moss patch).
+var slip_check: Callable
+## How much grip the floor gives on slippery moss (1 = normal).
+@export var moss_grip := 0.1
+
+
+## Floor grip: 1 normally, much less standing on a moss patch (slow to start, slow to stop).
+func _grip(on_floor: bool) -> float:
+	if on_floor and slip_check.is_valid() and slip_check.call(global_position + Vector2(0.0, SIZE / 2.0 + 6.0)):
+		return moss_grip
+	return 1.0
+
+
 ## Vine Platform: seconds left tangled in hanging vines (they drag on your sideways speed in the air).
 var in_vines := 0.0
 var _phase_look := 1.0   # how solid you're drawn: dips when phasing, then fades back in
@@ -450,11 +463,11 @@ func _physics_process(delta: float) -> void:
 			_momentum = 0.0
 		_face = signf(dir)
 		_momentum += delta
-		var acc := ground_accel if on_floor else air_accel * (2.5 if "air_brake" in abilities else 1.0)
+		var acc := ground_accel * _grip(on_floor) if on_floor else air_accel * (2.5 if "air_brake" in abilities else 1.0)
 		velocity.x = move_toward(velocity.x, dir * _run_speed(), acc * delta)
 	else:
 		_momentum = 0.0
-		var dec := ground_decel if on_floor else air_decel * (4.0 if "air_brake" in abilities else 1.0)
+		var dec := ground_decel * _grip(on_floor) if on_floor else air_decel * (4.0 if "air_brake" in abilities else 1.0)
 		velocity.x = move_toward(velocity.x, 0.0, dec * delta)
 
 	if on_floor:

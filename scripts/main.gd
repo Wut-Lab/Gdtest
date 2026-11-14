@@ -51,7 +51,7 @@ var _came_from := "dungeon"
 ## Dungeon areas, in order. Each is a run of 5 fixed levels (hearts carry over), then its boss.
 ## An area shows at the gate once the boss of the area before it is beaten.
 const AREAS := [
-	{"id": "basic", "name": "Basic", "first": 1, "seeds": [18, 25, 3, 34, 1],
+	{"id": "basic", "name": "Basic", "first": 1, "seeds": [18, 25, 3, 34, 1], "extra": 12,
 		"boss": "res://levels/boss_basic.txt", "boss_name": "Big Bad Square"},
 	{"id": "moss", "name": "Mossy Cave", "first": 6, "seeds": [29, 56, 49, 10, 8]},
 ]
@@ -85,6 +85,7 @@ func _ready() -> void:
 	world.add_child(level)
 	player = player_scene.instantiate() as Player
 	player.water = level.water
+	player.slip_check = level.is_slippery
 	level.add_child(player)
 	_fit_to_level()
 
@@ -825,7 +826,7 @@ func _play_floor_level() -> void:
 		_play_boss(ar, carry)
 		return
 	hud.set_seed(seed_value)
-	var text := LevelGen.generate(seed_value)
+	var text := LevelGen.generate(seed_value, ar.get("extra", 0))   # Basic levels run 10-15 tiles longer
 	if id == "moss":
 		text = _mossify(_add_moss_obstacles(text, seed_value), seed_value).replace("`", "=")
 		level.set_theme("moss")
