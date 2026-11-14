@@ -350,6 +350,7 @@ button:disabled { opacity: 0.4; }
     { ch: 'u', label: 'Harpoonist Block' },
     { ch: 'm', label: 'Big Bad Square (boss)' },
     { ch: 'y', label: 'Old Mossback (boss)' },
+    { ch: 'x', label: 'Captain Chomp (boss, in a lake)' },
     { ch: 'd', label: 'Boss door' },
     { ch: '1', label: 'Red warp' },
     { ch: '2', label: 'Yellow warp' },
@@ -646,6 +647,15 @@ button:disabled { opacity: 0.4; }
       g.fillStyle = '#8fd3ff'; g.fillRect(x + s * 0.24, y + s * 0.32, s * 0.2, s * 0.18); g.fillRect(x + s * 0.52, y + s * 0.32, s * 0.2, s * 0.18);
       g.fillStyle = '#6d7685'; g.fillRect(x + s * 0.55, y + s * 0.66, s * 0.45, s * 0.1);
       g.fillStyle = '#c8d0de'; g.beginPath(); g.moveTo(x + s, y + s * 0.71); g.lineTo(x + s * 0.88, y + s * 0.6); g.lineTo(x + s * 0.88, y + s * 0.82); g.fill();
+    } else if (ch === 'x') {
+      // Captain Chomp: a big slate piranha in water with a saddle and a goggled rider.
+      g.fillStyle = 'rgba(77,163,255,0.45)'; g.fillRect(x, y, s, s);
+      g.fillStyle = '#4a5776'; g.fillRect(x + s * 0.05, y + s * 0.45, s * 0.9, s * 0.5);
+      g.fillStyle = '#c9a227'; g.fillRect(x + s * 0.05, y + s * 0.8, s * 0.9, s * 0.15);
+      g.fillStyle = '#ffde59'; g.fillRect(x + s * 0.7, y + s * 0.52, s * 0.14, s * 0.1);
+      g.fillStyle = '#6b4428'; g.fillRect(x + s * 0.3, y + s * 0.38, s * 0.4, s * 0.08);
+      g.fillStyle = '#8a5a32'; g.fillRect(x + s * 0.36, y + s * 0.08, s * 0.28, s * 0.3);
+      g.fillStyle = '#8fd3ff'; g.fillRect(x + s * 0.4, y + s * 0.16, s * 0.2, s * 0.08);
     } else if (ch === 'm' || ch === 'y') {
       // Bosses: a big square (2x2 in the game) standing on this cell, with a crown of hearts.
       const moss = ch === 'y', b = s * 0.95, o = (s - b) / 2;

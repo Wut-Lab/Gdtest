@@ -13,10 +13,10 @@ signal near_changed(door: TownDoor, near: bool)
 
 const KINDS := {"!": "dungeon", "$": "shop", "&": "cards", "%": "replay", "(": "paul", ")": "terry", "{": "paula", "}": "tim", "[": "romeo", "]": "romeo", "f": "hut", "l": "larry"}
 const NAMES := {"dungeon": "the Dungeon", "shop": "the Shop", "cards": "the Card Hall", "replay": "the Replay Room",
-	"paul": "Paul", "terry": "Terry", "paula": "Paula", "tim": "Tim", "romeo": "Romeo", "hut": "the Fishing Hut", "larry": "Larry"}
+	"paul": "Paul", "terry": "Terry", "paula": "Paula", "tim": "Tim", "romeo": "Romeo", "hut": "the Fishing Hut", "larry": "Larry", "pork": "Pork"}
 const SIGNS := {"dungeon": "DUNGEON", "shop": "SHOP", "cards": "CARDS", "replay": "REPLAY"}
 ## Townsfolk: you talk to them instead of entering.
-const PEOPLE := ["paul", "terry", "paula", "tim", "romeo", "larry"]
+const PEOPLE := ["paul", "terry", "paula", "tim", "romeo", "larry", "pork"]
 ## Scenery only: no door to walk up to.
 const DECOR := ["hut"]
 ## Townsfolk who stroll back and forth (body colour, highlight).

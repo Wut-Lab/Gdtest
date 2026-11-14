@@ -6,6 +6,8 @@ extends CharacterBody2D
 signal fell
 ## Overgrowth card: landed from a jump here (feet).
 signal grew_moss(pos: Vector2)
+## Undertow card: a dash finished, leaving a current from start to end.
+signal undertow(start: Vector2, end: Vector2)
 signal bounced
 signal teleported
 signal wall_bounced
@@ -175,6 +177,7 @@ var _takeoff_x := 0.0   # Grip and Go: where you left the ground
 ## Momentum card: seconds spent running one way without stopping or turning.
 var _momentum := 0.0
 var _dash := 0.0          # time left in the current dash
+var _dash_start := Vector2.ZERO
 var _dash_cd := 0.0
 var _air_dash_used := false
 var _pounding := false
@@ -685,6 +688,8 @@ func _update_dash_and_pound(delta: float, on_floor: bool) -> void:
 		velocity = Vector2(_face * dash_speed, 0.0)
 		if _dash == 0.0:
 			velocity.x = _face * run_speed      # come out of it at running speed
+			if "undertow" in abilities:
+				undertow.emit(_dash_start, global_position)
 		return
 	if _stun > 0.0:
 		return
@@ -694,6 +699,7 @@ func _update_dash_and_pound(delta: float, on_floor: bool) -> void:
 		if dir != 0.0:
 			_face = signf(dir)
 		_dash = dash_time
+		_dash_start = global_position
 		_dash_cd = dash_cooldown
 		_air_dash_used = not on_floor
 		velocity = Vector2(_face * dash_speed, 0.0)

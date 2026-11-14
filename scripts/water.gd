@@ -32,6 +32,9 @@ var _spans := {}
 var _river := {}
 ## Waterfall cells.
 var _falls := {}
+## Each waterfall as one piece: {"x", "y0", "y1" (pixels), "side" (-1/1: which way it pours,
+## or 0 if no river feeds it), "edge" (x of the block edge it pours off)}.
+var _fall_runs: Array[Dictionary] = []
 ## The ponds: Array of {"x0", "x1" (pixels), "top", "bottom", "cells"}.
 var _bodies: Array[Dictionary] = []
 var _t := 0.0
@@ -48,6 +51,7 @@ func setup(cells: Dictionary, fish := false) -> void:
 	_spans.clear()
 	_river.clear()
 	_falls.clear()
+	_fall_runs.clear()
 	_bodies.clear()
 	_fish.clear()
 	var still := {}
@@ -61,6 +65,20 @@ func setup(cells: Dictionary, fish := false) -> void:
 				_river[c] = 1
 			"|":
 				_falls[c] = true
+	for c in _falls:
+		if _falls.has(c + Vector2i.UP):
+			continue
+		var bottom: Vector2i = c
+		while _falls.has(bottom + Vector2i.DOWN):
+			bottom += Vector2i.DOWN
+		var side := 0
+		if _river.get(c + Vector2i.LEFT, 0) == 1:
+			side = 1
+		elif _river.get(c + Vector2i.RIGHT, 0) == -1:
+			side = -1
+		var edge: int = c.x * T if side >= 0 else (c.x + 1) * T
+		var y0: float = c.y * T + (T - RIVER_DEPTH if side != 0 else 0.0)
+		_fall_runs.append({"x": c.x * T, "y0": y0, "y1": (bottom.y + 1) * T, "side": side, "edge": edge})
 	# Ponds: still cells joined side to side or up and down.
 	var seen := {}
 	for c in still:
@@ -198,18 +216,57 @@ func _draw() -> void:
 			var sx := fposmod(x + i * 16.0 + dir * _t * FLOW_SPEED * 0.6, T)
 			draw_rect(Rect2(x + sx, top + 4 + i * 4, minf(9.0, T - sx), 2), FOAM)
 		draw_rect(Rect2(x, top - 1 + sin(_t * 4.0 + x * 0.1), T, 2), FOAM)
-	# Waterfalls: a curtain of streaks falling, with foam where they land.
-	for c in _falls:
-		var x: float = c.x * T
-		var y: float = c.y * T
-		draw_rect(Rect2(x + 4, y, T - 8, T), FALL)
-		for i in 3:
-			var sy := fposmod(y + i * 11.0 + _t * 260.0, T)
-			draw_rect(Rect2(x + 7 + i * 7, y + sy, 2, minf(10.0, T - sy)), FOAM)
-		if not _falls.has(c + Vector2i.DOWN):
-			for i in 4:
-				var r := 3.0 + 2.0 * sin(_t * 9.0 + i * 1.7)
-				draw_rect(Rect2(x + 2 + i * 7, y + T - 6 - r, r + 2, r + 2), FOAM)
+	for f in _fall_runs:
+		_draw_fall(f)
+
+
+## A waterfall: the river rolls over the block edge in a smooth curve, then falls as one
+## curtain that bows out a little as it drops, with streaks sliding down and foam at the bottom.
+func _draw_fall(f: Dictionary) -> void:
+	var side: int = f.side
+	var y0: float = f.y0
+	var y1: float = f.y1
+	var w := 18.0
+	var step := 3.0
+	var y := y0
+	var prev := Vector2.ZERO
+	var first := true
+	while y < y1:
+		var drop := y - y0
+		# Pours off the edge in an arc: out quickly at first, then nearly straight down.
+		var out := (minf(sqrt(drop) * 1.6, 10.0) if side != 0 else 7.0)
+		var left: float = f.edge + out if side >= 0 else f.edge - out - w
+		if side == 0:
+			left = f.x + (T - w) / 2.0
+		var hgt := minf(step, y1 - y)
+		draw_rect(Rect2(left, y, w, hgt + 0.5), FALL)
+		draw_rect(Rect2(left + w * 0.3, y, w * 0.4, hgt + 0.5), Color(0.8, 0.92, 1.0, 0.35))   # bright core
+		if first:
+			prev = Vector2(left, y)
+			first = false
+		y += step
+	# The lip: the river's surface curving over the edge into the curtain.
+	if side != 0:
+		var e: float = f.edge
+		var pts := PackedVector2Array()
+		for i in 7:
+			var a := float(i) / 6.0
+			pts.append(Vector2(e - side * 6.0 + side * a * 16.0, y0 - 2.0 + a * a * 10.0))
+		draw_polyline(pts, FOAM, 2.5)
+	# Streaks sliding down the whole curtain.
+	var length := y1 - y0
+	for i in 4:
+		var sy := fposmod(i * 23.0 + _t * 240.0, maxf(length, 1.0))
+		var d := sy
+		var out2 := (minf(sqrt(d) * 1.6, 10.0) if side != 0 else 7.0)
+		var lx: float = (f.edge + out2 if side >= 0 else f.edge - out2 - w) if side != 0 else f.x + (T - w) / 2.0
+		draw_rect(Rect2(lx + 3 + i * 4, y0 + sy, 2, minf(12.0, length - sy)), FOAM)
+	# Foam where it lands.
+	var out_end := 10.0 if side != 0 else 7.0
+	var bx: float = (f.edge + out_end if side >= 0 else f.edge - out_end - w) if side != 0 else f.x + (T - w) / 2.0
+	for i in 5:
+		var r := 3.0 + 2.0 * sin(_t * 9.0 + i * 1.7)
+		draw_circle(Vector2(bx - 3 + i * 6, y1 - 4 - r * 0.5), r, Color(FOAM, 0.75))
 
 
 func _draw_fish(f: Dictionary) -> void:

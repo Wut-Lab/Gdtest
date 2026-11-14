@@ -57,14 +57,15 @@ const AREAS := [
 		"boss": "res://levels/boss_moss.txt", "boss_name": "Old Mossback"},
 	# Harder: more Bad Blocks (and Hard ones from the first level), slightly longer levels.
 	{"id": "lake", "name": "Cavern Lake", "first": 11, "levels": 5, "extra": 8,
-		"bad": [1, 1, 2, 2, 3], "hard": [1, 1, 1, 2, 2]},
+		"bad": [1, 1, 2, 2, 3], "hard": [1, 1, 1, 2, 2],
+		"boss": "res://levels/boss_lake.txt", "boss_name": "Captain Chomp"},
 ]
 const FLOOR_CLEAR_REWARD := 10
 ## Beating a boss the first time: these pixels plus its card (Dash first, if you lack it).
 const BOSS_REWARD := 25
 ## Each boss gives its area's own card if you don't have it yet, otherwise the boss's card.
 const BOSS_CARDS := {"basic": "chain_dash", "moss": "bark_hide"}
-const AREA_CARDS := {"basic": "dash", "moss": "overgrowth"}
+const AREA_CARDS := {"basic": "dash", "moss": "overgrowth", "lake": "undertow"}
 ## Chance Pork is in town on a visit, after the first.
 const PORK_CHANCE := 0.3
 ## Longest level a run may roll, in tiles.
@@ -100,6 +101,8 @@ func _ready() -> void:
 	player = player_scene.instantiate() as Player
 	player.water = level.water
 	player.slip_check = level.is_slippery
+	player.undertow.connect(func(a: Vector2, b: Vector2) -> void:
+		level.add_undertow(level.to_local(a), level.to_local(b)))
 	level.add_child(player)
 	_fit_to_level()
 
@@ -383,6 +386,11 @@ func _enter_door() -> void:
 		_talks[_near_door] = n + 1
 		_talk(_near_door, TOWNSFOLK_LINES[_near_door] if _near_door == "larry" \
 			else [TOWNSFOLK_LINES[_near_door][n % TOWNSFOLK_LINES[_near_door].size()]])
+		return
+	if _near_door == "pork":
+		var pork := level.get_node_or_null("Obstacles/Pork")
+		if pork:
+			pork.blow_bubbles()   # Pork can't talk: he blows a stream of colourful bubbles
 		return
 	if _near_door == "terry":
 		_talk("terry", [TERRY_LINES[randi() % TERRY_LINES.size()]])
@@ -891,7 +899,7 @@ func _play_floor_level() -> void:
 	seed_value = _floor_seeds[step - 1] if step <= _floor_seeds.size() else 0
 	_level_key = _area_key(id, step)
 	_replay_mode = ""
-	set_music({"moss": "music_moss"}.get(id, "music_level"))
+	set_music({"moss": "music_moss", "lake": "music_lake"}.get(id, "music_level"))
 	var ar := _area(id)
 	if id not in CardCollection.areas_played:
 		CardCollection.areas_played.append(id)   # town milestone: see enter_town
@@ -926,10 +934,10 @@ func _play_boss(ar: Dictionary, carry: int) -> void:
 	_floor = ar.id
 	_floor_step = int(ar.levels) + 1
 	_carry_hearts = carry
-	set_music("music_moss_boss" if ar.id == "moss" else "music_boss")
+	set_music({"moss": "music_moss_boss", "lake": "music_lake_boss"}.get(ar.id, "music_boss"))
 	var rematch := _rematch
-	level.set_theme("moss" if ar.id == "moss" else "")
-	$Background/Sky.modulate = Color(0.55, 0.85, 0.7) if ar.id == "moss" else Color.WHITE
+	level.set_theme(ar.id if ar.id in ["moss", "lake"] else "")
+	$Background/Sky.modulate = {"moss": Color(0.55, 0.85, 0.7), "lake": Color(0.5, 0.62, 0.9)}.get(ar.id, Color.WHITE)
 	load_level_text(FileAccess.get_file_as_string(ar.boss))
 	_rematch = rematch
 	_level_hearts = hearts

@@ -21,7 +21,7 @@ extends Node2D
 ##   !  town: dungeon gate     $  town: shop     &  town: card hall
 ##   ~  still water (you float)   < >  shallow river running left / right (carries you)
 ##   |  waterfall (pushes you down)   a  Piranha Block (in water)   u  Harpoonist Block
-##   ,  shallow spikes (Cavern Lake)
+##   ,  shallow spikes (Cavern Lake)   x  Captain Chomp, the Cavern Lake boss (in his lake)
 
 signal goal_reached
 signal heart_collected
@@ -119,8 +119,48 @@ func add_overgrowth(pos: Vector2) -> void:
 	_moss_layer.queue_redraw()
 
 
+## Undertow card: currents left by dashes {a, b (ends), dir (the way it drags: back toward the
+## dash's start), left (seconds)}.
+var _currents: Array[Dictionary] = []
+const UNDERTOW_TIME := 2.5
+const UNDERTOW_PULL := 150.0
+
+
+func add_undertow(a: Vector2, b: Vector2) -> void:
+	if a.distance_to(b) < 8.0:
+		return
+	_currents.append({"a": a, "b": b, "dir": signf(a.x - b.x) if absf(a.x - b.x) > 1.0 else 0.0,
+		"left": UNDERTOW_TIME})
+	_moss_layer.queue_redraw()
+
+
+func _drag_currents(delta: float) -> void:
+	for cur in _currents:
+		cur.left -= delta
+	_currents = _currents.filter(func(c: Dictionary) -> bool: return c.left > 0.0)
+	if _currents.is_empty():
+		return
+	_moss_layer.queue_redraw()
+	for t in get_tree().get_nodes_in_group("card_targets"):
+		if not t.visible or not t.has_method("half_size"):
+			continue
+		for cur in _currents:
+			var x0: float = minf(cur.a.x, cur.b.x)
+			var x1: float = maxf(cur.a.x, cur.b.x)
+			var y: float = (cur.a.y + cur.b.y) / 2.0   # dashes run straight across
+			var half: Vector2 = t.half_size()
+			if t.position.x + half.x < x0 or t.position.x - half.x > x1 or absf(t.position.y - y) > half.y + 18.0:
+				continue
+			if t.has_method("drift"):
+				t.drift(cur.dir * UNDERTOW_PULL * delta)
+			if t.has_method("slow"):
+				t.slow(0.3)
+			break
+
+
 func _physics_process(delta: float) -> void:
 	_overgrowth_cd = maxf(_overgrowth_cd - delta, 0.0)
+	_drag_currents(delta)
 	if _overgrowth.is_empty():
 		return
 	_overgrowth.left -= delta
@@ -129,7 +169,7 @@ func _physics_process(delta: float) -> void:
 		_moss_layer.queue_redraw()
 		return
 	for t in get_tree().get_nodes_in_group("card_targets"):
-		if not (t is BadBlock or t is BigBadSquare or t is MossBoss) or not t.visible or t in _overgrowth.caught:
+		if not (t is BadBlock or t is BigBadSquare or t is MossBoss or t is Harpoonist) or not t.visible or t in _overgrowth.caught:
 			continue
 		var half: Vector2 = t.half_size()
 		var feet: float = t.position.y + half.y
@@ -245,6 +285,7 @@ func load_map_text(text: String) -> void:
 	_moss_patches.clear()
 	_overgrowth = {}
 	_overgrowth_cd = 0.0
+	_currents.clear()
 	var vine_cells: Array[Vector2i] = []
 	var moss_bosses: Array[Vector2i] = []
 	var simple_blocks: Array[Vector2i] = []
@@ -253,6 +294,7 @@ func load_map_text(text: String) -> void:
 	var checkpoints: Array[Vector2i] = []
 	var water_cells := {}   # cell -> "~", "<", ">" or "|"
 	var piranhas: Array[Vector2i] = []
+	var lake_bosses: Array[Vector2i] = []
 	var harpoonists: Array[Vector2i] = []
 	var shallow: Array[Vector2i] = []
 	var crumbles: Array[Vector2i] = []
@@ -319,6 +361,9 @@ func load_map_text(text: String) -> void:
 					water_cells[Vector2i(x, y)] = kind
 				"u":
 					harpoonists.append(Vector2i(x, y))
+				"x":
+					lake_bosses.append(Vector2i(x, y))
+					water_cells[Vector2i(x, y)] = "~"
 				",":
 					shallow.append(Vector2i(x, y))
 				"!", "$", "&", "%", "(", ")", "{", "}", "[", "]", "f", "l":
@@ -396,6 +441,19 @@ func load_map_text(text: String) -> void:
 		hb.harpooned.connect(func(push: Vector2) -> void: player_harpooned.emit(push))
 		hb.broken.connect(func(pos: Vector2) -> void: obstacle_broken.emit(pos, "harpoonist"))
 		_obstacles.add_child(hb)
+	for cell in lake_bosses:
+		_has_boss = true
+		var probe := _make_piranha(cell, water_cells)   # just to find his stretch of lake
+		var lb := LakeBoss.new()
+		lb.x0 = probe.x0
+		lb.x1 = probe.x1
+		lb.surface_y = probe.surface_y
+		lb.position = Vector2(cell.x * T + T / 2.0, probe.surface_y + 6.0)
+		probe.free()
+		lb.hurt_player.connect(func(push: Vector2) -> void: player_hurt.emit(push))
+		lb.harpooned.connect(func(push: Vector2) -> void: player_harpooned.emit(push))
+		lb.defeated.connect(func(_pos: Vector2) -> void: boss_defeated.emit())
+		_obstacles.add_child(lb)
 	for cell in piranhas:
 		var pb := _make_piranha(cell, water_cells)
 		pb.hurt_player.connect(func(push: Vector2) -> void: player_hurt.emit(push))
@@ -449,6 +507,7 @@ func add_pork(i: int) -> void:
 			start_cell = c
 	var pork := _make_piranha(start_cell, cells, true)
 	pork.name = "Pork"
+	pork.near_changed.connect(func(near: bool) -> void: door_near.emit("pork", near))
 	_obstacles.add_child(pork)
 
 
@@ -704,6 +763,18 @@ func _draw_back_door(cell: Vector2i) -> void:
 func _draw_moss_blocks() -> void:
 	for cell in _moss_cells:
 		_draw_moss_block(_moss_layer, cell)
+	for cur in _currents:
+		# Undertow: wavy streaks sliding back along the dash's path, fading out.
+		var a: float = clampf(cur.left / 0.6, 0.0, 1.0)
+		var length: float = cur.a.distance_to(cur.b)
+		var along: Vector2 = (cur.a - cur.b) / maxf(length, 1.0)
+		var k := 0.0
+		while k < length:
+			var off := fposmod(k + (UNDERTOW_TIME - cur.left) * 120.0, maxf(length, 1.0))
+			for row in [-8.0, 0.0, 8.0]:
+				var p: Vector2 = cur.b + along * off + Vector2(0.0, row + 2.0 * sin(off * 0.15 + row))
+				_moss_layer.draw_rect(Rect2(p - Vector2(5, 1), Vector2(10, 2)), Color(0.55, 0.85, 1.0, 0.7 * a))
+			k += 22.0
 	if not _overgrowth.is_empty():
 		# Overgrowth: bright leafy moss that withers away over its last second.
 		var fade := clampf(_overgrowth.left, 0.0, 1.0)

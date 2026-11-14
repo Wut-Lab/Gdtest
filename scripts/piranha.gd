@@ -9,6 +9,8 @@ extends CharacterBody2D
 
 signal hurt_player(push: Vector2)
 signal broken(pos: Vector2)
+## Pork: the player came close or left.
+signal near_changed(near: bool)
 
 const W := 26.0
 const H := 20.0
@@ -44,6 +46,8 @@ var _leap_cd := 1.0
 var _t := 0.0
 var _wander := 0.0
 var _near := false
+var _chomp_sfx := BigBadSquare._sfx("chomp", -6.0)
+var _splash_sfx := BigBadSquare._sfx("splash", -10.0)
 
 
 func _ready() -> void:
@@ -66,6 +70,8 @@ func _ready() -> void:
 	ac.shape = ash
 	_hit_area.add_child(ac)
 	add_child(_hit_area)
+	add_child(_chomp_sfx)
+	add_child(_splash_sfx)
 	_t = randf() * 10.0
 
 
@@ -102,6 +108,11 @@ func slow(seconds: float) -> void:
 
 func shove(dir: float, tiles := 2) -> void:
 	position.x = clampf(position.x + dir * tiles * 32.0, x0 + W / 2.0, x1 - W / 2.0)
+
+
+## Undertow card: dragged along its water.
+func drift(dx: float) -> void:
+	position.x = clampf(position.x + dx, x0 + W / 2.0, x1 - W / 2.0)
 
 
 func smash() -> void:
@@ -146,6 +157,7 @@ func _physics_process(delta: float) -> void:
 		var near: bool = _player.global_position.distance_to(global_position) < 4 * 32.0
 		if near != _near:
 			_near = near
+			near_changed.emit(near)
 	if _stun > 0.0:
 		_next_bolts -= delta
 		if _next_bolts <= 0.0:
@@ -171,10 +183,42 @@ func _hunt(delta: float, pace: float) -> void:
 		var rise := clampf(home_y - _player.global_position.y + 16.0, 40.0, 150.0)
 		_vy = -sqrt(2.0 * LEAP_GRAVITY * rise)
 		_vx = clampf(d.x * 1.5, -160.0, 160.0)
+		_splash_sfx.pitch_scale = randf_range(1.1, 1.3)
+		_splash_sfx.play()
 
 
 ## Pork: drifts to a new spot now and then, with a happy little hop out of the water.
+## Pork, talked to: a stream of colourful bubbles floats up and pops.
+var _bubbles: Array = []
+var _bubble_sfx: AudioStreamPlayer
+
+
+func blow_bubbles() -> void:
+	var cols := [Color("ff7aa5"), Color("ffd23f"), Color("6fd3ff"), Color("8ef07a"), Color("c49bff")]
+	for i in 9:
+		_bubbles.append({"p": Vector2(_dir * 10.0 + randf_range(-4, 4), -4.0), "v": Vector2(randf_range(-30, 30),
+			randf_range(-90, -55)), "r": randf_range(3.0, 7.0), "t": -i * 0.12, "life": randf_range(1.2, 1.9),
+			"c": cols[i % cols.size()]})
+	if _bubble_sfx == null:
+		_bubble_sfx = AudioStreamPlayer.new()
+		_bubble_sfx.stream = load("res://audio/bubbles.wav")
+		_bubble_sfx.volume_db = -4.0
+		_bubble_sfx.bus = AudioSettings.SOUNDS_BUS
+		add_child(_bubble_sfx)
+	_bubble_sfx.pitch_scale = randf_range(0.9, 1.15)
+	_bubble_sfx.play()
+	_leap_cd = 0.6
+
+
 func _potter(delta: float) -> void:
+	for b in _bubbles:
+		b.t += delta
+		if b.t > 0.0:
+			b.p += b.v * delta
+			b.p.x += sin(b.t * 6.0 + b.r) * 20.0 * delta
+	_bubbles = _bubbles.filter(func(b: Dictionary) -> bool: return b.t < b.life)
+	if not _bubbles.is_empty():
+		return   # he holds still while he blows them
 	if absf(position.x - _wander) < 4.0:
 		if randf() < delta * 0.6:
 			_wander = randf_range(x0 + W, x1 - W)
@@ -204,6 +248,9 @@ func _check_player() -> void:
 			return
 		if _stun > 0.0:
 			return
+		if not p.is_safe():
+			_chomp_sfx.pitch_scale = randf_range(1.0, 1.2)
+			_chomp_sfx.play()
 		var dx: float = p.global_position.x - global_position.x
 		hurt_player.emit(Vector2(signf(dx) if absf(dx) > 2.0 else _dir, -1.0))
 
@@ -232,6 +279,14 @@ func _draw() -> void:
 		draw_rect(Rect2(_dir * 6 - 3, 3, 2, 2), TOOTH)
 		draw_rect(Rect2(_dir * 6 + 1, 3, 2, 2), TOOTH)
 		draw_rect(Rect2(-w + 3, -1, 4, 3), Color("ff7aa5"))   # blush
+		for bb in _bubbles:
+			if bb.t <= 0.0:
+				continue
+			var a: float = clampf((bb.life - bb.t) / 0.3, 0.0, 1.0)
+			var c: Color = bb.c
+			draw_arc(bb.p, bb.r, 0.0, TAU, 14, Color(c, a), 1.5)
+			draw_circle(bb.p, bb.r - 1.0, Color(c, 0.25 * a))
+			draw_rect(Rect2(bb.p + Vector2(-bb.r * 0.5, -bb.r * 0.5), Vector2(2, 2)), Color(1, 1, 1, a))
 		if _near:
 			var f := ThemeDB.fallback_font
 			draw_string(f, Vector2(-20, -h - 10), "Pork", HORIZONTAL_ALIGNMENT_CENTER, 40, 12, Color.WHITE)

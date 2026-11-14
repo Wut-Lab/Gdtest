@@ -112,6 +112,12 @@ func _floor_under(x: float) -> bool:
 	return not get_world_2d().direct_space_state.intersect_ray(q).is_empty()
 
 
+## Undertow card: dragged sideways a little, but never off its floor.
+func drift(dx: float) -> void:
+	if _floor_under(global_position.x + dx + signf(dx) * SIZE / 2.0):
+		position.x += dx
+
+
 ## Angry Block Dash ran into it.
 func smash() -> void:
 	_die()

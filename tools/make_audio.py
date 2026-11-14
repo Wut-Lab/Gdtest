@@ -6,7 +6,9 @@
 Writes audio/music.ogg (a soft, happy loop, exactly 3:00 at 96 BPM) and audio/jump.wav,
 audio/land.wav, audio/hurt.wav, audio/buy.wav, audio/ding.wav, the boss sounds (boss_hit, boss_charge,
 boss_crash, boss_defeat) and the boss track music_boss.ogg, plus the Mossy Cave tracks
-(music_moss, music_moss_boss, both with crickets) and Old Mossback's moss_* sounds. Everything is synthesized here, so edit this file and rerun
+(music_moss, music_moss_boss, both with crickets) and Old Mossback's moss_* sounds, and
+Cavern Lake's music_lake, music_lake_boss and its sounds (chomp, splash, bubbles, harpoon_fire,
+lake_boss_hit, lake_boss_defeat). Everything is synthesized here, so edit this file and rerun
 it to change the sound, then run `godot --headless --path . --import`.
 """
 import os
@@ -744,6 +746,250 @@ def sfx_moss_defeat():
     return out * 0.8
 
 
+# ---------- Cavern Lake: a watery cave track, a shanty boss track and the lake's sounds ----------
+
+def harp(f, dur):
+    """Plucked harp: soft attack, a little shimmer, long fade."""
+    n = int((dur + 1.2) * SR)
+    t = np.arange(n) / SR
+    w = (np.sin(2 * np.pi * f * t) + 0.3 * np.sin(4 * np.pi * f * t) * np.exp(-t / 0.25)
+         + 0.1 * np.sin(6 * np.pi * f * t) * np.exp(-t / 0.12))
+    return w * np.minimum(t / 0.006, 1) * np.exp(-t / 0.75)
+
+
+def squeeze(f, dur):
+    """Accordion-ish lead: two detuned reedy tones with a wobble."""
+    n = int((dur + 0.12) * SR)
+    t = np.arange(n) / SR
+    out = np.zeros(n)
+    for det in (0.996, 1.004):
+        ph = 2 * np.pi * f * det * t
+        out += np.sin(ph) + 0.45 * np.sin(2 * ph) + 0.3 * np.sin(3 * ph) + 0.15 * np.sin(5 * ph)
+    out *= 1 + 0.12 * np.sin(2 * np.pi * 6.0 * t)
+    return out * 0.5 * env_adsr(n, 0.02, 0.15, 0.85, 0.06, dur)
+
+
+def blip_bubble(f, rng_):
+    """One bubble: a short rising sine blip."""
+    d = rng_.uniform(0.04, 0.08)
+    w = sweep(f, f * rng_.uniform(1.6, 2.4), d)
+    t = np.arange(len(w)) / SR
+    return w * np.sin(np.pi * t / d) ** 2
+
+
+def render_lake_music():
+    """Cavern Lake levels: 108 BPM in E minor, 32 bars (about 71 s). Harp arpeggios through a
+    long cave echo, a deep pad, slow bass, brushed shaker, a bell tune, drips and bubbles."""
+    bpm = 108
+    beat = 60 / bpm
+    slot = beat / 2
+    bar = beat * 4
+    prog = [(52, "min"), (48, "maj"), (55, "maj"), (50, "maj"),
+            (52, "min"), (45, "min"), (47, "maj"), (52, "min")] * 4   # Em C G D Em Am B Em
+    total = int(len(prog) * bar * SR)
+    buf = np.zeros(total + 4 * SR)
+    wet = np.zeros_like(buf)
+    r = np.random.default_rng(41)
+
+    def put(sound, t, gain, into=None):
+        b = buf if into is None else into
+        i = int(t * SR)
+        x = sound * gain
+        b[i:i + len(x)] += x[: len(b) - i]
+
+    tune = [[(0, 3, 7), (3, 1, 6), (4, 4, 4)], [(0, 2, 2), (2, 2, 4), (4, 4, 6)],
+            [(0, 3, 7), (3, 1, 9), (4, 2, 7), (6, 2, 6)], [(0, 6, 4)]]
+    minor = [0, 2, 3, 5, 7, 8, 10]
+
+    def em(step):
+        return 64 + 12 * (step // 7) + minor[step % 7]
+
+    for bi, (root, q) in enumerate(prog):
+        t0 = bi * bar
+        sec = bi // 8
+        tones = [root + x for x in TRIAD[q]]
+        for m in tones:
+            put(pad(midi_hz(m), bar * 0.98), t0, 0.045)
+        put(pad(midi_hz(root - 12), bar * 0.98), t0, 0.04)
+        put(bass(midi_hz(root - 12), slot * 3), t0, 0.15)
+        put(bass(midi_hz(root - 12 + 7), slot * 2), t0 + 4 * slot, 0.1)
+        arp = [0, 1, 2, 1, 2, 0, 1, 2]   # rippling harp, an octave up
+        for k in range(8):
+            put(harp(midi_hz(tones[arp[k]] + 12), slot), t0 + k * slot, 0.055, wet)
+        if sec >= 1:
+            for st, ln, d in tune[bi % 4]:
+                put(bell(midi_hz(em(d) + 12), ln * slot), t0 + st * slot, 0.07, wet)
+        if sec >= 1:
+            for k in range(8):
+                put(shaker(), t0 + k * slot + slot / 2, 0.5 if k % 2 else 0.3)
+            put(kick(), t0, 0.12)
+        for _ in range(int(r.integers(1, 4))):   # drips and little bubble runs
+            if r.random() < 0.5:
+                put(drip(r.uniform(1000, 1600)), t0 + r.uniform(0, bar), 0.1, wet)
+            else:
+                tb = t0 + r.uniform(0, bar - 0.4)
+                for j in range(int(r.integers(2, 5))):
+                    put(blip_bubble(r.uniform(500, 900), r), tb + j * r.uniform(0.05, 0.1), 0.06)
+    buf += echo(wet, slot * 1.5, 0.5, 0.55)
+    tail = buf[total:]
+    buf = buf[:total]
+    buf[: len(tail)] += tail
+    buf *= 0.66 / np.max(np.abs(buf))
+    return buf
+
+
+def render_lake_boss_music():
+    """Captain Chomp: a pirate-shanty battle at 138 BPM in D minor, 16 bars (about 28 s) that
+    loop. Oom-pah bass, stomping kick, claps, an accordion-ish lead and twangy harp stabs."""
+    bpm = 138
+    beat = 60 / bpm
+    slot = beat / 2
+    bar = beat * 4
+    prog = [(50, "min"), (50, "min"), (48, "maj"), (45, "maj"),
+            (50, "min"), (46, "maj"), (45, "maj"), (50, "min")] * 2   # Dm Dm C A Dm Bb A Dm
+    total = int(len(prog) * bar * SR)
+    buf = np.zeros(total + 4 * SR)
+    r = np.random.default_rng(43)
+
+    def put(sound, t, gain):
+        i = int(t * SR)
+        x = sound * gain
+        buf[i:i + len(x)] += x[: len(buf) - i]
+
+    # A shanty-style tune in D minor (MIDI notes), two bars a line.
+    shanty = [[(0, 2, 62), (2, 1, 65), (3, 1, 67), (4, 2, 69), (6, 2, 69)],
+              [(0, 2, 70), (2, 2, 69), (4, 2, 67), (6, 2, 65)],
+              [(0, 2, 64), (2, 1, 67), (3, 1, 64), (4, 4, 60)],
+              [(0, 2, 61), (2, 2, 64), (4, 4, 69)],
+              [(0, 2, 62), (2, 1, 65), (3, 1, 67), (4, 2, 69), (6, 2, 72)],
+              [(0, 2, 70), (2, 2, 69), (4, 2, 67), (6, 2, 65)],
+              [(0, 2, 64), (2, 2, 61), (4, 2, 64), (6, 2, 67)],
+              [(0, 6, 62)]]
+    for bi, (root, q) in enumerate(prog):
+        t0 = bi * bar
+        tones = [root + x for x in TRIAD[q]]
+        for m in tones:
+            put(pad(midi_hz(m), bar * 0.95), t0, 0.03)
+        for k in range(8):   # oom-pah: low root on the beat, chord stab on the off-beat
+            if k % 2 == 0:
+                put(bass(midi_hz(root - 12 + (0 if k % 4 == 0 else 7)), slot * 0.8), t0 + k * slot, 0.22)
+            else:
+                for m in tones:
+                    put(harp(midi_hz(m + 12), slot * 0.4), t0 + k * slot, 0.045)
+        for st, ln, m in shanty[bi % 8]:
+            put(squeeze(midi_hz(m), ln * slot * 0.92), t0 + st * slot, 0.07 if bi >= 8 else 0.055)
+        for k in range(8):
+            t = t0 + k * slot
+            if k in (0, 4):
+                put(kick(), t, 0.34)
+            if k in (2, 6):
+                put(clap(), t, 0.09)
+            put(hat(), t + slot / 2, 0.04)
+        if bi % 2 == 1:   # a splash of bubbles every other bar
+            tb = t0 + bar - beat
+            for j in range(4):
+                put(blip_bubble(r.uniform(600, 1000), r), tb + j * 0.06, 0.05)
+    tail = buf[total:]
+    buf = buf[:total]
+    buf[: len(tail)] += tail
+    buf *= 0.7 / np.max(np.abs(buf))
+    return buf
+
+
+def sfx_chomp():
+    """A piranha bite: two quick wet snaps of teeth."""
+    r = np.random.default_rng(51)
+    out = np.zeros(int(0.3 * SR))
+    for st, f in ((0.0, 900), (0.11, 760)):
+        n = int(0.07 * SR)
+        t = np.arange(n) / SR
+        snap = np.diff(r.standard_normal(n), prepend=0) * np.exp(-t / 0.008)
+        click = np.sin(2 * np.pi * f * t) * np.exp(-t / 0.015)
+        thud = np.sin(2 * np.pi * 140 * t) * np.exp(-t / 0.03)
+        i = int(st * SR)
+        out[i:i + n] += snap * 0.5 + click * 0.6 + thud * 0.5
+    return out
+
+
+def sfx_splash():
+    """Something big breaking the surface: a burst of water and a few droplets."""
+    r = np.random.default_rng(52)
+    n = int(0.7 * SR)
+    t = np.arange(n) / SR
+    x = r.standard_normal(n)
+    body = np.convolve(x, np.ones(4) / 4, "same") * np.exp(-t / 0.14) * np.minimum(t / 0.01, 1)
+    low = np.sin(2 * np.pi * 90 * t) * np.exp(-t / 0.08) * 0.6
+    out = body + low
+    for _ in range(6):   # droplets
+        d = drip(r.uniform(1200, 2200))
+        i = int(r.uniform(0.12, 0.55) * SR)
+        out[i:i + len(d)] += d[: n - i] * 0.25
+    return out
+
+
+def sfx_bubbles():
+    """A stream of bubbles rising and popping (Pork, and the boss's dive)."""
+    r = np.random.default_rng(53)
+    out = np.zeros(int(1.0 * SR))
+    t = 0.0
+    while t < 0.8:
+        b = blip_bubble(r.uniform(450, 1100) * (1 + t * 0.6), r)
+        i = int(t * SR)
+        out[i:i + len(b)] += b[: len(out) - i] * r.uniform(0.5, 1.0)
+        t += r.uniform(0.03, 0.09)
+    return out
+
+
+def sfx_harpoon_fire():
+    """The harpoon gun: a tight string twang and a whoosh of the harpoon leaving."""
+    r = np.random.default_rng(54)
+    n = int(0.5 * SR)
+    t = np.arange(n) / SR
+    f = 220 * (1 + 0.6 * np.exp(-t / 0.02))
+    ph = 2 * np.pi * np.cumsum(f) / SR
+    twang = (np.sin(ph) + 0.5 * np.sin(2 * ph) + 0.3 * np.sin(3 * ph)) * np.exp(-t / 0.12)
+    clack = wood_knock(520, 0.02, 0.5) * 0.5
+    x = r.standard_normal(n)
+    whoosh = (x - np.convolve(x, np.ones(8) / 8, "same")) * np.sin(np.pi * np.clip(t / 0.35, 0, 1)) * 0.25
+    return twang * 0.6 + clack + whoosh
+
+
+def sfx_lake_boss_hit():
+    """Stomping Captain Chomp: a heavy wet slap, a squelch and an angry gurgle."""
+    r = np.random.default_rng(55)
+    n = int(0.6 * SR)
+    t = np.arange(n) / SR
+    slap = np.convolve(r.standard_normal(n), np.ones(3) / 3, "same") * np.exp(-t / 0.03)
+    thump = sweep(180, 60, 0.6) * np.exp(-t / 0.1)
+    gurgle = np.zeros(n)
+    tb = 0.12
+    while tb < 0.5:
+        b = blip_bubble(r.uniform(200, 380), r)
+        i = int(tb * SR)
+        gurgle[i:i + len(b)] += b[: n - i]
+        tb += r.uniform(0.025, 0.05)
+    return slap * 0.6 + thump * 0.9 + gurgle * 0.35
+
+
+def sfx_lake_boss_defeat():
+    """Captain Chomp beaten: a huge splash, bubbles sinking away, then a bright fanfare (E G B)."""
+    out = np.zeros(int(2.0 * SR))
+    sp = sfx_splash()
+    out[: len(sp)] += sp * 1.1
+    r = np.random.default_rng(56)
+    tb = 0.2
+    while tb < 0.9:   # bubbles falling in pitch as he sinks
+        b = blip_bubble(900 - (tb - 0.2) * 800, r)
+        i = int(tb * SR)
+        out[i:i + len(b)] += b * 0.4
+        tb += r.uniform(0.03, 0.06)
+    for start, m in ((0.95, 76), (1.12, 79), (1.29, 83)):
+        b = bell(midi_hz(m + 12), 0.5)
+        i = int(start * SR)
+        out[i:i + len(b)] += b[: len(out) - i] * 0.45
+    return out
+
+
 def write_wav(path, x, rate=SR):
     x = np.clip(x, -1, 1)
     with wave.open(path, "wb") as f:
@@ -788,7 +1034,13 @@ def main():
                      ("moss_defeat", sfx_moss_defeat)):
         x = fn()
         write_wav(os.path.join(OUT, name + ".wav"), x * 0.9 / np.max(np.abs(x)))
-    for name, fn in (("music_moss", render_moss_music), ("music_moss_boss", render_moss_boss_music)):
+    for name, fn in (("chomp", sfx_chomp), ("splash", sfx_splash), ("bubbles", sfx_bubbles),
+                     ("harpoon_fire", sfx_harpoon_fire), ("lake_boss_hit", sfx_lake_boss_hit),
+                     ("lake_boss_defeat", sfx_lake_boss_defeat)):
+        x = fn()
+        write_wav(os.path.join(OUT, name + ".wav"), x * 0.9 / np.max(np.abs(x)))
+    for name, fn in (("music_moss", render_moss_music), ("music_moss_boss", render_moss_boss_music),
+                     ("music_lake", render_lake_music), ("music_lake_boss", render_lake_boss_music)):
         m = fn()
         write_wav(tmp, m)
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", tmp, "-c:a", "libvorbis",

@@ -30,6 +30,7 @@ var _next_bolts := 0.0
 var _reload := 1.5
 var _aim := 0.0
 var _recoil := 0.0
+var _fire_sfx := BigBadSquare._sfx("harpoon_fire", -6.0)
 
 
 func _ready() -> void:
@@ -49,6 +50,7 @@ func _ready() -> void:
 	ac.shape = ash
 	_hit_area.add_child(ac)
 	add_child(_hit_area)
+	add_child(_fire_sfx)
 
 
 func reset() -> void:
@@ -98,6 +100,12 @@ func _floor_under(x: float) -> bool:
 	var q := PhysicsRayQueryParameters2D.create(from, from + Vector2(0.0, SIZE / 2.0 + 8.0), 1)
 	q.exclude = [get_rid()]
 	return not get_world_2d().direct_space_state.intersect_ray(q).is_empty()
+
+
+## Undertow card: dragged sideways a little, but never off its floor.
+func drift(dx: float) -> void:
+	if _floor_under(global_position.x + dx + signf(dx) * SIZE / 2.0):
+		position.x += dx
 
 
 func smash() -> void:
@@ -151,6 +159,8 @@ func _physics_process(delta: float) -> void:
 func _fire() -> void:
 	_reload = RELOAD
 	_recoil = 0.2
+	_fire_sfx.pitch_scale = randf_range(0.95, 1.1)
+	_fire_sfx.play()
 	var from := global_position + Vector2(_dir * 18.0, -4.0)
 	var to: Vector2 = _player.global_position + Vector2(0.0, 6.0)
 	var t := clampf(absf(to.x - from.x) / 300.0, 0.55, 1.3)
