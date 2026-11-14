@@ -124,14 +124,14 @@ func _physics_process(delta: float) -> void:
 		_moss_layer.queue_redraw()
 		return
 	for t in get_tree().get_nodes_in_group("card_targets"):
-		if not (t is BadBlock or t is BigBadSquare) or not t.visible or t in _overgrowth.caught:
+		if not (t is BadBlock or t is BigBadSquare or t is MossBoss) or not t.visible or t in _overgrowth.caught:
 			continue
 		var half: Vector2 = t.half_size()
 		var feet: float = t.position.y + half.y
 		if absf(feet - _overgrowth.y) < 6.0 and t.position.x + half.x > _overgrowth.x0 \
 				and t.position.x - half.x < _overgrowth.x1:
 			_overgrowth.caught.append(t)
-			t.stun(OVERGROWTH_BOSS_TANGLE if t is BigBadSquare else OVERGROWTH_TANGLE)   # bosses shake it off sooner
+			t.stun(OVERGROWTH_TANGLE if t is BadBlock else OVERGROWTH_BOSS_TANGLE)   # bosses shake it off sooner
 	_moss_layer.queue_redraw()
 
 
@@ -143,15 +143,37 @@ func is_slippery(pos: Vector2) -> bool:
 
 ## A Moss Covered Square landed with its feet at pos: about half the time, slippery moss grows
 ## on the block(s) under it.
-func add_moss_patch(pos: Vector2) -> void:
-	if randf() >= 0.5:
+func add_moss_patch(pos: Vector2, half_width := BadBlock.SIZE / 2.0 - 2.0, always := false) -> void:
+	if not always and randf() >= 0.5:
 		return
-	for dx in [-BadBlock.SIZE / 2.0 + 2.0, BadBlock.SIZE / 2.0 - 2.0]:
+	for dx in [-half_width, half_width]:
 		var cell := ground.local_to_map(ground.to_local(to_global(pos + Vector2(dx, 4.0))))
 		if ground.get_cell_source_id(cell) != -1:
 			_moss_patches[cell] = true
 	_moss_layer.queue_redraw()
 var _has_boss := false
+## Blocks the Mossy Cave boss has thrown into the room (mossy ground tiles).
+var _boss_blocks: Array[Vector2i] = []
+
+
+## A thrown Moss Covered Square landed and turned into a mossy block here.
+func add_boss_block(cell: Vector2i) -> void:
+	ground.set_cell(cell, 0, ATLAS_GROUND_TOP)
+	_boss_blocks.append(cell)
+	_moss_cells.append(cell)
+	_moss_patches.erase(cell + Vector2i.DOWN)   # covered up
+	_moss_layer.queue_redraw()
+
+
+## All the boss's blocks crumble away.
+func clear_boss_blocks(with_fx := true) -> void:
+	for cell in _boss_blocks:
+		ground.erase_cell(cell)
+		_moss_cells.erase(cell)
+		if with_fx:
+			CardFx.spawn(self, Vector2(cell.x * T + T / 2.0, cell.y * T + T / 2.0), "bark")
+	_boss_blocks.clear()
+	_moss_layer.queue_redraw()
 
 
 func _ready() -> void:
@@ -219,6 +241,8 @@ func load_map_text(text: String) -> void:
 	_overgrowth = {}
 	_overgrowth_cd = 0.0
 	var vine_cells: Array[Vector2i] = []
+	var moss_bosses: Array[Vector2i] = []
+	_boss_blocks.clear()
 	var doors := {}   # cell -> door character
 	var checkpoints: Array[Vector2i] = []
 	var water_cells: Array[Vector2i] = []
@@ -263,6 +287,8 @@ func load_map_text(text: String) -> void:
 					_moss_cells.append(Vector2i(x, y))
 				"m":
 					bosses.append(Vector2i(x, y))
+				"y":
+					moss_bosses.append(Vector2i(x, y))
 				"q":
 					bad_blocks.append(Vector2i(x, y))
 					_mossy_cells[Vector2i(x, y)] = true
@@ -315,6 +341,21 @@ func load_map_text(text: String) -> void:
 		boss.hurt_player.connect(func(push: Vector2) -> void: player_hurt.emit(push))
 		boss.defeated.connect(func(_pos: Vector2) -> void: boss_defeated.emit())
 		_obstacles.add_child(boss)
+	for cell in moss_bosses:
+		_has_boss = true
+		var mb := MossBoss.new()
+		mb.position = Vector2(cell.x * T + T / 2.0, (cell.y + 1) * T - MossBoss.SIZE / 2.0)
+		mb.room = self
+		mb.floor_row = cell.y + 1
+		mb.min_col = 1
+		mb.max_col = lines[cell.y].length() - 2
+		for c in cells:   # he hangs under the middle of the highest floating platform
+			if cells[c] == "=" and (mb.perch_cell.y > c.y or cells.get(mb.perch_cell, "") != "="):
+				mb.perch_cell = c + Vector2i(1, 0)
+		mb.hurt_player.connect(func(push: Vector2) -> void: player_hurt.emit(push))
+		mb.defeated.connect(func(_pos: Vector2) -> void: boss_defeated.emit())
+		mb.landed.connect(func(pos: Vector2) -> void: add_moss_patch(pos, MossBoss.SIZE / 2.0 - 4.0, true))
+		_obstacles.add_child(mb)
 	water.setup(water_cells)
 	_moss_layer.queue_redraw()
 	_update_walls()
@@ -376,7 +417,7 @@ func _place_spikes(cells: Array[Vector2i], vertical_cells: Array[Vector2i], plat
 		var e := BadBlock.new()
 		e.hard = _hard_cells.has(cell)
 		e.mossy = _mossy_cells.has(cell)
-		e.landed.connect(add_moss_patch)
+		e.landed.connect(func(pos: Vector2) -> void: add_moss_patch(pos))
 		e.position = Vector2(cell.x * T + T / 2.0, (cell.y + 1) * T - BadBlock.SIZE / 2.0)
 		e.hurt_player.connect(func(push: Vector2) -> void: player_hurt.emit(push))
 		e.broken.connect(func(pos: Vector2) -> void:

@@ -53,7 +53,8 @@ var _came_from := "dungeon"
 const AREAS := [
 	{"id": "basic", "name": "Basic", "first": 1, "levels": 5, "extra": 12,
 		"boss": "res://levels/boss_basic.txt", "boss_name": "Big Bad Square"},
-	{"id": "moss", "name": "Mossy Cave", "first": 6, "levels": 5},
+	{"id": "moss", "name": "Mossy Cave", "first": 6, "levels": 5,
+		"boss": "res://levels/boss_moss.txt", "boss_name": "Old Mossback"},
 ]
 const FLOOR_CLEAR_REWARD := 10
 ## Beating a boss the first time: these pixels plus its card (Dash first, if you lack it).
@@ -888,6 +889,8 @@ func _play_boss(ar: Dictionary, carry: int) -> void:
 	_carry_hearts = carry
 	set_music("music_boss")
 	var rematch := _rematch
+	level.set_theme("moss" if ar.id == "moss" else "")
+	$Background/Sky.modulate = Color(0.55, 0.85, 0.7) if ar.id == "moss" else Color.WHITE
 	load_level_text(FileAccess.get_file_as_string(ar.boss))
 	_rematch = rematch
 	_level_hearts = hearts
