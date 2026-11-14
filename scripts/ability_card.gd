@@ -82,8 +82,8 @@ const DESCRIPTIONS := {
 		+ "you get your dash straight back and a small hop, so you can chain dashes through a group. "
 		+ "Big Bad Square's reward.",
 	"overgrowth": "Passive: when you land from a jump, moss grows on the ground around you for 5 seconds. "
-		+ "Enemies that step onto it get tangled and can't move for 1.5 seconds. Your own moss is never "
-		+ "slippery. One patch at a time. Found in the Mossy Cave.",
+		+ "Enemies that step onto it get tangled and can't move for 0.75 seconds (bosses 0.5). Your own moss "
+		+ "is never slippery. One patch at a time, and 1 second between patches. Found in the Mossy Cave.",
 	"bark_hide": "Passive: you wear a mossy bark hide. The first hit you take in each level (boss fights "
 		+ "too) breaks the bark off and costs no heart; it grows back for the next level. Moss patches "
 		+ "also stop slowing your take-off (you still slide to a halt). The Mossy Cave boss's reward.",

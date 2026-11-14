@@ -83,15 +83,20 @@ var _moss_patches := {}
 ## already tangled by it)}, or empty. Enemies that step on it are tangled for a moment.
 var _overgrowth := {}
 const OVERGROWTH_TIME := 5.0
-const OVERGROWTH_TANGLE := 1.5
+const OVERGROWTH_TANGLE := 0.75
+const OVERGROWTH_BOSS_TANGLE := 0.5
+## Seconds after a patch grows before a landing can grow the next one.
+const OVERGROWTH_COOLDOWN := 1.0
+var _overgrowth_cd := 0.0
 
 
 ## The player landed at pos (feet) with Overgrowth: moss covers the ground 1.5 tiles each way,
 ## as far as that floor goes. A new patch replaces the old one.
 func add_overgrowth(pos: Vector2) -> void:
 	var cell := ground.local_to_map(ground.to_local(to_global(pos + Vector2(0.0, 6.0))))
-	if ground.get_cell_source_id(cell) == -1:
+	if ground.get_cell_source_id(cell) == -1 or _overgrowth_cd > 0.0:
 		return
+	_overgrowth_cd = OVERGROWTH_COOLDOWN
 	var x0 := pos.x
 	var x1 := pos.x
 	for side in [-1, 1]:
@@ -110,6 +115,7 @@ func add_overgrowth(pos: Vector2) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	_overgrowth_cd = maxf(_overgrowth_cd - delta, 0.0)
 	if _overgrowth.is_empty():
 		return
 	_overgrowth.left -= delta
@@ -125,7 +131,7 @@ func _physics_process(delta: float) -> void:
 		if absf(feet - _overgrowth.y) < 6.0 and t.position.x + half.x > _overgrowth.x0 \
 				and t.position.x - half.x < _overgrowth.x1:
 			_overgrowth.caught.append(t)
-			t.stun(OVERGROWTH_TANGLE * (0.5 if t is BigBadSquare else 1.0))   # bosses shake it off sooner
+			t.stun(OVERGROWTH_BOSS_TANGLE if t is BigBadSquare else OVERGROWTH_TANGLE)   # bosses shake it off sooner
 	_moss_layer.queue_redraw()
 
 
@@ -211,6 +217,7 @@ func load_map_text(text: String) -> void:
 	_mossy_cells.clear()
 	_moss_patches.clear()
 	_overgrowth = {}
+	_overgrowth_cd = 0.0
 	var vine_cells: Array[Vector2i] = []
 	var doors := {}   # cell -> door character
 	var checkpoints: Array[Vector2i] = []
