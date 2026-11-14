@@ -636,6 +636,28 @@ def rustle(dur, decay):
     return x * grain * np.exp(-t / decay)
 
 
+def wood_knock(f, decay=0.06, dur=0.35):
+    """A struck piece of wood: inharmonic modes like a log drum or wood block, fast decay,
+    with a tiny click on the attack."""
+    n = int(dur * SR)
+    t = np.arange(n) / SR
+    out = np.zeros(n)
+    for ratio, g, dk in ((1.0, 1.0, 1.0), (2.76, 0.5, 0.55), (5.40, 0.25, 0.3), (8.93, 0.1, 0.2)):
+        out += np.sin(2 * np.pi * f * ratio * t) * np.exp(-t / (decay * dk)) * g
+    click = np.zeros(n)
+    m = int(0.004 * SR)
+    click[:m] = np.linspace(1, 0, m) * np.sign(np.sin(np.arange(m) * 1.7))
+    return (out + click * 0.4) * np.minimum(t / 0.0015, 1)
+
+
+def wood_creak(f0, f1, dur, gain=0.2):
+    """Bending wood: a slow, raspy, wavering tone."""
+    w = sweep(f0, f1, dur, shape="square")
+    t = np.arange(len(w)) / SR
+    rasp = 0.5 + 0.5 * np.sign(np.sin(2 * np.pi * (34 + 8 * np.sin(2 * np.pi * 3 * t)) * t))
+    return w * rasp * np.minimum(t / 0.03, 1) * np.exp(-t / (dur * 0.5)) * gain
+
+
 def sfx_moss_hit():
     """Stomping Old Mossback: a hollow wooden knock, a bark crunch and a puff of leaves."""
     out = np.zeros(int(0.45 * SR))
@@ -644,6 +666,9 @@ def sfx_moss_hit():
         out[: len(t)] += np.sin(2 * np.pi * f * t) * np.exp(-t / (0.09 / (1 + f / 600))) * g
     out[: int(0.2 * SR)] += noise_hit(0.04, bright=False, n_sec=0.2) * 0.5
     out += rustle(0.45, 0.12) * 0.12
+    out[: int(0.35 * SR)] += wood_knock(150, 0.08) * 0.8 + wood_knock(240, 0.05) * 0.4
+    k = wood_creak(160, 120, 0.3, 0.12)
+    out[int(0.04 * SR): int(0.04 * SR) + len(k)] += k
     return out * 0.7
 
 
@@ -654,6 +679,8 @@ def sfx_moss_land():
     out = w * np.minimum(t / 0.003, 1) * np.exp(-t / 0.1)
     out += noise_hit(0.08, bright=False, n_sec=0.35) * 0.45
     out += rustle(0.35, 0.1) * 0.15
+    out[: int(0.35 * SR)] += wood_knock(95, 0.1) * 0.7
+    out[int(0.03 * SR): int(0.03 * SR) + int(0.3 * SR)] += wood_knock(180, 0.04, 0.3) * 0.3
     return out * 0.8
 
 
@@ -669,6 +696,8 @@ def sfx_moss_throw():
         seg = (t >= k * 0.06) & (t < (k + 1) * 0.06 + 0.08)
         out[seg] += sm[seg]
     env = np.sin(np.pi * np.clip(t / 0.3, 0, 1)) ** 1.5
+    out[: int(0.25 * SR)] += wood_creak(220, 300, 0.25, 0.1)
+    out[: int(0.35 * SR)][: int(0.3 * SR)] += wood_knock(320, 0.03)[: int(0.3 * SR)] * 0.35
     return out * env * 0.5
 
 
@@ -685,6 +714,10 @@ def sfx_moss_crack():
     i = int(0.05 * SR)
     out[i:i + len(creak)] += creak
     out += noise_hit(0.15, bright=False, n_sec=0.6) * 0.25
+    for st, f in ((0.0, 420), (0.035, 610), (0.09, 330)):
+        k = wood_knock(f, 0.025, 0.2)
+        i = int(st * SR)
+        out[i:i + len(k)] += k * 0.45
     return out * 0.75
 
 
@@ -702,6 +735,12 @@ def sfx_moss_defeat():
         b = bell(midi_hz(m + 12), 0.5)
         i = int(start * SR)
         out[i:i + len(b)] += b[: len(out) - i] * 0.42
+    k = wood_creak(200, 60, 1.0, 0.22)
+    out[: len(k)] += k
+    for st, f in ((0.3, 140), (0.42, 110), (0.5, 175), (0.62, 90)):   # logs tumbling
+        w = wood_knock(f, 0.07)
+        i = int(st * SR)
+        out[i:i + len(w)] += w * 0.5
     return out * 0.8
 
 
@@ -747,7 +786,8 @@ def main():
     for name, fn in (("moss_hit", sfx_moss_hit), ("moss_land", sfx_moss_land),
                      ("moss_throw", sfx_moss_throw), ("moss_crack", sfx_moss_crack),
                      ("moss_defeat", sfx_moss_defeat)):
-        write_wav(os.path.join(OUT, name + ".wav"), fn())
+        x = fn()
+        write_wav(os.path.join(OUT, name + ".wav"), x * 0.9 / np.max(np.abs(x)))
     for name, fn in (("music_moss", render_moss_music), ("music_moss_boss", render_moss_boss_music)):
         m = fn()
         write_wav(tmp, m)
