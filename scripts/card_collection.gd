@@ -119,6 +119,9 @@ static func use_file(n: int) -> void:
 		shop_buys = int(cfg.get_value("progress", "shop_buys",
 			owned.filter(func(a: String) -> bool: return drop_group(a) == "shop").size()))
 		beaten.assign(cfg.get_value("progress", "beaten", []))
+		for old in OLD_KEYS:
+			if old in beaten and OLD_KEYS[old] not in beaten:
+				beaten.append(OLD_KEYS[old])
 		boss_wins = cfg.get_value("progress", "boss_wins", {})
 		run = cfg.get_value("progress", "run", {})
 		areas_played.assign(cfg.get_value("progress", "areas_played", []))
@@ -302,7 +305,19 @@ const REPLAY_UNLOCK := 3
 
 
 static func replay_unlocked() -> bool:
-	return beaten.filter(func(k: String) -> bool: return k.begins_with("seed")).size() >= REPLAY_UNLOCK
+	return beaten.filter(func(k: String) -> bool: return _is_slot(k) or (k.begins_with("seed") and not OLD_KEYS.has(k))).size() >= REPLAY_UNLOCK
+
+
+## A dungeon level slot key, e.g. "basic:L3" (see Main._area_key).
+static func _is_slot(k: String) -> bool:
+	var parts := k.split(":L")
+	return parts.size() == 2 and parts[1].is_valid_int() and ":" not in parts[0]
+
+
+## Older saves marked the fixed dungeon levels by their seeds: carry those wins over to the slots.
+const OLD_KEYS := {"seed18": "basic:L1", "seed25": "basic:L2", "seed3": "basic:L3", "seed34": "basic:L4",
+	"seed1": "basic:L5", "moss29": "moss:L1", "moss56": "moss:L2", "moss49": "moss:L3", "moss10": "moss:L4",
+	"moss8": "moss:L5"}
 
 
 static func mark_beaten(key: String) -> void:
@@ -326,7 +341,8 @@ static func toggle_like(seed_value: int) -> bool:
 
 ## Levels beaten for milestones: random levels and the training level (not replays or tests).
 static func levels_beaten() -> int:
-	return beaten.filter(func(k: String) -> bool: return k == "main" or k.begins_with("seed") or k.begins_with("moss")).size()
+	return beaten.filter(func(k: String) -> bool:
+		return k == "main" or _is_slot(k) or (k.begins_with("seed") and not OLD_KEYS.has(k))).size()
 
 
 static func larry_here() -> bool:

@@ -51,9 +51,9 @@ var _came_from := "dungeon"
 ## Dungeon areas, in order. Each is a run of 5 fixed levels (hearts carry over), then its boss.
 ## An area shows at the gate once the boss of the area before it is beaten.
 const AREAS := [
-	{"id": "basic", "name": "Basic", "first": 1, "seeds": [18, 25, 3, 34, 1], "extra": 12,
+	{"id": "basic", "name": "Basic", "first": 1, "levels": 5, "extra": 12,
 		"boss": "res://levels/boss_basic.txt", "boss_name": "Big Bad Square"},
-	{"id": "moss", "name": "Mossy Cave", "first": 6, "seeds": [29, 56, 49, 10, 8]},
+	{"id": "moss", "name": "Mossy Cave", "first": 6, "levels": 5},
 ]
 const FLOOR_CLEAR_REWARD := 10
 ## Beating a boss the first time: these pixels plus its card (Dash first, if you lack it).
@@ -611,7 +611,7 @@ func _lose_heart(from_fall := false) -> void:
 		hud.show_out(run_time, falls)
 		if _floor != "":
 			var ar := _area(_floor)
-			var where := "the boss" if _floor_step > ar.seeds.size() else "Level %d" % (ar.first + _floor_step - 1)
+			var where := "the boss" if _floor_step > int(ar.levels) else "Level %d" % (ar.first + _floor_step - 1)
 			hud.out_label.text = "Out of hearts on %s. Start again from Level %d?" % [where, ar.first]
 			if _rematch:
 				hud.out_label.text = "Out of hearts. Try the rematch again?"
@@ -627,16 +627,16 @@ func _on_heart_collected() -> void:
 func _sync_chests() -> void:
 	var chests := level.get_chests()
 	for i in chests.size():
-		chests[i].set_open(_level_key != "custom" and CardCollection.chest_opened("%s:%d" % [_level_key, i]))
+		chests[i].set_open(_level_key != "custom" and CardCollection.chest_opened("%s:%d" % [_pickup_key(), i]))
 	var pixels := level.get_pixels()
 	for i in pixels.size():
-		pixels[i].set_taken(_level_key != "custom" and CardCollection.chest_opened("%s:px%d" % [_level_key, i]))
+		pixels[i].set_taken(_level_key != "custom" and CardCollection.chest_opened("%s:px%d" % [_pickup_key(), i]))
 
 
 ## A floating pixel: +1, remembered like chests so replaying a level doesn't pay out again.
 func _on_pixel_collected(index: int) -> void:
 	if _level_key != "custom":
-		CardCollection.mark_chest("%s:px%d" % [_level_key, index])
+		CardCollection.mark_chest("%s:px%d" % [_pickup_key(), index])
 	CardCollection.add_pixels(1)
 	hud.set_pixels(CardCollection.pixels)
 
@@ -646,7 +646,7 @@ func _on_pixel_collected(index: int) -> void:
 ## owns turns into DUPLICATE_PIXELS instead.
 func _on_chest_opened(index: int) -> void:
 	if _level_key != "custom":
-		CardCollection.mark_chest("%s:%d" % [_level_key, index])
+		CardCollection.mark_chest("%s:%d" % [_pickup_key(), index])
 	var chest_cards := CardCollection.pool("chest")
 	var card: String = chest_cards.pick_random() if randf() < 0.2 and not chest_cards.is_empty() else ""
 	if card != "":
@@ -762,17 +762,36 @@ func _update_gate() -> void:
 			break
 		var ar: Dictionary = AREAS[i]
 		var marks := []
-		for k in ar.seeds.size():
+		for k in ar.levels:
 			var n: int = ar.first + k
-			marks.append(("✓" if CardCollection.is_beaten(_area_key(ar.id, ar.seeds[k])) else "") + str(n))
+			marks.append(("✓" if CardCollection.is_beaten(_area_key(ar.id, k + 1)) else "") + str(n))
 		marks.append(("✓" if CardCollection.is_beaten("boss:" + ar.id) else "") + "Boss")
 		rows.append({"id": ar.id, "title": "Levels %d–%d: %s" % [ar.first, ar.first + 4, ar.name],
 			"progress": "  ".join(marks), "rematch": ar.has("boss") and boss_wins(ar.id) >= 2})
 	hud.set_areas(rows)
 
 
-static func _area_key(id: String, s: int) -> String:
-	return ("seed%d" if id == "basic" else id + "%d") % s
+## The save key for an area's level slot (its 1st to 5th level). The layouts are random every
+## run, so wins and first-win rewards are counted per slot, not per layout.
+static func _area_key(id: String, step: int) -> String:
+	return "%s:L%d" % [id, step]
+
+
+## Pixels and chests picked up in a dungeon run are remembered under "run:" keys, which are
+## wiped when a new run starts: every run's fresh levels have all their pickups.
+func _pickup_key() -> String:
+	return "run:" + _level_key if _floor != "" and not _level_key.begins_with("boss_") else _level_key
+
+
+## Five fresh random levels for a run through an area.
+func _roll_floor_seeds(id: String) -> void:
+	_floor_seeds.clear()
+	while _floor_seeds.size() < int(_area(id).levels):
+		var s := LevelGen.random_seed()
+		if s not in _floor_seeds:
+			_floor_seeds.append(s)
+	CardCollection.opened_chests = CardCollection.opened_chests.filter(
+		func(k: String) -> bool: return not k.begins_with("run:"))
 
 
 ## Times this area's boss was beaten the normal way. Files that beat him before wins were
@@ -784,7 +803,7 @@ static func boss_wins(id: String) -> int:
 
 ## Rematch (after 2 normal wins): straight into the boss room with fresh hearts. No rewards.
 func start_rematch(id: String) -> void:
-	start_floor(id, _area(id).seeds.size() + 1)
+	start_floor(id, int(_area(id).levels) + 1)
 	_rematch = true
 	hud.banner("Rematch: %s!" % _area(id).boss_name, 5.0, 1.0)
 
@@ -794,7 +813,7 @@ func start_floor(id: String, step := 1) -> void:
 	_floor = id
 	_floor_step = step
 	_carry_hearts = -1
-	_floor_seeds.assign(_area(id).seeds)
+	_roll_floor_seeds(id)
 	_play_floor_level()
 
 
@@ -815,14 +834,14 @@ func _play_floor_level() -> void:
 	var carry := _carry_hearts
 	_came_from = "dungeon"
 	seed_value = _floor_seeds[step - 1] if step <= _floor_seeds.size() else 0
-	_level_key = _area_key(id, seed_value)
+	_level_key = _area_key(id, step)
 	_replay_mode = ""
 	set_music("music_level")
 	var ar := _area(id)
 	if id not in CardCollection.areas_played:
 		CardCollection.areas_played.append(id)   # town milestone: see enter_town
 		CardCollection.save()
-	if step > ar.seeds.size():
+	if step > int(ar.levels):
 		_play_boss(ar, carry)
 		return
 	hud.set_seed(seed_value)
@@ -845,7 +864,7 @@ func _play_boss(ar: Dictionary, carry: int) -> void:
 	_level_key = "boss_" + ar.id
 	hud.set_seed(0)
 	_floor = ar.id
-	_floor_step = ar.seeds.size() + 1
+	_floor_step = int(ar.levels) + 1
 	_carry_hearts = carry
 	set_music("music_boss")
 	var rematch := _rematch
@@ -946,7 +965,7 @@ func _mossify(text: String, s: int) -> String:
 
 func _floor_level_won() -> void:
 	var ar := _area(_floor)
-	var total: int = ar.seeds.size()
+	var total: int = int(ar.levels)
 	if _floor_step < total:
 		hud.set_floor_win("Next: Level %d" % (ar.first + _floor_step))
 		return
@@ -1004,12 +1023,12 @@ func _floor_level_won() -> void:
 ## back to the title. Picking the save file again offers to resume it.
 func _save_and_quit() -> void:
 	var ar := _area(_floor)
-	var where := "the %s boss" % ar.name if _floor_step > ar.seeds.size() \
+	var where := "the %s boss" % ar.name if _floor_step > int(ar.levels) \
 		else "Level %d (%s)" % [ar.first + _floor_step - 1, ar.name]
 	if _rematch:
 		where = "a rematch with %s" % ar.boss_name
 	CardCollection.run = {"area": _floor, "step": _floor_step, "hearts": _level_hearts,
-		"rematch": _rematch, "where": where}
+		"rematch": _rematch, "where": where, "seeds": _floor_seeds.duplicate()}
 	CardCollection.save()
 	enter_town("dungeon")
 	go_to_start()
@@ -1028,7 +1047,9 @@ func _resume_run() -> void:
 		return
 	_floor = r.area
 	_floor_step = int(r.step)
-	_floor_seeds.assign(_area(r.area).seeds)
+	_floor_seeds.assign(r.get("seeds", []))
+	if _floor_seeds.size() != int(_area(r.area).levels):
+		_roll_floor_seeds(r.area)   # an older save without its levels
 	_rematch = false
 	_carry_hearts = int(r.hearts) if _floor_step > 1 and int(r.hearts) > 0 else -1
 	_play_floor_level()
