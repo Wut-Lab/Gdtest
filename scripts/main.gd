@@ -1148,7 +1148,7 @@ func _mossify(text: String, s: int) -> String:
 	rng.seed = s * 31 + 7
 	var out := ""
 	for ch in text:
-		out += "c" if ch == "=" and rng.randf() < 0.6 else ch
+		out += "c" if ch == "=" and rng.randf() < 0.3 else ch
 	return out
 
 

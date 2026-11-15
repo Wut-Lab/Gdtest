@@ -213,11 +213,11 @@ static func _piece(cols: Array, st: Dictionary, rng: RandomNumberGenerator, piec
 		"warp1", "warp2":
 			# A pit too wide to jump, with a teleport pad on each edge.
 			var pad := "1" if piece == "warp1" else "2"
-			_flat(cols, h, 3)
-			cols[x + 2][h - 1] = pad
+			_flat(cols, h, 4)
+			cols[x + 1][h - 1] = pad   # pads sit a tile back from the pit edge
 			_pit(cols, 9)
-			_flat(cols, h, 2)
-			cols[x + 12][h - 1] = pad
+			_flat(cols, h, 4)
+			cols[x + 15][h - 1] = pad
 		"chest":
 			# A floating platform 3 rows up with a chest on it: jump up through it to reach.
 			_flat(cols, h, 7)
@@ -568,10 +568,10 @@ static func _v_piece(g: Array, st: Dictionary, rng: RandomNumberGenerator, piece
 			# platform too high to jump to. You leave that one from its other end.
 			var pad := "1" if piece == "warp1" else "2"
 			var a := _v_step(g, st, rng, 3, 5, "=")
-			_v_put(g, a.x + 4, a.y - 1, pad)
+			_v_put(g, a.x + 2, a.y - 1, pad)
 			var b := _v_step(g, st, rng, 9, 7, "=", 4)
 			var pad_left: bool = rng.randf() < 0.5 if not st.has("dir") else st.dir > 0
-			_v_put(g, b.x if pad_left else b.x + 6, b.y - 1, pad)
+			_v_put(g, b.x + 1 if pad_left else b.x + 5, b.y - 1, pad)
 			b.exit = 1 if pad_left else -1
 		"chest":
 			# A small side ledge with a chest, off the main climb (the climb carries on from here).
