@@ -28,6 +28,7 @@ var _tune_key: TouchScreenButton
 @onready var dash: TouchScreenButton = $Pad/Dash
 @onready var pound: TouchScreenButton = $Pad/Pound
 @onready var brick: TouchScreenButton = $Pad/Brick
+@onready var toss: TouchScreenButton = $Pad/Toss
 @onready var angry: TouchScreenButton = $Pad/Angry
 @onready var push: TouchScreenButton = $Pad/Push
 ## Card buttons, in the order their cards were equipped (the first sits next to Jump).
@@ -48,7 +49,8 @@ func _ready() -> void:
 	_setup_key(jump, BIG, "JUMP", 0.0, Color("79e2c2"), Color("1b2440"))
 	_setup_key(dash, SMALL, "DASH", 0.0, Color("e5484d"))
 	_setup_key(pound, SMALL, "POUND", 0.0, Color("e5484d"))
-	_setup_key(brick, SMALL, "BRICK", 0.0, Color("e5484d"))
+	_setup_key(brick, SMALL, "B-DROP", 0.0, Color("e5484d"))
+	_setup_key(toss, SMALL, "B-TOSS", 0.0, Color("e5484d"))
 	_setup_key(angry, SMALL, "ANGRY", 0.0, Color("b8323a"))
 	_setup_key(push, SMALL, "PUSH", 0.0, Color("7d8597"))
 	_pause_key = _mini_key("PAUSE", func() -> void: pause_source.pressed.emit())
@@ -125,11 +127,11 @@ func bar_height() -> float:
 
 ## Dash, Pound and Brick buttons show only when their cards are equipped.
 func set_abilities(abilities: Array[String]) -> void:
-	var by_card := {"dash": dash, "pound": pound, "brick_drop": brick, "brick_toss": brick, "angry_dash": angry,
+	var by_card := {"dash": dash, "pound": pound, "brick_drop": brick, "brick_toss": toss, "angry_dash": angry,
 		"personal_space": push}
 	_card_buttons.clear()
 	for a in abilities:
-		if by_card.has(a) and by_card[a] not in _card_buttons:
+		if by_card.has(a):
 			_card_buttons.append(by_card[a])
 	for b in by_card.values():
 		b.visible = b in _card_buttons

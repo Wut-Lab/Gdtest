@@ -72,6 +72,11 @@ brick={
 "events": [
 ]
 }
+toss={
+"deadzone": 0.3,
+"events": [
+]
+}
 angry={
 "deadzone": 0.3,
 "events": [

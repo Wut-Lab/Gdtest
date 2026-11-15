@@ -82,6 +82,7 @@ func _setup_project() -> void:
 		"dash": [KEY_SHIFT, KEY_X, KEY_K],
 		"pound": [KEY_DOWN, KEY_S, KEY_J],
 		"brick": [KEY_C, KEY_L],
+		"toss": [],
 		"angry": [KEY_V, KEY_U],
 		"push": [KEY_B, KEY_I],
 	}
@@ -547,7 +548,9 @@ func _touch_scene() -> Node:
 	var pound := _touch_button(pad, "Pound", "pound", 76, false, Vector2(W - margin - 84, H - margin - 180))
 	_button_label(pound, "POUND", 76, 15)
 	var brick := _touch_button(pad, "Brick", "brick", 76, false, Vector2(W - margin - 180, H - margin - 180))
-	_button_label(brick, "BRICK", 76, 15)
+	_button_label(brick, "B-DROP", 76, 15)
+	var toss := _touch_button(pad, "Toss", "toss", 76, false, Vector2(W - margin - 372, H - margin - 180))
+	_button_label(toss, "B-TOSS", 76, 15)
 	var angry := _touch_button(pad, "Angry", "angry", 76, false, Vector2(W - margin - 276, H - margin - 76))
 	_button_label(angry, "ANGRY", 76, 15)
 	var push := _touch_button(pad, "Push", "push", 76, false, Vector2(W - margin - 276, H - margin - 180))

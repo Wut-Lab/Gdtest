@@ -111,6 +111,9 @@ const SIZE := 24.0
 ## Perfect Stomp: how close to the stomp jump must be tapped (before or after), how much higher
 ## you bounce, and how long you're safe afterward.
 @export var perfect_window := 0.15
+## Edge Hop: the free hop's height (share of a full jump) and the ledge grace it gives (seconds).
+@export var edge_hop_height := 0.2
+@export var edge_coyote := 0.2
 @export var perfect_boost := 0.33
 @export var perfect_safe := 0.5
 ## Angry Block Dash (rare): seconds of rage, the speed boost, and the recharge after it ends.
@@ -455,6 +458,15 @@ func stomped() -> void:
 	hot_feet.emit(global_position + Vector2(0.0, SIZE / 2.0))
 
 
+## Edge Hop card: running off a ledge (without jumping) gives a small free hop, and a little
+## longer to still jump.
+func _edge_hop() -> void:
+	velocity.y = -jump_velocity * sqrt(_pct(edge_hop_height))
+	_coyote = edge_coyote
+	_squash = Vector2(0.85, 1.15)
+	_puff()
+
+
 ## Perfect Stomp card: bounce higher, a moment of safety and an extra pixel.
 func _perfect_stomp() -> void:
 	_stomp_late = 0.0
@@ -684,6 +696,8 @@ func _physics_process(delta: float) -> void:
 		_grip_and_go()
 	if _was_on_floor and not is_on_floor():
 		_takeoff_x = position.x
+		if "edge_hop" in abilities and velocity.y >= 0.0 and not bounced_now:
+			_edge_hop()
 	_update_cling(delta, bounced_now)
 	_was_on_floor = is_on_floor() and not bounced_now
 
@@ -739,10 +753,9 @@ func _update_dash_and_pound(delta: float, on_floor: bool) -> void:
 	_dash_cd = maxf(_dash_cd - delta, 0.0)
 	_brick_cd = maxf(_brick_cd - delta, 0.0)
 	_toss_cd = maxf(_toss_cd - delta, 0.0)
-	if _card_pressed("brick", "brick_drop") and not on_floor:
-		if _brick_cd == 0.0:
-			_drop_brick()
-	elif _card_pressed("brick", "brick_toss") and _toss_cd == 0.0:
+	if _card_pressed("brick", "brick_drop") and not on_floor and _brick_cd == 0.0:
+		_drop_brick()
+	if _card_pressed("toss", "brick_toss") and _toss_cd == 0.0:
 		_toss_brick()
 	_push_cd = maxf(_push_cd - delta, 0.0)
 	_angry_cd = maxf(_angry_cd - delta, 0.0)
