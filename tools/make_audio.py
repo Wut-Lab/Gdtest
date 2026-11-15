@@ -355,15 +355,15 @@ def sfx_buy():
         out[int(start * SR): int(start * SR) + len(w)] += w * 0.5
     shimmer = noise_hit(0.05, n_sec=0.15) * 0.15
     out[: len(shimmer)] += shimmer
-    return out * 0.7
+    return out * 0.4
 
 
 def sfx_ding():
-    """Checkpoint: one clear, bright bell note with a soft octave shimmer."""
-    w = bell(midi_hz(88), 0.25)
+    """Checkpoint: one soft, warm bell note (G4) with a faint octave above."""
+    w = bell(midi_hz(67), 0.3)
     t = np.arange(len(w)) / SR
-    w += 0.3 * np.sin(2 * np.pi * midi_hz(100) * t) * np.exp(-t / 0.12)
-    return w * 0.55
+    w += 0.2 * np.sin(2 * np.pi * midi_hz(79) * t) * np.exp(-t / 0.12)
+    return w * 0.3
 
 
 # ---------- Boss: sounds and a tense, driving loop ----------

@@ -360,7 +360,7 @@ func load_map_text(text: String) -> void:
 	var bosses: Array[Vector2i] = []
 	_back_doors.clear()
 	_moss_cells.clear()
-	var lines := text.replace("\r", "").split("\n")
+	var lines := _clear_checkpoint_platforms(text.replace("\r", "").split("\n"))
 	for y in lines.size():
 		var line: String = lines[y]
 		for x in line.length():
@@ -781,6 +781,34 @@ func get_doors() -> Array[Node]:
 
 func get_chests() -> Array[Node]:
 	return _chests.get_children()
+
+
+## A checkpoint's platform is a safe spot: no obstacles on it and no crumbling blocks.
+static func _clear_checkpoint_platforms(lines: PackedStringArray) -> PackedStringArray:
+	const SOLID := "#=c^"
+	const HAZARD := "SVTBektuj"
+	for y in lines.size() - 1:
+		var at := lines[y].find("@")
+		while at != -1:
+			var floor_row: String = lines[y + 1]
+			if at < floor_row.length() and SOLID.contains(floor_row[at]):
+				var x0 := at
+				var x1 := at
+				while x0 > 0 and SOLID.contains(floor_row[x0 - 1]):
+					x0 -= 1
+				while x1 < floor_row.length() - 1 and SOLID.contains(floor_row[x1 + 1]):
+					x1 += 1
+				for x in range(x0, x1 + 1):
+					if floor_row[x] == "c":
+						floor_row[x] = "="
+					for r in range(maxi(0, y - 4), y + 1):
+						var row: String = lines[r]
+						if x < row.length() and HAZARD.contains(row[x]):
+							row[x] = "."
+							lines[r] = row
+				lines[y + 1] = floor_row
+			at = lines[y].find("@", at + 1)
+	return lines
 
 
 func get_teleporters() -> Array[Node]:
