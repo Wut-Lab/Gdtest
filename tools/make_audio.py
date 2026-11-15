@@ -355,7 +355,7 @@ def sfx_buy():
         out[int(start * SR): int(start * SR) + len(w)] += w * 0.5
     shimmer = noise_hit(0.05, n_sec=0.15) * 0.15
     out[: len(shimmer)] += shimmer
-    return out * 0.4
+    return out * 0.36
 
 
 def sfx_ding():
