@@ -699,6 +699,10 @@ func reset_pickups() -> void:
 		_hide_goal()   # the exit only opens once the boss is beaten
 
 
+func has_boss() -> bool:
+	return _has_boss
+
+
 func _hide_goal() -> void:
 	goal.hide()
 	goal.set_deferred("monitoring", false)

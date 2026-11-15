@@ -143,6 +143,12 @@ func _ready() -> void:
 	_ding.stream = load("res://audio/ding.wav")
 	_ding.bus = AudioSettings.SOUNDS_BUS
 	add_child(_ding)
+	for n in ["victory", "boss_victory"]:
+		var v := AudioStreamPlayer.new()
+		v.name = "Sfx_" + n
+		v.stream = load("res://audio/%s.wav" % n)
+		v.bus = AudioSettings.SOUNDS_BUS
+		add_child(v)
 	hud.enter_pressed.connect(_enter_door)
 	dialog = DialogBox.new()
 	hud.get_node("Root").add_child(dialog)
@@ -824,6 +830,7 @@ func _on_goal_reached() -> void:
 	if state != State.PLAY:
 		return
 	state = State.WON
+	(get_node("Sfx_boss_victory" if level.has_boss() else "Sfx_victory") as AudioStreamPlayer).play()
 	hud.pause_button.hide()
 	player.active = false
 	player.velocity = Vector2.ZERO

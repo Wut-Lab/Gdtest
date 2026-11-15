@@ -366,6 +366,33 @@ def sfx_ding():
     return w * 0.3
 
 
+def sfx_victory():
+    """Level clear: a quick, bright rising arpeggio (C E G C) ending on a held bell."""
+    out = np.zeros(int(1.4 * SR))
+    for i, n in enumerate((72, 76, 79, 84)):
+        st = int(i * 0.09 * SR)
+        w = bell(midi_hz(n), 0.25 if i < 3 else 0.5)[: len(out) - st]
+        out[st: st + len(w)] += w * (0.4 if i < 3 else 0.55)
+    return out * 0.45
+
+
+def sfx_boss_victory():
+    """Boss level clear: a low boom, then a slower, fuller fanfare (G C E G, then a C chord)."""
+    out = np.zeros(int(2.4 * SR))
+    boom = sweep(110, 45, 0.5)
+    t = np.arange(len(boom)) / SR
+    out[: len(boom)] += boom * np.exp(-t / 0.18) * 0.6
+    for i, n in enumerate((67, 72, 76, 79)):
+        st = int((0.1 + i * 0.14) * SR)
+        w = bell(midi_hz(n), 0.3)[: len(out) - st]
+        out[st: st + len(w)] += w * 0.4
+    st = int(0.7 * SR)
+    for n in (60, 72, 76, 79, 84):
+        w = bell(midi_hz(n), 0.9)[: len(out) - st]
+        out[st: st + len(w)] += w * 0.25
+    return out / max(1e-9, np.abs(out).max()) * 0.5
+
+
 # ---------- Boss: sounds and a tense, driving loop ----------
 
 def sfx_boss_hit():
@@ -1211,6 +1238,8 @@ def main():
     write_wav(os.path.join(OUT, "hurt.wav"), sfx_hurt())
     write_wav(os.path.join(OUT, "buy.wav"), sfx_buy())
     write_wav(os.path.join(OUT, "ding.wav"), sfx_ding())
+    write_wav(os.path.join(OUT, "victory.wav"), sfx_victory())
+    write_wav(os.path.join(OUT, "boss_victory.wav"), sfx_boss_victory())
     tmp = os.path.join(OUT, "_music.wav")
     music = render_music()
     write_wav(tmp, music)

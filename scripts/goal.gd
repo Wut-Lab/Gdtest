@@ -25,6 +25,14 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
+	# A pixel swirl: two arms of little squares spiraling out and turning slowly.
+	for arm in 2:
+		for i in 9:
+			var f := i / 8.0
+			var a := _t * 2.2 + arm * PI + f * 3.2
+			var r := 20.0 + f * 16.0
+			var p := (Vector2(cos(a), sin(a)) * r / 4.0).round() * 4.0
+			draw_rect(Rect2(p - Vector2(2, 2), Vector2(4, 4)), Color(color, 0.85 - f * 0.65))
 	var pulse := 1.0 + sin(_t * 4.0) * 0.08
 	var c := Vector2(0, sin(_t * 2.5) * 2.0)
 	draw_rect(Rect2(c - Vector2(18, 18) * pulse, Vector2(36, 36) * pulse), Color(color, 0.25))
