@@ -85,6 +85,9 @@ func _setup_key(b: TouchScreenButton, key_size: Vector2, text: String, arrow: fl
 	b.add_child(key)
 	b.pressed.connect(key.press.bind(true))
 	b.released.connect(key.press.bind(false))
+	# A tiny buzz so you can feel the press without looking: lighter for the arrows,
+	# which you tap and slide between a lot.
+	b.pressed.connect(Haptics.buzz.bind(6, 0.15) if arrow != 0.0 else Haptics.tap)
 	_keys[b] = key
 
 

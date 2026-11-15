@@ -979,6 +979,10 @@ func _play_boss(ar: Dictionary, carry: int) -> void:
 	hud.set_seed(0)
 	_floor = ar.id
 	_floor_step = int(ar.levels) + 1
+	# A breather before the fight: heal 1 heart, up to your max.
+	var healed := carry > 0 and carry < _start_hearts()
+	if healed:
+		carry += 1
 	_carry_hearts = carry
 	set_music({"moss": "music_moss_boss", "lake": "music_lake_boss", "forge": "music_forge_boss"}.get(ar.id, "music_boss"))
 	var rematch := _rematch
@@ -988,7 +992,7 @@ func _play_boss(ar: Dictionary, carry: int) -> void:
 	_rematch = rematch
 	_level_hearts = hearts
 	_on_screen_changed()
-	hud.banner("Boss: %s!" % ar.boss_name, 5.0, 1.0)
+	hud.banner("Boss: %s!%s" % [ar.boss_name, "  +1 heart" if healed else ""], 5.0, 1.0)
 
 
 ## The boss is down: the exit cube appears by the door on his side. Touching it wins (and
