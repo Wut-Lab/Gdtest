@@ -11,7 +11,7 @@ const FILES := 3
 const MAX_EQUIPPED := 3
 const STARTER := "heart_box"
 ## Every card, grouped by type, in the order the collection screen shows them.
-const ALL := ["dash", "pound", "double_jump", "glide", "quick", "tele_hop", "high_jump", "phase_jump", "shockwave", "stun_landing", "grip_and_go", "lucky_charm", "bounce_house", "secret_helper", "magnet", "wall_cling", "brick_drop", "slow_burst", "portion_booster", "air_brake", "momentum", "heart_box", "angry_dash", "personal_space", "safety_bubble", "guard_block", "long_blink", "chain_dash", "overgrowth", "bark_hide", "undertow", "geyser_jump", "kiln_skin", "hot_feet"]
+const ALL := ["dash", "pound", "double_jump", "glide", "quick", "tele_hop", "high_jump", "phase_jump", "shockwave", "stun_landing", "grip_and_go", "lucky_charm", "bounce_house", "secret_helper", "magnet", "wall_cling", "brick_drop", "slow_burst", "portion_booster", "air_brake", "momentum", "heart_box", "angry_dash", "personal_space", "safety_bubble", "guard_block", "long_blink", "chain_dash", "overgrowth", "bark_hide", "undertow", "geyser_jump", "kiln_skin", "hot_feet", "perfect_stomp", "brick_toss"]
 
 ## Where each card can come from (its drop group, as on the blueprint):
 ##   shop = Shop Only, drop = Drop Only (earned in levels, never sold), chest = Chest Only,
@@ -31,6 +31,7 @@ const DROP_GROUPS := {
 	"angry_dash": "milestone", "personal_space": "milestone", "safety_bubble": "paul", "guard_block": "paul", "long_blink": "paul",
 	"chain_dash": "boss",
 	"overgrowth": "moss", "bark_hide": "boss", "undertow": "lake", "geyser_jump": "boss", "kiln_skin": "forge", "hot_feet": "boss",
+	"perfect_stomp": "shop", "brick_toss": "shop",
 }
 ## Level milestones (random dungeon levels beaten; the training level doesn't count):
 ##   5: Paul moves onto the floating platform in town (his mini shop sells Paul cards)
@@ -46,6 +47,9 @@ const PAUL_PRICE := 40
 const RARE_PRICE := 50
 ## The shop: every card costs the same for now, 3 on display, new stock every 3 wins.
 const PRICE := 30
+## Shop milestones: these Shop cards are only stocked after this many Shop purchases. The one
+## unlocked by a purchase takes the slot it emptied, so it shows up right away.
+const SHOP_UNLOCKS := {"perfect_stomp": 3, "brick_toss": 9}
 const SHOP_SIZE := 3
 const RESTOCK_WINS := 3
 
@@ -196,7 +200,8 @@ static func pool(source: String) -> Array:
 ## The shop's cards, stocking it first if it's empty. Cards already owned aren't stocked.
 static func get_shop() -> Array[String]:
 	if shop_stock.is_empty():
-		var left := pool("shop").filter(func(a: String) -> bool: return a not in owned)
+		var left := pool("shop").filter(func(a: String) -> bool:
+			return a not in owned and shop_buys >= SHOP_UNLOCKS.get(a, 0))
 		left.shuffle()
 		shop_stock.assign(left.slice(0, SHOP_SIZE))
 		save()
@@ -228,6 +233,9 @@ static func buy(ability: String) -> bool:
 	pixels -= price_of(ability)
 	shop_stock[i] = ""
 	shop_buys += 1
+	for a in SHOP_UNLOCKS:
+		if SHOP_UNLOCKS[a] == shop_buys and a not in owned and a not in shop_stock:
+			shop_stock[i] = a   # shop milestone: the new card fills the empty slot
 	add(ability)   # saves
 	return true
 

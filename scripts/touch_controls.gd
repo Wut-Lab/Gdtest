@@ -125,11 +125,11 @@ func bar_height() -> float:
 
 ## Dash, Pound and Brick buttons show only when their cards are equipped.
 func set_abilities(abilities: Array[String]) -> void:
-	var by_card := {"dash": dash, "pound": pound, "brick_drop": brick, "angry_dash": angry,
+	var by_card := {"dash": dash, "pound": pound, "brick_drop": brick, "brick_toss": brick, "angry_dash": angry,
 		"personal_space": push}
 	_card_buttons.clear()
 	for a in abilities:
-		if by_card.has(a):
+		if by_card.has(a) and by_card[a] not in _card_buttons:
 			_card_buttons.append(by_card[a])
 	for b in by_card.values():
 		b.visible = b in _card_buttons

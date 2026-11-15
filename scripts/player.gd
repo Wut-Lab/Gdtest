@@ -8,6 +8,8 @@ signal fell
 signal grew_moss(pos: Vector2)
 ## Hot Feet card: a stomp set off a burst of heat at pos (feet).
 signal hot_feet(pos: Vector2)
+## Perfect Stomp card: a well-timed stomp, worth an extra pixel (Main pays it).
+signal perfect_stomp(pos: Vector2)
 ## Geyser Jump card: a jump sprayed water down from feet (pos).
 signal geyser(pos: Vector2, face: float)
 ## Undertow card: a dash finished, leaving a current from start to end.
@@ -103,6 +105,14 @@ const SIZE := 24.0
 @export var cling_kick := 1.3
 ## Brick Drop: seconds between bricks.
 @export var brick_cooldown := 3.0
+## Brick Toss: seconds between tosses, and the lob's speed sideways and up.
+@export var toss_cooldown := 12.0
+@export var toss_speed := Vector2(300.0, 460.0)
+## Perfect Stomp: how close to the stomp jump must be tapped (before or after), how much higher
+## you bounce, and how long you're safe afterward.
+@export var perfect_window := 0.15
+@export var perfect_boost := 0.33
+@export var perfect_safe := 0.5
 ## Angry Block Dash (rare): seconds of rage, the speed boost, and the recharge after it ends.
 @export var angry_time := 3.0
 @export var angry_speed := 1.5
@@ -164,6 +174,9 @@ var _shock_cd := 0.0
 var _cling_left := 1.0   # Wall Cling: hang time left this jump
 var _cling_dir := 0.0    # which way the wall you're clinging to faces (0 = not clinging)
 var _brick_cd := 0.0
+var _toss_cd := 0.0
+var _toss: Node = null
+var _stomp_late := 0.0
 var _angry := 0.0
 var _angry_cd := 0.0
 var _push_cd := 0.0
@@ -235,6 +248,10 @@ func reset_to(pos: Vector2) -> void:
 	_cling_dir = 0.0
 	_cling_left = cling_time
 	_brick_cd = 0.0
+	_toss_cd = 0.0
+	_stomp_late = 0.0
+	if is_instance_valid(_toss):
+		_toss.queue_free()
 	_angry = 0.0
 	_angry_cd = 0.0
 	_push_cd = 0.0
@@ -427,10 +444,27 @@ func _run_speed() -> float:
 ## You bounced off an enemy (or a boss) you stomped. Hot Feet card: the bounce is 30% higher and
 ## a burst of heat stuns enemies nearby.
 func stomped() -> void:
+	if "perfect_stomp" in abilities:
+		if _jump_buffer > 0.0:
+			_perfect_stomp()   # jump was tapped just before landing on it
+		else:
+			_stomp_late = perfect_window   # or tap it in the next moment
 	if "hot_feet" not in abilities:
 		return
 	velocity.y *= 1.3
 	hot_feet.emit(global_position + Vector2(0.0, SIZE / 2.0))
+
+
+## Perfect Stomp card: bounce higher, a moment of safety and an extra pixel.
+func _perfect_stomp() -> void:
+	_stomp_late = 0.0
+	_jump_buffer = 0.0
+	velocity.y = minf(velocity.y, 0.0) * sqrt(1.0 + _pct(perfect_boost))
+	invincible = maxf(invincible, perfect_safe)
+	_squash = Vector2(0.7, 1.35)
+	CardFx.spawn(get_parent(), global_position, "lucky")
+	_play(_jump_sfx, 1.6)
+	perfect_stomp.emit(global_position)
 
 
 ## Geyser Jump card: every jump (double jumps too) is 10% higher and sprays water down.
@@ -523,6 +557,10 @@ func _physics_process(delta: float) -> void:
 	var sub := _submerged()
 	if sub > 0.3:
 		_coyote = coyote_time   # you can always hop out of the water
+	if _stomp_late > 0.0:
+		_stomp_late = maxf(_stomp_late - delta, 0.0)
+		if Input.is_action_just_pressed("jump") and velocity.y < 0.0:
+			_perfect_stomp()
 	if Input.is_action_just_pressed("jump"):
 		_jump_buffer = jump_buffer_time
 	else:
@@ -685,12 +723,27 @@ func _drop_brick() -> void:
 	_play(_land_sfx, 0.8)
 
 
+## Brick Toss card: lob a brick ahead of you in an arc (one at a time).
+func _toss_brick() -> void:
+	_toss_cd = toss_cooldown
+	if is_instance_valid(_toss):
+		_toss.queue_free()
+	_toss = Brick.new()
+	_toss.thrown = Vector2(toss_speed.x * _face, -toss_speed.y)
+	get_parent().add_child(_toss)
+	_toss.global_position = global_position + Vector2(_face * (SIZE / 2.0 + Brick.T / 2.0 + 2.0), -8.0)
+	_play(_land_sfx, 0.9)
+
+
 func _update_dash_and_pound(delta: float, on_floor: bool) -> void:
 	_dash_cd = maxf(_dash_cd - delta, 0.0)
 	_brick_cd = maxf(_brick_cd - delta, 0.0)
-	if _card_pressed("brick", "brick_drop") and not on_floor \
-			and _brick_cd == 0.0:
-		_drop_brick()
+	_toss_cd = maxf(_toss_cd - delta, 0.0)
+	if _card_pressed("brick", "brick_drop") and not on_floor:
+		if _brick_cd == 0.0:
+			_drop_brick()
+	elif _card_pressed("brick", "brick_toss") and _toss_cd == 0.0:
+		_toss_brick()
 	_push_cd = maxf(_push_cd - delta, 0.0)
 	_angry_cd = maxf(_angry_cd - delta, 0.0)
 	if _angry > 0.0:

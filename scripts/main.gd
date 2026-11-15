@@ -111,6 +111,7 @@ func _ready() -> void:
 	player.water = level.water
 	player.slip_check = level.is_slippery
 	player.hot_feet.connect(func(pos: Vector2) -> void: level.hot_feet(level.to_local(pos)))
+	player.perfect_stomp.connect(_on_perfect_stomp)
 	player.geyser.connect(func(pos: Vector2, face: float) -> void: level.geyser(level.to_local(pos), face))
 	player.undertow.connect(func(a: Vector2, b: Vector2) -> void:
 		level.add_undertow(level.to_local(a), level.to_local(b)))
@@ -767,6 +768,13 @@ func _on_obstacle_broken(pos: Vector2, kind: String) -> void:
 
 ## A card you already own turns into this many pixels.
 const DUPLICATE_PIXELS := 2
+
+
+## Perfect Stomp card: +1 pixel for a well-timed stomp.
+func _on_perfect_stomp(pos: Vector2) -> void:
+	CardCollection.add_pixels(1)
+	hud.set_pixels(CardCollection.pixels)
+	CardFx.spawn(level, level.to_local(pos), "plus", 0.0, "+1")
 
 
 func _on_card_collected(ability: String) -> void:

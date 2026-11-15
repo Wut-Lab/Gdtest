@@ -15,12 +15,12 @@ const NAMES := {"dash": "Dash", "pound": "Ground Pound", "double_jump": "Double 
 	"portion_booster": "Portion Booster", "air_brake": "Air Brake", "momentum": "Momentum", "heart_box": "Heart Box",
 	"angry_dash": "Angry Block Dash", "personal_space": "Personal Space", "safety_bubble": "Safety Bubble",
 	"guard_block": "Guard Block", "long_blink": "Long Blink", "chain_dash": "Chain Dash",
-	"overgrowth": "Overgrowth", "bark_hide": "Bark Hide", "undertow": "Undertow", "geyser_jump": "Geyser Jump", "kiln_skin": "Kiln Skin", "hot_feet": "Hot Feet"}
+	"overgrowth": "Overgrowth", "bark_hide": "Bark Hide", "undertow": "Undertow", "geyser_jump": "Geyser Jump", "kiln_skin": "Kiln Skin", "hot_feet": "Hot Feet", "perfect_stomp": "Perfect Stomp", "brick_toss": "Brick Toss"}
 ## Card types, color coded: attacks are red, jumps are blue, movement is yellow, misc is gray.
 const TYPES := {"dash": "attack", "pound": "attack", "double_jump": "jump", "glide": "jump",
 	"quick": "movement", "tele_hop": "movement", "high_jump": "jump", "phase_jump": "jump", "shockwave": "attack", "stun_landing": "attack", "grip_and_go": "movement", "lucky_charm": "misc", "bounce_house": "misc", "secret_helper": "misc", "magnet": "misc", "wall_cling": "jump", "brick_drop": "attack", "slow_burst": "misc", "portion_booster": "misc", "air_brake": "movement", "momentum": "movement", "heart_box": "misc",
 	"angry_dash": "attack", "personal_space": "misc", "safety_bubble": "misc", "guard_block": "misc", "long_blink": "misc", "chain_dash": "attack",
-	"overgrowth": "attack", "bark_hide": "misc", "undertow": "attack", "geyser_jump": "jump", "kiln_skin": "misc", "hot_feet": "attack"}
+	"overgrowth": "attack", "bark_hide": "misc", "undertow": "attack", "geyser_jump": "jump", "kiln_skin": "misc", "hot_feet": "attack", "perfect_stomp": "jump", "brick_toss": "attack"}
 const TYPE_NAMES := {"attack": "Attack card", "jump": "Jump card", "movement": "Movement card", "misc": "Misc card"}
 const TYPE_COLORS := {"attack": Color("e5484d"), "jump": Color("3d7be0"), "movement": Color("e0a400"),
 	"misc": Color("7d8597")}
@@ -98,11 +98,16 @@ const DESCRIPTIONS := {
 		+ "2 tiles away). Found in the Ember Forge.",
 	"hot_feet": "Passive: stomping an enemy (or a boss) bounces you 30% higher and sets off a burst of "
 		+ "heat that stuns enemies within 2 tiles for 1 second. Anvil Annie's reward.",
+	"perfect_stomp": "Passive: tap jump right as you stomp an enemy to bounce 33% higher, stay safe "
+		+ "for half a second and earn an extra pixel. Joins the Shop after your 3rd Shop card.",
+	"brick_toss": "Press Brick (C or L) on the ground to lob a brick ahead of you. It breaks a spike "
+		+ "square or enemy it lands on (not bosses), then stays like a Brick Drop brick. "
+		+ "Recharges in 12 seconds. Joins the Shop after your 9th Shop card.",
 }
 const PAPER := Color("eef1fa")
 const EDGE := Color("1b2440")
 
-@export_enum("dash", "pound", "double_jump", "glide", "quick", "tele_hop", "high_jump", "phase_jump", "shockwave", "stun_landing", "grip_and_go", "lucky_charm", "bounce_house", "secret_helper", "magnet", "wall_cling", "brick_drop", "slow_burst", "portion_booster", "air_brake", "momentum", "heart_box", "angry_dash", "personal_space", "safety_bubble", "guard_block", "long_blink", "chain_dash", "overgrowth", "bark_hide", "undertow", "geyser_jump", "kiln_skin", "hot_feet") var ability := "dash"
+@export_enum("dash", "pound", "double_jump", "glide", "quick", "tele_hop", "high_jump", "phase_jump", "shockwave", "stun_landing", "grip_and_go", "lucky_charm", "bounce_house", "secret_helper", "magnet", "wall_cling", "brick_drop", "slow_burst", "portion_booster", "air_brake", "momentum", "heart_box", "angry_dash", "personal_space", "safety_bubble", "guard_block", "long_blink", "chain_dash", "overgrowth", "bark_hide", "undertow", "geyser_jump", "kiln_skin", "hot_feet", "perfect_stomp", "brick_toss") var ability := "dash"
 
 var _t := 0.0
 
@@ -232,6 +237,19 @@ static func _draw_symbol(ci: CanvasItem, ability_name: String, o: Vector2, c: Co
 			ci.draw_rect(Rect2(o + Vector2(-3, -3), Vector2(6, 6)), c)
 			for i in 3:
 				ci.draw_rect(Rect2(o + Vector2(-6 + i * 5, -14 + (i % 2) * 2), Vector2(b, 3)), c)
+		"perfect_stomp":
+			# A block springing off a flat enemy, with a sparkle for the perfect timing.
+			ci.draw_rect(Rect2(o + Vector2(-3, -10), Vector2(6, 6)), c)
+			ci.draw_rect(Rect2(o + Vector2(-8, 6), Vector2(16, 4)), c)
+			ci.draw_rect(Rect2(o + Vector2(-1, -2), Vector2(2, 5)), c)
+			for p in [Vector2(6, -10), Vector2(8, -7), Vector2(4, -7)]:
+				ci.draw_rect(Rect2(o + p, Vector2(b, b)), c)
+		"brick_toss":
+			# A brick flying in an arc of dots.
+			ci.draw_rect(Rect2(o + Vector2(1, -9), Vector2(8, 7)), c)
+			ci.draw_rect(Rect2(o + Vector2(1, -6), Vector2(8, 1)), PAPER)
+			for p in [Vector2(-9, 7), Vector2(-7, 2), Vector2(-4, -2)]:
+				ci.draw_rect(Rect2(o + p, Vector2(b, b)), c)
 		"hot_feet":
 			# A block bouncing up off a flat enemy, with a burst under it.
 			ci.draw_rect(Rect2(o + Vector2(-3, -11), Vector2(6, 6)), c)
