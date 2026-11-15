@@ -29,10 +29,18 @@ func _ready() -> void:
 	col.position = Vector2(0, -11)
 	add_child(col)
 	body_entered.connect(_on_body_entered)
+	_snd = AudioStreamPlayer2D.new()
+	_snd.stream = load("res://audio/chest_open.wav")
+	_snd.bus = AudioSettings.SOUNDS_BUS
+	add_child(_snd)
+
+
+var _snd: AudioStreamPlayer2D
 
 
 func _on_body_entered(body: Node2D) -> void:
 	if body is Player and not is_open:
+		_snd.play()
 		set_open(true)
 		_flash = 1.0
 		opened.emit(self)
@@ -54,6 +62,8 @@ func _process(delta: float) -> void:
 func _draw() -> void:
 	if not is_open and "secret_helper" in CardCollection.equipped:
 		_draw_glow()
+	if not is_open:
+		_draw_rim()
 	draw_chest(self, Vector2.ZERO, is_open, _t)
 	if _flash > 0.0:
 		# A burst of light blocks rising out of the chest.
@@ -61,6 +71,19 @@ func _draw() -> void:
 			var x := -10.0 + i * 4.0
 			var y := -14.0 - (1.0 - _flash) * (18.0 + (i % 3) * 8.0)
 			draw_rect(Rect2(x, y, 3, 3), Color(GOLD, _flash))
+
+
+## A faint gold pixel glow hugging the closed chest's outline (26x22), gently twinkling.
+func _draw_rim() -> void:
+	var b := 2.0
+	for gy in range(-12, 1):
+		for gx in range(-8, 8):
+			if gx > -8 and gx < 7 and gy > -12 and gy < 0:
+				continue
+			var a := 0.22 + 0.1 * sin(_t * 3.0 + (gx + gy) * 0.9)
+			if (gx + gy) % 2 == 0:
+				a *= 0.5
+			draw_rect(Rect2(gx * b, gy * b, b, b), Color(GOLD, a))
 
 
 ## Secret Helper card: a soft, blocky golden glow around the chest that slowly breathes.

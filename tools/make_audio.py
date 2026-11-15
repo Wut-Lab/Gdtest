@@ -366,6 +366,20 @@ def sfx_ding():
     return w * 0.3
 
 
+def sfx_chest_open():
+    """Chest opening: a low wooden creak sliding down, then a soft thunk as the lid falls back."""
+    out = np.zeros(int(0.6 * SR))
+    creak = sweep(180, 110, 0.3)
+    t = np.arange(len(creak)) / SR
+    creak = creak * (0.6 + 0.4 * np.sin(2 * np.pi * 28 * t)) * np.minimum(t / 0.02, 1) * np.exp(-t / 0.2)
+    out[: len(creak)] += creak * 0.35
+    thunk = sweep(120, 50, 0.15)
+    t = np.arange(len(thunk)) / SR
+    st = int(0.28 * SR)
+    out[st: st + len(thunk)] += thunk * np.exp(-t / 0.05) * 0.5
+    return out * 0.6
+
+
 def sfx_victory():
     """Level clear: a quick, bright rising arpeggio (C E G C) ending on a held bell."""
     out = np.zeros(int(1.4 * SR))
@@ -1239,6 +1253,7 @@ def main():
     write_wav(os.path.join(OUT, "buy.wav"), sfx_buy())
     write_wav(os.path.join(OUT, "ding.wav"), sfx_ding())
     write_wav(os.path.join(OUT, "victory.wav"), sfx_victory())
+    write_wav(os.path.join(OUT, "chest_open.wav"), sfx_chest_open())
     write_wav(os.path.join(OUT, "boss_victory.wav"), sfx_boss_victory())
     tmp = os.path.join(OUT, "_music.wav")
     music = render_music()

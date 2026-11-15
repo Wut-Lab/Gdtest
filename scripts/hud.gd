@@ -41,7 +41,8 @@ var like_button: Button
 ## Small equipped cards under the timer (dotted outlines for empty slots).
 var card_row: HBoxContainer
 var areas_box: VBoxContainer
-const AREA_COLORS := {"basic": Color("e0a35a"), "moss": Color("6cc04f")}
+const AREA_COLORS := {"basic": Color("e0a35a"), "moss": Color("6cc04f"), "lake": Color("2f5fa8"),
+	"forge": Color("c4502e")}
 var _card_icons: Array[CardIcon] = []
 var _card_buttons: Array[Button] = []
 @onready var out_menu: Control = %OutMenu
