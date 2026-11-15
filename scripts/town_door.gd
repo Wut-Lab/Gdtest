@@ -22,6 +22,9 @@ const DECOR := ["hut", "forge"]
 ## Townsfolk who stroll back and forth (body colour, highlight).
 const WALKERS := {"paula": [Color("9b5de5"), Color("c19bf2")], "tim": [Color("3dbb5c"), Color("7fdc95")]}
 const WALK_RANGE := 36.0
+## Building roofs you can stand on (jump up through them from below): x center, top y, width.
+const ROOFS := {"dungeon": [0, -128, 112], "shop": [0, -110, 100], "cards": [0, -132, 100],
+	"replay": [0, -98, 20], "hut": [-4, -58, 60], "forge": [-18, -64, 44]}
 const EDGE := Color("1b2440")
 
 var kind := "shop"
@@ -45,6 +48,17 @@ func _ready() -> void:
 	if portrait:
 		process_mode = Node.PROCESS_MODE_ALWAYS
 		return
+	if ROOFS.has(kind):
+		var r: Array = ROOFS[kind]
+		var roof := StaticBody2D.new()
+		var rc := CollisionShape2D.new()
+		var rs := RectangleShape2D.new()
+		rs.size = Vector2(r[2], 8)
+		rc.shape = rs
+		rc.position = Vector2(r[0], r[1] + 4)
+		rc.one_way_collision = true
+		roof.add_child(rc)
+		add_child(roof)
 	if kind in DECOR:
 		return
 	var col := CollisionShape2D.new()
