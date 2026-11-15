@@ -51,16 +51,16 @@ var _came_from := "dungeon"
 ## Dungeon areas, in order. Each is a run of 5 fixed levels (hearts carry over), then its boss.
 ## An area shows at the gate once the boss of the area before it is beaten.
 const AREAS := [
-	{"id": "basic", "name": "Basic", "first": 1, "levels": 5, "extra": 12,
+	{"id": "basic", "name": "Basic", "first": 1, "levels": 5,
 		"boss": "res://levels/boss_basic.txt", "boss_name": "Big Bad Square"},
-	{"id": "moss", "name": "Mossy Cave", "first": 6, "levels": 5,
+	{"id": "moss", "name": "Mossy Cave", "first": 6, "levels": 5, "extra": 4,
 		"boss": "res://levels/boss_moss.txt", "boss_name": "Old Mossback"},
 	# Harder: more Bad Blocks (and Hard ones from the first level), slightly longer levels.
-	{"id": "lake", "name": "Cavern Lake", "first": 11, "levels": 5, "extra": 8,
+	{"id": "lake", "name": "Cavern Lake", "first": 11, "levels": 5, "extra": 6,
 		"bad": [1, 1, 2, 2, 3], "hard": [1, 1, 1, 2, 2],
 		"boss": "res://levels/boss_lake.txt", "boss_name": "Crazy Harry"},
 	# Harder again: more and harder Bad Blocks from the start.
-	{"id": "forge", "name": "Ember Forge", "first": 16, "levels": 5, "extra": 10,
+	{"id": "forge", "name": "Ember Forge", "first": 16, "levels": 5, "extra": 8,
 		"bad": [2, 2, 2, 3, 3], "hard": [1, 1, 2, 2, 3],
 		"boss": "res://levels/boss_forge.txt", "boss_name": "Anvil Annie"},
 ]
@@ -950,7 +950,7 @@ func _play_floor_level() -> void:
 		_play_boss(ar, carry)
 		return
 	hud.set_seed(seed_value)
-	var text := LevelGen.generate(seed_value, ar.get("extra", 0))   # Basic levels run 10-15 tiles longer
+	var text := LevelGen.generate(seed_value, ar.get("extra", 0))   # per-area extra length
 	text = _harden(text, step, seed_value, ar)
 	if id == "moss":
 		text = _mossify(_add_moss_obstacles(text, seed_value), seed_value).replace("`", "=")
