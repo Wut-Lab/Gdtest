@@ -1165,6 +1165,20 @@ func _flood_rubber(town: String) -> String:
 				x = x1 + 1
 			else:
 				x += 1
+	# Townsfolk left over water (Terry) move onto the nearest rubber block instead of floating.
+	for y in range(0, g.size() - 1):
+		for x in g[y].size():
+			if g[y][x] in [")", "(", "{", "}", "l"] and g[y + 1][x] == "~":
+				for d in range(1, 6):
+					var nx := -1
+					for c in [x - d, x + d]:
+						if c >= 0 and c < g[y].size() and g[y + 1][c] in ["R", "r"] and g[y][c] == ".":
+							nx = c
+							break
+					if nx != -1:
+						g[y][nx] = g[y][x]
+						g[y][x] = "."
+						break
 	var out := PackedStringArray()
 	for row in g:
 		out.append("".join(row))

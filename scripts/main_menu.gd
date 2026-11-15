@@ -54,6 +54,7 @@ var _buy_text: Label
 var _buy: Button
 var _buy_sfx: AudioStreamPlayer
 var _replay_list: VBoxContainer
+var _replay_scroll: ScrollContainer
 var _replay_info: Label
 var _mode_title: Label
 var _mode_seed := 0
@@ -244,6 +245,8 @@ func _ready() -> void:
 	replay.add_child(_replay_info)
 	var replay_scroll := ScrollContainer.new()
 	replay_scroll.custom_minimum_size = Vector2(340, 300)
+	# Short screens (sideways phones): shrink the list so Back stays on screen.
+	_replay_scroll = replay_scroll
 	replay_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	replay.add_child(replay_scroll)
 	_replay_list = VBoxContainer.new()
@@ -521,6 +524,8 @@ func _open_shop() -> void:
 
 ## Lists the liked levels, each with Play and Remove.
 func _open_replay() -> void:
+	# Short screens (sideways phones): shrink the list so Back stays on screen.
+	_replay_scroll.custom_minimum_size.y = clampf(get_viewport_rect().size.y - 260.0, 140.0, 300.0)
 	for c in _replay_list.get_children():
 		_replay_list.remove_child(c)
 		c.queue_free()
