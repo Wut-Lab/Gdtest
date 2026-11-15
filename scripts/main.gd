@@ -670,7 +670,16 @@ func _on_player_hurt(push: Vector2, heavy := false) -> void:
 
 ## Hearts at the start of a run: 2, plus 1 for the Heart Box card.
 func _start_hearts() -> int:
-	return START_HEARTS + (1 if "heart_box" in player.abilities else 0)
+	return START_HEARTS + (1 if "heart_box" in player.abilities else 0) + boss_hearts()
+
+
+## +1 max heart for every boss you've beaten (first wins only).
+func boss_hearts() -> int:
+	var n := 0
+	for ar in AREAS:
+		if ar.has("boss") and CardCollection.is_beaten("boss:" + ar.id):
+			n += 1
+	return n
 
 
 func _lose_heart(from_fall := false, heavy := false) -> void:
@@ -1209,6 +1218,9 @@ func _floor_level_won() -> void:
 				card = BOSS_CARDS.get(ar.id, "")
 			if card != "" and not CardCollection.owns(card):
 				_on_card_collected(card)
+			hearts += 1   # Your max went up with the win (boss_hearts): fill the new heart.
+			hud.set_hearts(hearts, _start_hearts(), _cracked)
+			news += " +1 Heart!"
 		CardCollection.add_pixels(px)
 		hud.set_pixels(CardCollection.pixels)
 		news += " +%d pixels" % px
