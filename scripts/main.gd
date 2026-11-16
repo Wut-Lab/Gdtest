@@ -143,12 +143,14 @@ func _ready() -> void:
 	_ding.stream = load("res://audio/ding.wav")
 	_ding.bus = AudioSettings.SOUNDS_BUS
 	add_child(_ding)
-	for n in ["victory", "boss_victory"]:
+	for n in ["victory", "boss_victory", "bounce"]:
 		var v := AudioStreamPlayer.new()
 		v.name = "Sfx_" + n
 		v.stream = load("res://audio/%s.wav" % n)
 		v.bus = AudioSettings.SOUNDS_BUS
 		add_child(v)
+	for sig in [player.bounced, player.wall_bounced]:
+		sig.connect(func() -> void: ($Sfx_bounce as AudioStreamPlayer).play())
 	hud.enter_pressed.connect(_enter_door)
 	dialog = DialogBox.new()
 	hud.get_node("Root").add_child(dialog)

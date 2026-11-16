@@ -380,6 +380,13 @@ def sfx_chest_open():
     return out * 0.6
 
 
+def sfx_bounce():
+    """Rubber bounce: a low, soft boing that bends up and fades."""
+    b = sweep(70, 140, 0.22)
+    t = np.arange(len(b)) / SR
+    return b * np.minimum(t / 0.008, 1) * np.exp(-t / 0.07) * 0.4
+
+
 def sfx_victory():
     """Level clear: a quick, bright rising arpeggio (C E G C) ending on a held bell."""
     out = np.zeros(int(1.4 * SR))
@@ -863,8 +870,8 @@ def render_lake_music():
                 put(bell(midi_hz(em(d) + 12), ln * slot), t0 + st * slot, 0.07, wet)
         if sec >= 1:
             for k in range(8):
-                put(shaker(), t0 + k * slot + slot / 2, 0.5 if k % 2 else 0.3)
-            put(kick(), t0, 0.12)
+                put(shaker(), t0 + k * slot + slot / 2, 0.25 if k % 2 else 0.15)
+            put(kick(), t0, 0.06)
         for _ in range(int(r.integers(1, 4))):   # drips and little bubble runs
             if r.random() < 0.5:
                 put(drip(r.uniform(1000, 1600)), t0 + r.uniform(0, bar), 0.1, wet)
@@ -1253,6 +1260,7 @@ def main():
     write_wav(os.path.join(OUT, "buy.wav"), sfx_buy())
     write_wav(os.path.join(OUT, "ding.wav"), sfx_ding())
     write_wav(os.path.join(OUT, "victory.wav"), sfx_victory())
+    write_wav(os.path.join(OUT, "bounce.wav"), sfx_bounce())
     write_wav(os.path.join(OUT, "chest_open.wav"), sfx_chest_open())
     write_wav(os.path.join(OUT, "boss_victory.wav"), sfx_boss_victory())
     tmp = os.path.join(OUT, "_music.wav")
