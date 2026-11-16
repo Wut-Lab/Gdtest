@@ -3,6 +3,7 @@ extends Control
 ## A card drawn in a menu: the card when something is equipped, or an empty outline.
 ## Big cards (card_scale above 1) also show the ability's name in their bottom bar.
 ## Locked cards are a dark silhouette with a question mark; equipped ones get a green check.
+## Upgradable cards you own show their Forge level as gold squares in the top-left corner.
 
 var ability := "":
 	set(v):
@@ -42,6 +43,14 @@ func _draw() -> void:
 		return
 	if ability != "":
 		AbilityCard.draw_card(self, ability, c, card_scale, card_scale >= 2.5)
+		if CardCollection.UPGRADES.has(ability) and CardCollection.owns(ability):
+			# Level pips: one gold square per Forge level, along the top-left corner.
+			for i in CardCollection.level_of(ability):
+				var tl := c + (Vector2(-11, -15) + Vector2(i * 3.5, 0)) * card_scale
+				var px := maxf(3.0 * card_scale, 3.0)
+				draw_rect(Rect2(tl - Vector2(1, 1), Vector2(px + 2, px + 2)), Color("1b2440"))
+				draw_rect(Rect2(tl, Vector2(px, px)), Color("f2c230"))
+				draw_rect(Rect2(tl, Vector2(px, maxf(px * 0.3, 1.0))), Color("ffe58a"))
 		if equipped:
 			# Green check badge in the top-right corner.
 			var p := c + Vector2(12, -16) * card_scale

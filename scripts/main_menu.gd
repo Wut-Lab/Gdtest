@@ -63,6 +63,8 @@ var _paul_row: HBoxContainer
 ## Where the Buy page goes back to: "Shop" or "Paul".
 var _buy_from := "Shop"
 var _forge_info: Label
+var _cards_scroll: ScrollContainer
+var _card_flows: Array[HFlowContainer] = []
 var _forge_list: VBoxContainer
 var _forge_scroll: ScrollContainer
 var _mode_notes := {}   # "hard"/"scramble" -> Label under its button
@@ -139,6 +141,14 @@ func _ready() -> void:
 	_count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_count.add_theme_color_override("font_color", DIM)
 	cards.add_child(_count)
+	# The rows scroll, and each type's cards wrap onto more lines on narrow screens.
+	_cards_scroll = ScrollContainer.new()
+	_cards_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_cards_scroll.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	cards.add_child(_cards_scroll)
+	var rows := VBoxContainer.new()
+	rows.add_theme_constant_override("separation", 10)
+	_cards_scroll.add_child(rows)
 	for type_name in ["attack", "jump", "movement", "misc"]:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 12)
@@ -149,6 +159,11 @@ func _ready() -> void:
 		label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		label.add_theme_color_override("font_color", AbilityCard.TYPE_COLORS[type_name].lightened(0.25))
 		row.add_child(label)
+		var flow := HFlowContainer.new()
+		flow.add_theme_constant_override("h_separation", 12)
+		flow.add_theme_constant_override("v_separation", 8)
+		_card_flows.append(flow)
+		row.add_child(flow)
 		for a in CardCollection.ALL:
 			if AbilityCard.TYPES[a] != type_name:
 				continue
@@ -161,9 +176,9 @@ func _ready() -> void:
 			icon.ability = a
 			icon.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 			b.add_child(icon)
-			row.add_child(b)
+			flow.add_child(b)
 			_icons[a] = icon
-		cards.add_child(row)
+		rows.add_child(row)
 	_button(cards, "Back", _back_out)
 
 	var card := _page("Card")
@@ -490,6 +505,13 @@ func _open_collection() -> void:
 	for a in _icons:
 		_icons[a].locked = not CardCollection.owns(a)
 		_icons[a].equipped = CardCollection.is_equipped(a)
+		_icons[a].queue_redraw()   # level pips
+	# Fit the card grid to the screen: up to 10 cards a line, fewer on narrow screens.
+	var vp := get_viewport_rect().size
+	var line := clampf(floorf((vp.x - 200.0) / 72.0), 3.0, 10.0) * 72.0
+	for f in _card_flows:
+		f.custom_minimum_size.x = line
+	_cards_scroll.custom_minimum_size = Vector2(line + 120.0, clampf(vp.y - 230.0, 160.0, 520.0))
 	_show("Cards")
 	# Focus the card you were just looking at, or the first one.
 	_icons[_shown if _icons.has(_shown) else CardCollection.ALL[0]].get_parent().grab_focus()
