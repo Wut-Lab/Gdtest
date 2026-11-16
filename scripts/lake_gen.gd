@@ -119,6 +119,10 @@ static func lakeify(text: String, s: int) -> String:
 				g[run.y - 1][x] = ">" if d > 0 else "<"
 				river_cells.append(Vector2i(x, run.y - 1))
 				g[run.y][x] = "`"   # never crumbles under a river
+			# A stone lip holds the water in at the upstream end; it only flows out the other.
+			var lip: int = run.x if d > 0 else run.z
+			g[run.y - 1][lip] = "#"
+			river_cells.erase(Vector2i(lip, run.y - 1))
 			var fy: int = run.y - 1
 			while fy < run.y + 6 and at.call(ex, fy) == ".":
 				g[fy][ex] = "|"
@@ -140,6 +144,7 @@ static func lakeify(text: String, s: int) -> String:
 			continue
 		for x in range(x0, x0 + len):
 			g[run.y - 1][x] = ">"
+		g[run.y - 1][x0 - 1] = "#"   # a stone lip holds it in at the upstream end
 		g[run.y - 1][x0 + len] = ","
 		busy.append(Vector2i(x0 + len, run.y - 1))
 		break
