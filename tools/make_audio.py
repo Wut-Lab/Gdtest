@@ -883,7 +883,8 @@ def render_lake_music():
     tail = buf[total:]
     buf = buf[:total]
     buf[: len(tail)] += tail
-    buf *= 0.66 / np.max(np.abs(buf))
+    # A fixed level (the first version's), so turning the drums down really makes them quieter.
+    buf *= min(0.66 / 0.756, 0.98 / np.max(np.abs(buf)))
     return buf
 
 
@@ -941,7 +942,7 @@ def render_lake_boss_music():
     tail = buf[total:]
     buf = buf[:total]
     buf[: len(tail)] += tail
-    buf *= 0.7 / np.max(np.abs(buf))
+    buf *= min(0.7 / 0.544, 0.98 / np.max(np.abs(buf)))   # fixed level: see render_lake_music
     return buf
 
 
