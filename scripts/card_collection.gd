@@ -72,6 +72,8 @@ const LARRY_BUYS := 3
 static var beaten: Array[String] = []
 ## Times each area's boss was beaten the normal way (after its 5 levels): {area id: count}.
 static var boss_wins := {}
+## Card upgrades bought at the Forge: {card: level}. Cards not listed are level 1.
+static var card_levels := {}
 ## A dungeon run saved with Save and Quit: {area, step, hearts, rematch}, or {} for none.
 static var run := {}
 ## Dungeon areas played at least once (win or lose): each one adds a little to the town.
@@ -130,6 +132,7 @@ static func use_file(n: int) -> void:
 			if old in beaten and OLD_KEYS[old] not in beaten:
 				beaten.append(OLD_KEYS[old])
 		boss_wins = cfg.get_value("progress", "boss_wins", {})
+		card_levels = cfg.get_value("cards", "levels", {})
 		run = cfg.get_value("progress", "run", {})
 		areas_played.assign(cfg.get_value("progress", "areas_played", []))
 		liked.assign(cfg.get_value("replay", "liked", []))
@@ -146,6 +149,7 @@ static func use_file(n: int) -> void:
 		shop_buys = 0
 		beaten.clear()
 		boss_wins = {}
+		card_levels = {}
 		run = {}
 		areas_played = []
 		liked.clear()
@@ -169,6 +173,7 @@ static func save() -> void:
 	cfg.set_value("progress", "shop_buys", shop_buys)
 	cfg.set_value("progress", "beaten", beaten)
 	cfg.set_value("progress", "boss_wins", boss_wins)
+	cfg.set_value("cards", "levels", card_levels)
 	cfg.set_value("progress", "run", run)
 	cfg.set_value("progress", "areas_played", areas_played)
 	cfg.set_value("replay", "liked", liked)
@@ -392,3 +397,72 @@ static func claim_milestones() -> Array[String]:
 		shop_stock[0] = RARE_MISC
 		save()
 	return got
+
+
+## ---- Upgrades (the Forge) ----
+## The Forge opens in town after the first boss. Every boss beaten raises the highest level a
+## card can reach: level 2 after the first boss, up to level 5 after all four.
+const BOSSES := ["basic", "moss", "lake", "forge"]
+## Upgradable cards: the value at each level (level 1 first) and how to show it.
+## "pct" values show as percentages; "sec" as seconds; "tiles" as tiles.
+const UPGRADES := {
+	"quick": {"vals": [0.15, 0.2, 0.25, 0.3, 0.35], "unit": "pct", "text": "%s faster"},
+	"momentum": {"vals": [0.25, 0.3, 0.35, 0.4, 0.45], "unit": "pct", "text": "up to %s faster"},
+	"high_jump": {"vals": [0.2, 0.25, 0.3, 0.35, 0.4], "unit": "pct", "text": "jumps %s higher"},
+	"lucky_charm": {"vals": [0.2, 0.25, 0.3, 0.35, 0.4], "unit": "pct", "text": "%s chance"},
+	"magnet": {"vals": [2.0, 2.5, 3.0, 3.5, 4.0], "unit": "tiles", "text": "reach %s"},
+	"shockwave": {"vals": [2.5, 2.2, 1.9, 1.6, 1.3], "unit": "sec", "text": "recharges in %s"},
+	"brick_drop": {"vals": [3.0, 2.5, 2.0, 1.75, 1.5], "unit": "sec", "text": "recharges in %s"},
+	"brick_toss": {"vals": [12.0, 10.0, 8.0, 7.0, 6.0], "unit": "sec", "text": "recharges in %s"},
+}
+## Pixels to go from level n to n + 1 is UPGRADE_COST * n (40, 80, 120, 160).
+const UPGRADE_COST := 40
+
+
+static func forge_open() -> bool:
+	return is_beaten("boss:basic")
+
+
+## The highest level cards can reach right now: 1 + bosses beaten.
+static func max_level() -> int:
+	return 1 + BOSSES.filter(func(b: String) -> bool: return is_beaten("boss:" + b)).size()
+
+
+static func level_of(ability: String) -> int:
+	return int(card_levels.get(ability, 1))
+
+
+## The card's main number at its current level (fallback for cards without upgrades).
+static func up(ability: String, fallback: float) -> float:
+	if not UPGRADES.has(ability):
+		return fallback
+	return UPGRADES[ability].vals[clampi(level_of(ability), 1, 5) - 1]
+
+
+static func upgrade_cost(ability: String) -> int:
+	return UPGRADE_COST * level_of(ability)
+
+
+## What the card does at a level, short, e.g. "20% faster".
+static func upgrade_text(ability: String, lvl: int) -> String:
+	var u: Dictionary = UPGRADES[ability]
+	var v: float = u.vals[clampi(lvl, 1, 5) - 1]
+	var shown := ""
+	match u.unit:
+		"pct": shown = "%d%%" % roundi(v * 100.0)
+		"sec": shown = ("%.2f" % v).trim_suffix("0").trim_suffix("0").trim_suffix(".") + " s"
+		_: shown = ("%.1f" % v).trim_suffix(".0") + " tiles"
+	return u.text % shown
+
+
+## Buys the next level of an owned card. Returns false if it can't be upgraded now.
+static func upgrade(ability: String) -> bool:
+	if not UPGRADES.has(ability) or ability not in owned or level_of(ability) >= mini(max_level(), 5):
+		return false
+	var cost := upgrade_cost(ability)
+	if pixels < cost:
+		return false
+	pixels -= cost
+	card_levels[ability] = level_of(ability) + 1
+	save()
+	return true

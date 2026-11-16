@@ -5,8 +5,7 @@ extends Area2D
 
 signal collected(pickup: PixelPickup)
 
-## With the Magnet card, pixels this close fly to the player (2 tiles), at this speed.
-const MAGNET_REACH := 64.0
+## With the Magnet card, pixels within its reach (2 tiles, more with upgrades) fly to the player.
 const MAGNET_SPEED := 420.0
 
 var _t := 0.0
@@ -42,7 +41,7 @@ func _process(delta: float) -> void:
 	_t += delta
 	if visible:
 		var pl := get_tree().get_first_node_in_group("player") as Player
-		if pl and "magnet" in pl.abilities and global_position.distance_to(pl.global_position) < MAGNET_REACH:
+		if pl and "magnet" in pl.abilities and global_position.distance_to(pl.global_position) < CardCollection.up("magnet", 2.0) * 32.0:
 			global_position = global_position.move_toward(pl.global_position, MAGNET_SPEED * delta)
 	queue_redraw()
 

@@ -13,12 +13,12 @@ signal near_changed(door: TownDoor, near: bool)
 
 const KINDS := {"!": "dungeon", "$": "shop", "&": "cards", "%": "replay", "(": "paul", ")": "terry", "{": "paula", "}": "tim", "[": "romeo", "]": "romeo", "f": "hut", "l": "larry", ";": "forge"}
 const NAMES := {"dungeon": "the Dungeon", "shop": "the Shop", "cards": "the Card Hall", "replay": "the Replay Room",
-	"paul": "Paul", "terry": "Terry", "paula": "Paula", "tim": "Tim", "romeo": "Romeo", "hut": "the Fishing Hut", "larry": "Larry", "pork": "Pork"}
+	"paul": "Paul", "terry": "Terry", "paula": "Paula", "tim": "Tim", "romeo": "Romeo", "hut": "the Fishing Hut", "larry": "Larry", "pork": "Pork", "forge": "the Forge"}
 const SIGNS := {"dungeon": "DUNGEON", "shop": "SHOP", "cards": "CARDS", "replay": "REPLAY"}
 ## Townsfolk: you talk to them instead of entering.
 const PEOPLE := ["paul", "terry", "paula", "tim", "romeo", "larry", "pork"]
 ## Scenery only: no door to walk up to.
-const DECOR := ["hut", "forge"]
+const DECOR := ["hut"]
 ## Townsfolk who stroll back and forth (body colour, highlight).
 const WALKERS := {"paula": [Color("9b5de5"), Color("c19bf2")], "tim": [Color("3dbb5c"), Color("7fdc95")]}
 const WALK_RANGE := 36.0
@@ -300,9 +300,70 @@ func _draw_romeo() -> void:
 
 
 ## A small, makeshift fishing hut: patchy planks, a tarp roof tied down at the corners, a crate.
-## Ember Forge milestone: a little smithy by the shop: a brick furnace with a flickering fire,
-## a chimney puffing smoke, and an anvil with a hammer on it.
+## The Forge (card upgrades), by the shop. It opens after the first boss as a cobbled-together
+## stand: odd blocks from all over, a little fire pit, a plank counter, and Flint the smith
+## block behind it. Once the Ember Forge has been played it becomes a proper brick smithy.
 func _draw_forge() -> void:
+	if "forge" not in CardCollection.areas_played:
+		_draw_cobbled_forge()
+		return
+	_draw_smithy()
+	_draw_flint(Vector2(58, 0))
+
+
+func _draw_cobbled_forge() -> void:
+	# A lopsided wall of mismatched blocks: sandstone, stone, moss, a rubber block, a red brick.
+	var colors := [Color("d9b77e"), Color("8a8f99"), Color("6f9b5a"), Color("c9874f"), Color("f2c230"), Color("a24d33")]
+	draw_rect(Rect2(-40, -60, 44, 60), EDGE)
+	for row in 5:
+		for i in 3:
+			var w := 13.0 + float((row * 3 + i) % 3) * 1.0
+			var x := -38.0 + i * 14.0 + (2.0 if row % 2 else 0.0)
+			draw_rect(Rect2(x, -58 + row * 12, minf(w, 2.0 - x), 11), colors[(row * 2 + i * 5) % colors.size()])
+	draw_rect(Rect2(-44, -66, 52, 6), Color("7a5230"))   # a plank laid across the top
+	draw_rect(Rect2(-26, -76, 10, 10), Color("8a8f99"))   # a stub of a chimney made of one stone
+	for i in 2:   # thin smoke
+		var k := fmod(_t * 0.4 + i / 2.0, 1.0)
+		draw_rect(Rect2(-24 + sin(_t + i) * 3.0, -82 - k * 30.0, 6 + k * 4.0, 6 + k * 4.0), Color(0.35, 0.33, 0.35, 0.45 * (1.0 - k)))
+	# A fire pit in a ring of stones at the foot of the wall.
+	var flick := 0.5 + 0.5 * sin(_t * 13.0) * sin(_t * 7.3)
+	draw_rect(Rect2(-34, -16, 26, 16), Color("2a1410"))
+	draw_rect(Rect2(-30, -12 + flick * 3.0, 18, 12 - flick * 3.0), Color("ff7a1f"))
+	draw_rect(Rect2(-25, -8 + flick * 2.0, 8, 8 - flick * 2.0), Color("ffd23f"))
+	for sx in [-38, -30, -20, -12]:
+		draw_rect(Rect2(sx, -6, 8, 6), Color("5d6270"))
+	# An anvil that's really two stone blocks stacked, with a hammer on top.
+	draw_rect(Rect2(8, -14, 14, 14), Color("5d6270"))
+	draw_rect(Rect2(6, -22, 18, 8), Color("3b3f4a"))
+	draw_rect(Rect2(6, -22, 18, 2), Color("8a92a3"))
+	draw_rect(Rect2(10, -28, 12, 3), Color("7a5230"))
+	draw_rect(Rect2(20, -31, 5, 7), Color("5d6270"))
+	# Flint stands behind a plank counter.
+	_draw_flint(Vector2(40, -30))
+	draw_rect(Rect2(28, -24, 26, 5), Color("3b2716"))
+	draw_rect(Rect2(29, -23, 24, 3), Color("9c6b3f"))
+	draw_rect(Rect2(30, -19, 3, 19), Color("6e4626"))
+	draw_rect(Rect2(49, -19, 3, 19), Color("6e4626"))
+	if fmod(_t, 2.5) < 0.15:   # now and then a spark jumps off the anvil
+		for i in 4:
+			draw_rect(Rect2(12 + i * 4, -26 - i * 3, 2, 2), Color("ffd23f"))
+
+
+## Flint, the smith: a sooty slate-grey block with a leather apron and soot on his cheek.
+func _draw_flint(at: Vector2) -> void:
+	var bob := sin(_t * 2.0) * 1.0
+	var r := Rect2(at.x - 10, at.y - 20 + bob, 20, 20)
+	draw_rect(r.grow(2), EDGE)
+	draw_rect(r, Color("6b7385"))
+	draw_rect(Rect2(r.position, Vector2(20, 4)), Color("8a92a3"))
+	draw_rect(Rect2(r.position + Vector2(4, 12), Vector2(12, 8)), Color("7a5230"))   # apron
+	var blink := fmod(_t, 3.7) < 0.12
+	for ex in [5, 12]:
+		draw_rect(Rect2(r.position + Vector2(ex, 6), Vector2(3, 1 if blink else 3)), EDGE)
+	draw_rect(Rect2(r.position + Vector2(14, 10), Vector2(3, 2)), Color("2a2a30"))   # soot
+
+
+func _draw_smithy() -> void:
 	draw_rect(Rect2(-40, -64, 44, 64), EDGE)
 	for row in 7:
 		for i in 5:

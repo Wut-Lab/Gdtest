@@ -62,6 +62,9 @@ var _paul_info: Label
 var _paul_row: HBoxContainer
 ## Where the Buy page goes back to: "Shop" or "Paul".
 var _buy_from := "Shop"
+var _forge_info: Label
+var _forge_list: VBoxContainer
+var _forge_scroll: ScrollContainer
 var _mode_notes := {}   # "hard"/"scramble" -> Label under its button
 
 
@@ -255,6 +258,24 @@ func _ready() -> void:
 	replay_scroll.add_child(_replay_list)
 	_button(replay, "Back", _back_out)
 
+	var forge := _page("Forge")
+	forge.add_child(_title("The Forge"))
+	_forge_info = Label.new()
+	_forge_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_forge_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_forge_info.custom_minimum_size = Vector2(320, 0)
+	_forge_info.add_theme_color_override("font_color", DIM)
+	forge.add_child(_forge_info)
+	_forge_scroll = ScrollContainer.new()
+	_forge_scroll.custom_minimum_size = Vector2(360, 300)
+	_forge_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	forge.add_child(_forge_scroll)
+	_forge_list = VBoxContainer.new()
+	_forge_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_forge_list.add_theme_constant_override("separation", 8)
+	_forge_scroll.add_child(_forge_list)
+	_button(forge, "Back", _back_out)
+
 	var mode := _page("Mode")
 	_mode_title = _title("")
 	mode.add_child(_mode_title)
@@ -348,6 +369,7 @@ func _ready() -> void:
 	panel.add_child(buy)
 	panel.add_child(paul)
 	panel.add_child(replay)
+	panel.add_child(forge)
 	panel.add_child(mode)
 	panel.add_child(credits)
 	open()
@@ -374,7 +396,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif _pages["Buy"].visible:
 		get_viewport().set_input_as_handled()
 		_buy_back()
-	elif _pages["Shop"].visible or _pages["Cards"].visible or _pages["Replay"].visible or _pages["Paul"].visible:
+	elif _pages["Shop"].visible or _pages["Cards"].visible or _pages["Replay"].visible or _pages["Paul"].visible \
+			or _pages["Forge"].visible:
 		get_viewport().set_input_as_handled()
 		_back_out()
 	elif _pages["Credits"].visible or _pages["Cards"].visible or _pages["Files"].visible:
@@ -393,6 +416,8 @@ func open_page(page_name: String) -> void:
 		_open_replay()
 	elif page_name == "Paul":
 		_open_paul()
+	elif page_name == "Forge":
+		_open_forge()
 	else:
 		_open_collection()
 
@@ -635,6 +660,67 @@ func _open_paul() -> void:
 		_paul_row.get_child(0).get_child(0).grab_focus()
 	else:
 		_pages["Paul"].get_child(-1).grab_focus()
+
+
+## The Forge: upgrade owned cards with pixels, up to the level the bosses you've beaten allow.
+func _open_forge() -> void:
+	for c in _forge_list.get_children():
+		_forge_list.remove_child(c)
+		c.queue_free()
+	_forge_scroll.custom_minimum_size.y = clampf(get_viewport_rect().size.y - 260.0, 140.0, 300.0)
+	var cap := mini(CardCollection.max_level(), 5)
+	var next_boss: String = "" if cap >= 5 else ["Big Bad Square", "Old Mossback", "Crazy Harry", "Anvil Annie"][cap - 1]
+	_forge_info.text = "Flint: \"I can make your cards stronger, for a price.\"\nYou have %d pixels  ·  Cards go up to Level %d%s" % [
+		CardCollection.pixels, cap, (" (beat %s for more)" % next_boss) if next_boss != "" else ""]
+	var first: Button = null
+	var cards: Array = CardCollection.UPGRADES.keys().filter(func(a: String) -> bool: return CardCollection.owns(a))
+	if cards.is_empty():
+		var none := Label.new()
+		none.text = "None of your cards can be upgraded yet. Find Quick, High Jump, Lucky Charm, Magnet, Momentum, Shockwave, Brick Drop or Brick Toss."
+		none.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		none.custom_minimum_size = Vector2(320, 0)
+		none.add_theme_color_override("font_color", DIM)
+		_forge_list.add_child(none)
+	for a in cards:
+		var lvl := CardCollection.level_of(a)
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+		var icon := CardIcon.new()
+		icon.card_scale = 1.5
+		icon.ability = a
+		row.add_child(icon)
+		var info := Label.new()
+		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		info.theme_type_variation = "SmallLabel"
+		info.text = "%s  Lv %d\n%s" % [AbilityCard.NAMES[a], lvl, CardCollection.upgrade_text(a, lvl)]
+		if lvl < 5:
+			info.text += "  →  " + CardCollection.upgrade_text(a, lvl + 1)
+		row.add_child(info)
+		var b := Button.new()
+		b.custom_minimum_size = Vector2(96, 52)
+		if lvl >= 5:
+			b.text = "Max"
+			b.disabled = true
+		elif lvl >= cap:
+			b.text = "Locked"
+			b.disabled = true
+		else:
+			b.text = "%d px" % CardCollection.upgrade_cost(a)
+			b.disabled = CardCollection.pixels < CardCollection.upgrade_cost(a)
+		b.pressed.connect(func() -> void:
+			if CardCollection.upgrade(a):
+				_buy_sfx.play()
+				_open_forge())
+		row.add_child(b)
+		_forge_list.add_child(row)
+		if first == null and not b.disabled:
+			first = b
+	_show("Forge")
+	if first:
+		first.grab_focus()
+	else:
+		_pages["Forge"].get_child(-1).grab_focus()
 
 
 ## Wooden stands under each slot and a blocky counter along the bottom.

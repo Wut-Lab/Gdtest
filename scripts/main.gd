@@ -354,8 +354,8 @@ func enter_town(at_door := "") -> void:
 		town = town.replace("o", ".")   # mossy blocks by the pond
 	if "lake" in CardCollection.areas_played:
 		town = _flood_rubber(town)   # the rubber blocks float in little pools
-	if "forge" not in CardCollection.areas_played:
-		town = town.replace(";", ".")   # the little smithy by the shop
+	if not CardCollection.forge_open():
+		town = town.replace(";", ".")   # the Forge by the shop: after the first boss
 	if not CardCollection.larry_here():
 		town = town.replace("f", ".").replace("l", ".")   # Larry's hut: your 3rd Shop card
 	# Romeo sits on the right hill, then the left, switching every 2 levels you complete.
@@ -442,6 +442,7 @@ func _enter_door() -> void:
 		"cards": hud.main_menu.open_page("Cards")
 		"replay": hud.main_menu.open_page("Replay")
 		"paul": hud.main_menu.open_page("Paul")
+		"forge": hud.main_menu.open_page("Forge")
 
 
 ## Back out of a shop or card hall visit.

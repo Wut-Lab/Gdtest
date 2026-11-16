@@ -393,7 +393,7 @@ func try_bark(push: Vector2) -> bool:
 ## Lucky Charm card: maybe shrug off an obstacle's hit. Returns true if it was shrugged off:
 ## no heart lost, just a little push away and a moment of safety.
 func try_shrug_off(push: Vector2) -> bool:
-	if "lucky_charm" not in abilities or randf() >= lucky_chance:
+	if "lucky_charm" not in abilities or randf() >= CardCollection.up("lucky_charm", lucky_chance):
 		return false
 	velocity = Vector2(push.x * 200.0, -260.0 if push.y <= 0.0 else 260.0)
 	_stun = 0.15
@@ -454,11 +454,11 @@ func teleport_to(pos: Vector2) -> void:
 
 ## Running speed, 15% faster with the Quick card. Momentum builds up to 25% more over 2 seconds.
 func _run_speed() -> float:
-	var s := run_speed * (1.0 + _pct(0.15) if "quick" in abilities else 1.0)
+	var s := run_speed * (1.0 + _pct(CardCollection.up("quick", 0.15)) if "quick" in abilities else 1.0)
 	if _angry > 0.0:
 		s *= angry_speed
 	if "momentum" in abilities:
-		s *= 1.0 + _pct(0.25) * clampf(_momentum / 2.0, 0.0, 1.0)
+		s *= 1.0 + _pct(CardCollection.up("momentum", 0.25)) * clampf(_momentum / 2.0, 0.0, 1.0)
 	return s
 
 
@@ -526,7 +526,7 @@ func _geyser() -> void:
 
 
 func _jump_speed() -> float:
-	return jump_velocity * (sqrt(1.0 + _pct(high_jump - 1.0)) if "high_jump" in abilities else 1.0)
+	return jump_velocity * (sqrt(1.0 + _pct(CardCollection.up("high_jump", high_jump - 1.0))) if "high_jump" in abilities else 1.0)
 
 
 ## Nothing can hurt you: blinking after a hit, or phased out by Phase Jump.
@@ -784,7 +784,7 @@ func _update_cling(delta: float, bounced_now: bool) -> void:
 
 ## Brick Drop card: drop a brick straight down from under you (one at a time).
 func _drop_brick() -> void:
-	_brick_cd = brick_cooldown
+	_brick_cd = CardCollection.up("brick_drop", brick_cooldown)
 	if is_instance_valid(_brick):
 		_brick.queue_free()
 	_brick = Brick.new()
@@ -795,7 +795,7 @@ func _drop_brick() -> void:
 
 ## Brick Toss card: lob a brick ahead of you in an arc (one at a time).
 func _toss_brick() -> void:
-	_toss_cd = toss_cooldown
+	_toss_cd = CardCollection.up("brick_toss", toss_cooldown)
 	if is_instance_valid(_toss):
 		_toss.queue_free()
 	_toss = Brick.new()
@@ -903,7 +903,7 @@ func _personal_space() -> void:
 
 ## Shockwave card: shove spike squares, spiked platforms and Bad Blocks near the floor 2 tiles away from you.
 func _shockwave() -> void:
-	_shock_cd = shockwave_cooldown
+	_shock_cd = CardCollection.up("shockwave", shockwave_cooldown)
 	var feet := global_position.y + SIZE / 2.0
 	CardFx.spawn(get_parent(), Vector2(global_position.x, feet), "shock", shockwave_reach)
 	_play(_land_sfx, 0.6)
