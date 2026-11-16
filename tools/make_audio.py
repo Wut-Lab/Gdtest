@@ -973,7 +973,7 @@ def sfx_splash():
         d = drip(r.uniform(1200, 2200))
         i = int(r.uniform(0.12, 0.55) * SR)
         out[i:i + len(d)] += d[: n - i] * 0.25
-    return out
+    return out * 0.5
 
 
 def sfx_bubbles():
