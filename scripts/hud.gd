@@ -299,7 +299,6 @@ func set_floor_win(next_text: String) -> void:
 	new_level_button.visible = next_text != ""
 	new_level_button.text = next_text if next_text != "" else "New level"
 	again_button.visible = false
-	like_button.hide()
 	(new_level_button if next_text != "" else win_menu.get_node("Panel/Box").get_child(-1)).grab_focus()
 
 

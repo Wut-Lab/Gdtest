@@ -305,7 +305,11 @@ func play_random_level(s: int, mode := "") -> void:
 	_replay_mode = mode
 	set_music("music_saved" if mode != "" else "music_level")
 	hud.set_seed(seed_value)
+	var from: String = CardCollection.liked_from.get(str(seed_value), "") if mode != "" else ""
 	var text := LevelGen.generate(seed_value)
+	if from != "":
+		var parts := from.split(":")
+		text = _area_text(parts[0], int(parts[1]), seed_value)
 	if mode == "hard":
 		text = LevelRemix.hard(text, seed_value)
 	elif mode == "scramble":
@@ -810,7 +814,8 @@ func _on_card_collected(ability: String) -> void:
 
 ## Win screen's Like button: save this level to the Replay Room (or take it out).
 func _on_like_pressed() -> void:
-	if not CardCollection.toggle_like(seed_value):
+	var from := "%s:%d" % [_floor, _floor_step] if _floor != "" else ""
+	if not CardCollection.toggle_like(seed_value, from):
 		hud.toast("Replay Room is full (%d levels)" % CardCollection.room_size())
 	hud.set_like(true, seed_value in CardCollection.liked)
 
@@ -966,26 +971,33 @@ func _play_floor_level() -> void:
 		_play_boss(ar, carry)
 		return
 	hud.set_seed(seed_value)
-	var text := LevelGen.generate(seed_value, ar.get("extra", 0))   # per-area extra length
-	text = _harden(text, step, seed_value, ar)
-	if id == "moss":
-		text = _mossify(_add_moss_obstacles(text, seed_value), seed_value).replace("`", "=")
-		level.set_theme("moss")
-		$Background/Sky.modulate = Color(0.55, 0.85, 0.7)
-	elif id == "lake":
-		text = LakeGen.lakeify(text, seed_value)
-		level.set_theme("lake")
-		$Background/Sky.modulate = SKY.lake
-	elif id == "forge":
-		text = ForgeGen.forgify(text, seed_value)
-		level.set_theme("forge")
-		$Background/Sky.modulate = SKY.forge
+	var text := _area_text(id, step, seed_value)
 	_floor = id
 	_floor_step = step
 	_carry_hearts = carry
 	load_level_text(text)
 	_level_hearts = hearts
 	hud.banner("Level %d  ·  %s" % [ar.first + step - 1, ar.name])
+
+
+## A dungeon area level's text for this seed and step, with the area's look switched on.
+func _area_text(id: String, step: int, s: int) -> String:
+	var ar := _area(id)
+	var text := LevelGen.generate(s, ar.get("extra", 0))   # per-area extra length
+	text = _harden(text, step, s, ar)
+	if id == "moss":
+		text = _mossify(_add_moss_obstacles(text, s), s).replace("`", "=")
+		level.set_theme("moss")
+		$Background/Sky.modulate = Color(0.55, 0.85, 0.7)
+	elif id == "lake":
+		text = LakeGen.lakeify(text, s)
+		level.set_theme("lake")
+		$Background/Sky.modulate = SKY.lake
+	elif id == "forge":
+		text = ForgeGen.forgify(text, s)
+		level.set_theme("forge")
+		$Background/Sky.modulate = SKY.forge
+	return text
 
 
 ## The area's boss room, after its 5 levels. Hearts carry in.

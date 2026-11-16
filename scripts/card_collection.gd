@@ -89,6 +89,8 @@ static func room_size() -> int:
 	return mini(MAX_LIKED + clears, MAX_ROOM)
 
 static var liked: Array[int] = []
+## Where a saved dungeon level came from: seed (as text) -> "area:step". Plain random levels have none.
+static var liked_from: Dictionary = {}
 static var _loaded := false
 
 
@@ -131,6 +133,7 @@ static func use_file(n: int) -> void:
 		run = cfg.get_value("progress", "run", {})
 		areas_played.assign(cfg.get_value("progress", "areas_played", []))
 		liked.assign(cfg.get_value("replay", "liked", []))
+		liked_from = cfg.get_value("replay", "from", {})
 	else:
 		# A fresh file: written to disk the first time something changes.
 		owned.assign([STARTER])
@@ -146,6 +149,7 @@ static func use_file(n: int) -> void:
 		run = {}
 		areas_played = []
 		liked.clear()
+		liked_from = {}
 	var settings := ConfigFile.new()
 	settings.load(SETTINGS)
 	settings.set_value("game", "last_file", n)
@@ -168,6 +172,7 @@ static func save() -> void:
 	cfg.set_value("progress", "run", run)
 	cfg.set_value("progress", "areas_played", areas_played)
 	cfg.set_value("replay", "liked", liked)
+	cfg.set_value("replay", "from", liked_from)
 	cfg.save(path(file))
 
 
@@ -336,13 +341,16 @@ static func mark_beaten(key: String) -> void:
 
 
 ## Saves or forgets a liked level. Returns false if the Replay Room is full.
-static func toggle_like(seed_value: int) -> bool:
+static func toggle_like(seed_value: int, from := "") -> bool:
 	if seed_value in liked:
 		liked.erase(seed_value)
+		liked_from.erase(str(seed_value))
 	elif liked.size() >= room_size():
 		return false
 	else:
 		liked.append(seed_value)
+		if from != "":
+			liked_from[str(seed_value)] = from
 	save()
 	return true
 

@@ -538,7 +538,9 @@ func _open_replay() -> void:
 		row.add_theme_constant_override("separation", 8)
 		var shape := "Vertical" if LevelGen.is_vertical(sv) else ("Diagonal" if LevelGen.is_diagonal(sv) else "Horizontal")
 		var play := Button.new()
-		play.text = "▶ Seed %d · %s" % [sv, shape]
+		var area: String = {"basic": "Basic", "moss": "Mossy Cave", "lake": "Cavern Lake", "forge": "Ember Forge"}.get(
+			str(CardCollection.liked_from.get(str(sv), "")).get_slice(":", 0), "")
+		play.text = "▶ Seed %d · %s" % [sv, area if area != "" else shape]
 		play.custom_minimum_size = Vector2(250, 44)
 		play.pressed.connect(func() -> void:
 			_mode_seed = sv
