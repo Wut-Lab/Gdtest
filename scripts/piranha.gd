@@ -47,7 +47,7 @@ var _t := 0.0
 var _wander := 0.0
 var _near := false
 var _chomp_sfx := BigBadSquare._sfx("chomp", -6.0)
-var _splash_sfx := BigBadSquare._sfx("splash", -10.0)
+var _splash_sfx := BigBadSquare._sfx("splash", -16.0)   # about half as loud as before
 
 
 func _ready() -> void:
