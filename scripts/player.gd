@@ -121,6 +121,10 @@ const SIZE := 24.0
 @export var sling_rest := 1.0
 ## Feather Jump: hold jump at the top of a jump to hang in the air this long (once per air time).
 @export var feather_time := 0.4
+## Rubber Soles: rubber floors and walls throw you this much farther sideways, and the extra
+## speed holds for soles_time seconds (steering the same way doesn't slow it).
+@export var soles_boost := 0.25
+@export var soles_time := 0.6
 @export var perfect_boost := 0.33
 @export var perfect_safe := 0.5
 ## Angry Block Dash (rare): seconds of rage, the speed boost, and the recharge after it ends.
@@ -473,6 +477,14 @@ func stomped() -> void:
 	hot_feet.emit(global_position + Vector2(0.0, SIZE / 2.0))
 
 
+## Rubber Soles card: a rubber bounce throws you farther sideways.
+func _rubber_soles() -> void:
+	if "rubber_soles" not in abilities or absf(velocity.x) < 20.0:
+		return
+	velocity.x *= 1.0 + _pct(soles_boost)
+	_sling = maxf(_sling, soles_time)   # keep the extra speed for a moment
+
+
 ## Slingshot card: snap around and launch the other way faster than you can run.
 func _slingshot(dir: float) -> void:
 	velocity.x = dir * _run_speed() * (1.0 + _pct(sling_boost))
@@ -573,7 +585,7 @@ func _physics_process(delta: float) -> void:
 	var on_floor := is_on_floor()
 
 	var dir := Input.get_axis("move_left", "move_right")
-	_sling = maxf(_sling - delta, 0.0)
+	_sling = maxf(_sling - delta, 0.0)   # Slingshot / Rubber Soles: extra speed being kept
 	_sling_cd = maxf(_sling_cd - delta, 0.0)
 	if _stun > 0.0:
 		_stun = maxf(_stun - delta, 0.0)   # just bounced off a rubber wall: no steering yet
@@ -957,6 +969,7 @@ func _apply_rubber(before: Vector2, was_on_floor: bool) -> bool:
 		if is_wall and into_side:
 			# Rubber wall: throw the player back the way they came.
 			velocity.x = n.x * maxf(absf(before.x) * wall_bounciness, wall_kick)
+			_rubber_soles()
 			if not was_on_floor and Input.is_action_pressed("jump"):
 				velocity.y = minf(before.y, -jump_velocity * wall_jump)   # wall jump
 			elif was_on_floor:
@@ -978,6 +991,7 @@ func _apply_rubber(before: Vector2, was_on_floor: bool) -> bool:
 			var lift := sqrt(house_height) if "bounce_house" in abilities else 1.0
 			velocity.y = -minf(speed * lift, max_bounce_speed * lift)   # Bounce House: 25% higher
 			velocity.x = before.x
+			_rubber_soles()
 			_bouncing = true
 			_coyote = 0.0
 			_squash = Vector2(1.45, 0.6)
