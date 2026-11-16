@@ -63,7 +63,7 @@ var _bubbles: Array = []
 
 var _hit_sfx := BigBadSquare._sfx("lake_boss_hit", 0.0)
 var _chomp_sfx := BigBadSquare._sfx("chomp", -2.0)
-var _splash_sfx := BigBadSquare._sfx("splash", -3.0)
+var _splash_sfx := BigBadSquare._sfx("splash", -9.0)   # about half as loud as before
 var _bubble_sfx := BigBadSquare._sfx("bubbles", -3.0)
 var _fire_sfx := BigBadSquare._sfx("harpoon_fire", -3.0)
 
