@@ -870,8 +870,8 @@ def render_lake_music():
                 put(bell(midi_hz(em(d) + 12), ln * slot), t0 + st * slot, 0.07, wet)
         if sec >= 1:
             for k in range(8):
-                put(shaker(), t0 + k * slot + slot / 2, 0.125 if k % 2 else 0.075)
-            put(kick(), t0, 0.03)
+                put(shaker(), t0 + k * slot + slot / 2, 0.03 if k % 2 else 0.02)
+            put(kick(), t0, 0.015)
         for _ in range(int(r.integers(1, 4))):   # drips and little bubble runs
             if r.random() < 0.5:
                 put(drip(r.uniform(1000, 1600)), t0 + r.uniform(0, bar), 0.1, wet)
@@ -931,10 +931,10 @@ def render_lake_boss_music():
         for k in range(8):
             t = t0 + k * slot
             if k in (0, 4):
-                put(kick(), t, 0.17)
+                put(kick(), t, 0.085)
             if k in (2, 6):
-                put(clap(), t, 0.045)
-            put(hat(), t + slot / 2, 0.02)
+                put(clap(), t, 0.022)
+            put(hat(), t + slot / 2, 0.005)
         if bi % 2 == 1:   # a splash of bubbles every other bar
             tb = t0 + bar - beat
             for j in range(4):
