@@ -114,6 +114,13 @@ const SIZE := 24.0
 ## Edge Hop: the free hop's height (share of a full jump) and the ledge grace it gives (seconds).
 @export var edge_hop_height := 0.2
 @export var edge_coyote := 0.2
+## Slingshot: turning around at full speed on the ground launches you the other way this much
+## faster, for sling_time seconds (then it can't fire again until sling_rest has passed).
+@export var sling_boost := 0.4
+@export var sling_time := 0.5
+@export var sling_rest := 1.0
+## Feather Jump: hold jump at the top of a jump to hang in the air this long (once per air time).
+@export var feather_time := 0.4
 @export var perfect_boost := 0.33
 @export var perfect_safe := 0.5
 ## Angry Block Dash (rare): seconds of rage, the speed boost, and the recharge after it ends.
@@ -180,6 +187,10 @@ var _brick_cd := 0.0
 var _toss_cd := 0.0
 var _toss: Node = null
 var _stomp_late := 0.0
+var _sling := 0.0
+var _sling_cd := 0.0
+var _feather := 0.0
+var _feather_used := false
 var _angry := 0.0
 var _angry_cd := 0.0
 var _push_cd := 0.0
@@ -253,6 +264,10 @@ func reset_to(pos: Vector2) -> void:
 	_brick_cd = 0.0
 	_toss_cd = 0.0
 	_stomp_late = 0.0
+	_sling = 0.0
+	_sling_cd = 0.0
+	_feather = 0.0
+	_feather_used = false
 	if is_instance_valid(_toss):
 		_toss.queue_free()
 	_angry = 0.0
@@ -458,6 +473,16 @@ func stomped() -> void:
 	hot_feet.emit(global_position + Vector2(0.0, SIZE / 2.0))
 
 
+## Slingshot card: snap around and launch the other way faster than you can run.
+func _slingshot(dir: float) -> void:
+	velocity.x = dir * _run_speed() * (1.0 + _pct(sling_boost))
+	_sling = sling_time
+	_sling_cd = sling_rest
+	_squash = Vector2(1.3, 0.75)
+	_puff()
+	_play(_jump_sfx, 0.7)
+
+
 ## Edge Hop card: running off a ledge (without jumping) gives a small free hop, and a little
 ## longer to still jump.
 func _edge_hop() -> void:
@@ -548,15 +573,21 @@ func _physics_process(delta: float) -> void:
 	var on_floor := is_on_floor()
 
 	var dir := Input.get_axis("move_left", "move_right")
+	_sling = maxf(_sling - delta, 0.0)
+	_sling_cd = maxf(_sling_cd - delta, 0.0)
 	if _stun > 0.0:
 		_stun = maxf(_stun - delta, 0.0)   # just bounced off a rubber wall: no steering yet
 	elif dir != 0.0:
 		if signf(dir) != _face:
 			_momentum = 0.0
+			if "slingshot" in abilities and on_floor and _sling_cd == 0.0 \
+					and absf(velocity.x) >= run_speed * 0.9:
+				_slingshot(signf(dir))
 		_face = signf(dir)
 		_momentum += delta
 		var acc := ground_accel * _grip(on_floor, true) if on_floor else air_accel * (2.5 if "air_brake" in abilities else 1.0)
-		velocity.x = move_toward(velocity.x, dir * _run_speed(), acc * delta)
+		if _sling == 0.0 or signf(velocity.x) != signf(dir):
+			velocity.x = move_toward(velocity.x, dir * _run_speed(), acc * delta)
 	else:
 		_momentum = 0.0
 		var dec := ground_decel * _grip(on_floor) if on_floor else air_decel * (4.0 if "air_brake" in abilities else 1.0)
@@ -611,9 +642,11 @@ func _physics_process(delta: float) -> void:
 		_play(_jump_sfx, 1.25)
 	if on_floor:
 		_air_jump = true
+		_feather_used = false
 
 	_update_dash_and_pound(delta, on_floor)
 
+	var vy_before := velocity.y
 	var g := gravity
 	if _dash > 0.0:
 		g = 0.0                                  # dashes fly straight
@@ -623,6 +656,17 @@ func _physics_process(delta: float) -> void:
 	elif velocity.y < 0.0 and not Input.is_action_pressed("jump") and not _bouncing and sub == 0.0:
 		g *= short_hop_gravity
 	velocity.y = minf(velocity.y + g * delta, pound_speed if _pounding else max_fall_speed)
+	if "feather_jump" in abilities and not on_floor and not _feather_used and not _pounding \
+			and vy_before < 0.0 and velocity.y >= 0.0 and Input.is_action_pressed("jump"):
+		_feather = feather_time * _pct(1.0)   # Feather Jump: reached the top with jump held
+		_feather_used = true
+	if _feather > 0.0:
+		if Input.is_action_pressed("jump") and not _pounding and _dash == 0.0:
+			_feather = maxf(_feather - delta, 0.0)
+			velocity.y = 0.0   # hang at the top
+			_squash = _squash.lerp(Vector2(1.15, 0.9), 0.2)
+		else:
+			_feather = 0.0
 	if "glide" in abilities and velocity.y > glide_fall_speed and Input.is_action_pressed("jump") \
 			and not _pounding and _dash == 0.0 and not on_floor:
 		velocity.y = glide_fall_speed   # Glide card: float down while jump is held
