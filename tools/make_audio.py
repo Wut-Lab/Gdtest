@@ -387,6 +387,27 @@ def sfx_bounce():
     return b * np.minimum(t / 0.008, 1) * np.exp(-t / 0.07) * 0.4
 
 
+def sfx_heart():
+    """Heart pickup: a short, warm, low two-note lift (G3 then C4) with a soft round tone."""
+    out = np.zeros(int(0.42 * SR))
+    for st, m, ln in ((0.0, 55, 0.18), (0.11, 60, 0.3)):
+        f = midi_hz(m)
+        t = np.arange(int(ln * SR)) / SR
+        w = (np.sin(2 * np.pi * f * t) + 0.25 * np.sin(4 * np.pi * f * t)) \
+            * np.minimum(t / 0.012, 1) * np.exp(-t / 0.12)
+        i = int(st * SR)
+        out[i:i + len(w)] += w
+    return out * 0.35
+
+
+def sfx_pixel():
+    """Pixel pickup: a tiny, faint, high ding."""
+    t = np.arange(int(0.18 * SR)) / SR
+    f = midi_hz(88)
+    w = np.sin(2 * np.pi * f * t) + 0.2 * np.sin(2 * np.pi * f * 2.7 * t) * np.exp(-t / 0.02)
+    return w * np.minimum(t / 0.002, 1) * np.exp(-t / 0.05) * 0.12
+
+
 def sfx_victory():
     """Level clear: a quick, bright rising arpeggio (C E G C) ending on a held bell."""
     out = np.zeros(int(1.4 * SR))
@@ -1262,6 +1283,8 @@ def main():
     write_wav(os.path.join(OUT, "ding.wav"), sfx_ding())
     write_wav(os.path.join(OUT, "victory.wav"), sfx_victory())
     write_wav(os.path.join(OUT, "bounce.wav"), sfx_bounce())
+    write_wav(os.path.join(OUT, "heart.wav"), sfx_heart())
+    write_wav(os.path.join(OUT, "pixel.wav"), sfx_pixel())
     write_wav(os.path.join(OUT, "chest_open.wav"), sfx_chest_open())
     write_wav(os.path.join(OUT, "boss_victory.wav"), sfx_boss_victory())
     tmp = os.path.join(OUT, "_music.wav")

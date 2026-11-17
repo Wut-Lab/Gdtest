@@ -143,7 +143,7 @@ func _ready() -> void:
 	_ding.stream = load("res://audio/ding.wav")
 	_ding.bus = AudioSettings.SOUNDS_BUS
 	add_child(_ding)
-	for n in ["victory", "boss_victory", "bounce"]:
+	for n in ["victory", "boss_victory", "bounce", "heart", "pixel"]:
 		var v := AudioStreamPlayer.new()
 		v.name = "Sfx_" + n
 		v.stream = load("res://audio/%s.wav" % n)
@@ -728,6 +728,7 @@ func _lose_heart(from_fall := false, heavy := false) -> void:
 
 
 func _on_heart_collected() -> void:
+	($Sfx_heart as AudioStreamPlayer).play()
 	if _cracked and hearts >= _start_hearts():
 		_cracked = false   # full but cracked: mends the crack
 	else:
@@ -747,6 +748,7 @@ func _sync_chests() -> void:
 
 ## A floating pixel: +1, remembered like chests so replaying a level doesn't pay out again.
 func _on_pixel_collected(index: int) -> void:
+	($Sfx_pixel as AudioStreamPlayer).play()
 	if _level_key != "custom":
 		CardCollection.mark_chest("%s:px%d" % [_pickup_key(), index])
 	CardCollection.add_pixels(1)
